@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!--
+    Package versions will be added here as projects are introduced.
+    Keep Version attributes out of individual PackageReference items.
+  -->
+</Project>

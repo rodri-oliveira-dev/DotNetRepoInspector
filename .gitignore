@@ -1,0 +1,67 @@
+# Build output
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+[Bb]in/
+[Oo]bj/
+artifacts/
+
+# Visual Studio / VS Code local state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / IntelliJ
+.idea/
+
+# Test artifacts
+TestResults/
+**/TestResults/
+coverage/
+coverage.*
+coverage-report/
+CodeCoverage/
+StrykerOutput/
+*.trx
+*.coverage
+*.coveragexml
+
+# NuGet / .NET tooling
+*.nupkg
+*.snupkg
+.nuget/
+.dotnet/
+.dotnet-home/
+project.lock.json
+project.fragment.lock.json
+
+# MSBuild logs
+*.binlog
+[Bb]uild[Ll]og.*
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+*.p12
+secrets/
+
+# Node tooling (future GitHub Action tooling may use it)
+node_modules/
+
+# OS/editor temporary files
+Thumbs.db
+Desktop.ini
+.DS_Store
+~$*
+*~

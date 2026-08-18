@@ -1,0 +1,45 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "dotnet.server.useOmnisharp": false,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "files.associations": {
+      "*.slnx": "xml"
+    },
+    "files.exclude": {
+      "**/bin": true,
+      "**/obj": true,
+      "**/.vs": true,
+      "**/.dotnet": true,
+      "**/.dotnet-home": true,
+      "**/.nuget": true,
+      "**/TestResults": true,
+      "**/coverage": true,
+      "**/coverage-report": true,
+      "**/StrykerOutput": true
+    },
+    "search.exclude": {
+      "**/bin": true,
+      "**/obj": true,
+      "**/.vs": true,
+      "**/.dotnet": true,
+      "**/.dotnet-home": true,
+      "**/.nuget": true,
+      "**/TestResults": true,
+      "**/coverage": true,
+      "**/coverage-report": true,
+      "**/StrykerOutput": true
+    },
+    "search.useIgnoreFiles": true,
+    "search.useGlobalIgnoreFiles": true,
+    "markdown.preview.mermaid": true,
+    "markdown.preview.experimental.useMermaid": true
+  }
+}

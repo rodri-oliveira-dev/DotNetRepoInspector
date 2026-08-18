@@ -1,0 +1,22 @@
+{
+  "dotnet.server.useOmnisharp": false,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit"
+  },
+  "files.associations": {
+    "*.slnx": "xml"
+  },
+  "files.exclude": {
+    "**/bin": true,
+    "**/obj": true,
+    "**/.vs": true,
+    "**/.dotnet": true,
+    "**/.dotnet-home": true,
+    "**/.nuget": true,
+    "**/TestResults": true,
+    "**/coverage": true,
+    "**/coverage-report": true,
+    "**/StrykerOutput": true
+  }
+}
