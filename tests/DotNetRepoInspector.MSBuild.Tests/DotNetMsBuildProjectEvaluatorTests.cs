@@ -1,4 +1,5 @@
 using DotNetRepoInspector.MSBuild.Evaluation;
+using Xunit;
 
 namespace DotNetRepoInspector.MSBuild.Tests;
 
