@@ -20,7 +20,8 @@ internal static class Program
     public static async Task<int> Main(string[] args)
     {
         var options = BenchmarkOptions.Parse(args);
-        using var timeoutSource = new CancellationTokenSource(TimeSpan.FromSeconds(options.TimeoutSeconds));
+        using var timeoutSource = new CancellationTokenSource(
+            TimeSpan.FromSeconds(options.TimeoutSeconds));
         using var repository = SyntheticRepository.Create(options.ProjectCount);
 
         var timedDiscoverer = new TimedProjectDiscoverer(new FileSystemProjectDiscoverer());
@@ -36,7 +37,7 @@ internal static class Program
         GC.Collect();
 
         var allocatedBefore = GC.GetTotalAllocatedBytes(precise: true);
-        var process = Process.GetCurrentProcess();
+        using var process = Process.GetCurrentProcess();
 
         var inspectionStopwatch = Stopwatch.StartNew();
         var report = await inspector.InspectAsync(repository.RootPath, timeoutSource.Token);
@@ -48,10 +49,11 @@ internal static class Program
 
         process.Refresh();
         var allocatedAfter = GC.GetTotalAllocatedBytes(precise: true);
-        var inspectionMilliseconds = inspectionStopwatch.Elapsed.TotalMilliseconds;
-        var serializationMilliseconds = serializationStopwatch.Elapsed.TotalMilliseconds;
         var discoveryMilliseconds = timedDiscoverer.Elapsed.TotalMilliseconds;
         var evaluationMilliseconds = timedEvaluator.Elapsed.TotalMilliseconds;
+        var inspectionMilliseconds = inspectionStopwatch.Elapsed.TotalMilliseconds;
+        var serializationMilliseconds = serializationStopwatch.Elapsed.TotalMilliseconds;
+
         var metrics = new PerformanceMetrics(
             SchemaVersion: 1,
             Scenario: $"synthetic-{options.ProjectCount}-projects",
@@ -104,7 +106,10 @@ internal static class Program
         var fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         var json = JsonSerializer.Serialize(metrics, SerializerOptions);
-        File.WriteAllText(fullPath, $"{json}{Environment.NewLine}", new UTF8Encoding(false));
+        File.WriteAllText(
+            fullPath,
+            $"{json}{Environment.NewLine}",
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static void WriteSummary(
@@ -119,38 +124,45 @@ internal static class Program
 
         var fullPath = Path.GetFullPath(summaryPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-        var builder = new StringBuilder();
-        builder.AppendLine("## DotNetRepoInspector performance");
-        builder.AppendLine();
-        builder.AppendLine(string.Create(
-            CultureInfo.InvariantCulture,
-            $"Scenario: `{metrics.Scenario}` on `{metrics.OperatingSystem}` with `{metrics.Framework}` and SDK `{metrics.ResolvedSdkVersion ?? "unknown"}`."));
-        builder.AppendLine();
-        builder.AppendLine("| Metric | Value |");
-        builder.AppendLine("| --- | ---: |");
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Projects discovered | {metrics.DiscoveredProjectCount} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Project evaluations | {metrics.EvaluatedProjectCount} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Discovery | {FormatMilliseconds(metrics.DiscoveryMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| MSBuild evaluation | {FormatMilliseconds(metrics.EvaluationMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Serialization | {FormatMilliseconds(metrics.SerializationMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Other inspection overhead | {FormatMilliseconds(metrics.OtherInspectionMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Inspection | {FormatMilliseconds(metrics.InspectionMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| End to end | {FormatMilliseconds(metrics.EndToEndMilliseconds)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Managed allocations | {FormatBytes(metrics.ManagedAllocatedBytes)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Peak working set | {FormatBytes(metrics.PeakWorkingSetBytes)} |"));
-        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| JSON size | {FormatBytes(metrics.JsonBytes)} |"));
-        builder.AppendLine();
-        builder.AppendLine(baselinePath is null
-            ? "No regression baseline was supplied; this run records measurements only."
-            : $"Regression limits loaded from `{baselinePath.Replace('\\', '/')}`.");
 
-        File.WriteAllText(fullPath, builder.ToString(), new UTF8Encoding(false));
+        var lines = new List<string>
+        {
+            "## DotNetRepoInspector performance",
+            string.Empty,
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"Scenario: `{metrics.Scenario}` on `{metrics.OperatingSystem}` with `{metrics.Framework}` and SDK `{metrics.ResolvedSdkVersion ?? "unknown"}`."),
+            string.Empty,
+            "| Metric | Value |",
+            "| --- | ---: |",
+            $"| Projects discovered | {metrics.DiscoveredProjectCount.ToString(CultureInfo.InvariantCulture)} |",
+            $"| Project evaluations | {metrics.EvaluatedProjectCount.ToString(CultureInfo.InvariantCulture)} |",
+            $"| Discovery | {FormatMilliseconds(metrics.DiscoveryMilliseconds)} |",
+            $"| MSBuild evaluation | {FormatMilliseconds(metrics.EvaluationMilliseconds)} |",
+            $"| Serialization | {FormatMilliseconds(metrics.SerializationMilliseconds)} |",
+            $"| Other inspection overhead | {FormatMilliseconds(metrics.OtherInspectionMilliseconds)} |",
+            $"| Inspection | {FormatMilliseconds(metrics.InspectionMilliseconds)} |",
+            $"| End to end | {FormatMilliseconds(metrics.EndToEndMilliseconds)} |",
+            $"| Managed allocations | {FormatBytes(metrics.ManagedAllocatedBytes)} |",
+            $"| Peak working set | {FormatBytes(metrics.PeakWorkingSetBytes)} |",
+            $"| JSON size | {FormatBytes(metrics.JsonBytes)} |",
+            string.Empty,
+            baselinePath is null
+                ? "No regression baseline was supplied; this run records measurements only."
+                : $"Regression limits loaded from `{baselinePath.Replace('\\', '/')}`."
+        };
+
+        File.WriteAllText(
+            fullPath,
+            $"{string.Join(Environment.NewLine, lines)}{Environment.NewLine}",
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     private static void PrintMetrics(PerformanceMetrics metrics)
     {
         Console.WriteLine($"Scenario: {metrics.Scenario}");
-        Console.WriteLine($"Projects: discovered={metrics.DiscoveredProjectCount}, evaluated={metrics.EvaluatedProjectCount}");
+        Console.WriteLine(
+            $"Projects: discovered={metrics.DiscoveredProjectCount.ToString(CultureInfo.InvariantCulture)}, evaluated={metrics.EvaluatedProjectCount.ToString(CultureInfo.InvariantCulture)}");
         Console.WriteLine($"Discovery: {FormatMilliseconds(metrics.DiscoveryMilliseconds)}");
         Console.WriteLine($"MSBuild evaluation: {FormatMilliseconds(metrics.EvaluationMilliseconds)}");
         Console.WriteLine($"Serialization: {FormatMilliseconds(metrics.SerializationMilliseconds)}");
@@ -164,8 +176,7 @@ internal static class Program
 
     private static PerformanceBaseline ReadBaseline(string path)
     {
-        var fullPath = Path.GetFullPath(path);
-        var json = File.ReadAllText(fullPath);
+        var json = File.ReadAllText(Path.GetFullPath(path));
         return JsonSerializer.Deserialize<PerformanceBaseline>(json, SerializerOptions)
             ?? throw new InvalidDataException("Performance baseline could not be deserialized.");
     }
@@ -176,14 +187,15 @@ internal static class Program
     {
         if (baseline.SchemaVersion != 1)
         {
-            throw new InvalidDataException($"Unsupported performance baseline schema '{baseline.SchemaVersion}'.");
+            throw new InvalidDataException(
+                $"Unsupported performance baseline schema '{baseline.SchemaVersion.ToString(CultureInfo.InvariantCulture)}'.");
         }
 
         if (!string.Equals(metrics.Scenario, baseline.Scenario, StringComparison.Ordinal) ||
             metrics.ProjectCount != baseline.ProjectCount)
         {
             throw new InvalidDataException(
-                $"Baseline scenario '{baseline.Scenario}' ({baseline.ProjectCount} projects) does not match '{metrics.Scenario}' ({metrics.ProjectCount} projects).");
+                $"Baseline scenario '{baseline.Scenario}' ({baseline.ProjectCount.ToString(CultureInfo.InvariantCulture)} projects) does not match '{metrics.Scenario}' ({metrics.ProjectCount.ToString(CultureInfo.InvariantCulture)} projects).");
         }
 
         var failures = new List<string>();
@@ -205,17 +217,23 @@ internal static class Program
             metrics.ManagedAllocatedBytes,
             baseline.Limits.MaxManagedAllocatedBytes,
             "bytes");
+        AddLimitFailure(
+            failures,
+            "Peak working set",
+            metrics.PeakWorkingSetBytes,
+            baseline.Limits.MaxPeakWorkingSetBytes,
+            "bytes");
 
         if (metrics.DiscoveredProjectCount != metrics.ProjectCount)
         {
             failures.Add(
-                $"Discovery returned {metrics.DiscoveredProjectCount} projects; expected {metrics.ProjectCount}.");
+                $"Discovery returned {metrics.DiscoveredProjectCount.ToString(CultureInfo.InvariantCulture)} projects; expected {metrics.ProjectCount.ToString(CultureInfo.InvariantCulture)}.");
         }
 
         if (metrics.EvaluatedProjectCount != metrics.ProjectCount)
         {
             failures.Add(
-                $"MSBuild evaluator was invoked {metrics.EvaluatedProjectCount} times; expected exactly {metrics.ProjectCount} evaluations.");
+                $"MSBuild evaluator was invoked {metrics.EvaluatedProjectCount.ToString(CultureInfo.InvariantCulture)} times; expected exactly {metrics.ProjectCount.ToString(CultureInfo.InvariantCulture)} evaluations.");
         }
 
         return failures;
@@ -318,19 +336,28 @@ internal sealed record BenchmarkOptions(
             : throw new ArgumentException($"Option '{option}' requires a positive integer.");
 }
 
-internal sealed class TimedProjectDiscoverer(IProjectDiscoverer inner) : IProjectDiscoverer
+internal sealed class TimedProjectDiscoverer : IProjectDiscoverer
 {
-    public TimeSpan Elapsed { get; private set; }
+    private readonly IProjectDiscoverer _inner;
+    private TimeSpan _elapsed;
+
+    public TimedProjectDiscoverer(IProjectDiscoverer inner)
+    {
+        _inner = inner;
+    }
+
+    public TimeSpan Elapsed => _elapsed;
 
     public IReadOnlyList<DiscoveredProject> Discover(ProjectDiscoveryRequest request) =>
-        Measure(() => inner.Discover(request));
+        Measure(() => _inner.Discover(request));
 
     public IReadOnlyList<DiscoveredProject> Discover(
         ProjectDiscoveryRequest request,
         CancellationToken cancellationToken) =>
-        Measure(() => inner.Discover(request, cancellationToken));
+        Measure(() => _inner.Discover(request, cancellationToken));
 
-    private IReadOnlyList<DiscoveredProject> Measure(Func<IReadOnlyList<DiscoveredProject>> action)
+    private IReadOnlyList<DiscoveredProject> Measure(
+        Func<IReadOnlyList<DiscoveredProject>> action)
     {
         var stopwatch = Stopwatch.StartNew();
         try
@@ -340,32 +367,40 @@ internal sealed class TimedProjectDiscoverer(IProjectDiscoverer inner) : IProjec
         finally
         {
             stopwatch.Stop();
-            Elapsed += stopwatch.Elapsed;
+            _elapsed += stopwatch.Elapsed;
         }
     }
 }
 
-internal sealed class TimedProjectFactsEvaluator(IMsBuildProjectFactsEvaluator inner)
-    : IMsBuildProjectFactsEvaluator
+internal sealed class TimedProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
 {
-    public TimeSpan Elapsed { get; private set; }
+    private readonly IMsBuildProjectFactsEvaluator _inner;
+    private TimeSpan _elapsed;
+    private int _evaluationCount;
 
-    public int EvaluationCount { get; private set; }
+    public TimedProjectFactsEvaluator(IMsBuildProjectFactsEvaluator inner)
+    {
+        _inner = inner;
+    }
+
+    public TimeSpan Elapsed => _elapsed;
+
+    public int EvaluationCount => _evaluationCount;
 
     public async Task<MsBuildProjectFactsResult> EvaluateAsync(
         string projectPath,
         CancellationToken cancellationToken = default)
     {
-        EvaluationCount++;
+        _evaluationCount++;
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            return await inner.EvaluateAsync(projectPath, cancellationToken);
+            return await _inner.EvaluateAsync(projectPath, cancellationToken);
         }
         finally
         {
             stopwatch.Stop();
-            Elapsed += stopwatch.Elapsed;
+            _elapsed += stopwatch.Elapsed;
         }
     }
 }
@@ -397,7 +432,7 @@ internal sealed class SyntheticRepository : IDisposable
               }
             }
             """,
-            new UTF8Encoding(false));
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         File.WriteAllText(
             Path.Combine(rootPath, "Directory.Build.props"),
@@ -410,24 +445,28 @@ internal sealed class SyntheticRepository : IDisposable
               </PropertyGroup>
             </Project>
             """,
-            new UTF8Encoding(false));
+            new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         var sourceRoot = Path.Combine(rootPath, "src");
         Directory.CreateDirectory(sourceRoot);
 
         for (var index = 0; index < projectCount; index++)
         {
-            var projectName = $"Project{index:D4}";
+            var indexText = index.ToString("D4", CultureInfo.InvariantCulture);
+            var projectName = $"Project{indexText}";
             var projectDirectory = Path.Combine(sourceRoot, projectName);
             Directory.CreateDirectory(projectDirectory);
 
-            var projectReference = index == 0
-                ? string.Empty
-                : $"""
+            var projectReference = string.Empty;
+            if (index > 0)
+            {
+                var previousIndex = (index - 1).ToString("D4", CultureInfo.InvariantCulture);
+                projectReference = $"""
                     <ItemGroup>
-                      <ProjectReference Include="../Project{index - 1:D4}/Project{index - 1:D4}.csproj" />
+                      <ProjectReference Include="../Project{previousIndex}/Project{previousIndex}.csproj" />
                     </ItemGroup>
                   """;
+            }
 
             var projectContent = $"""
                 <Project Sdk="Microsoft.NET.Sdk">
@@ -441,7 +480,7 @@ internal sealed class SyntheticRepository : IDisposable
             File.WriteAllText(
                 Path.Combine(projectDirectory, $"{projectName}.csproj"),
                 projectContent,
-                new UTF8Encoding(false));
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
 
         return new SyntheticRepository(rootPath);
@@ -455,11 +494,11 @@ internal sealed class SyntheticRepository : IDisposable
         }
         catch (IOException)
         {
-            // Benchmark results are more valuable than cleanup failures in the temporary directory.
+            // Performance results are more valuable than temporary-directory cleanup failures.
         }
         catch (UnauthorizedAccessException)
         {
-            // Benchmark results are more valuable than cleanup failures in the temporary directory.
+            // Performance results are more valuable than temporary-directory cleanup failures.
         }
     }
 }
@@ -499,4 +538,5 @@ internal sealed record PerformanceObserved(
 internal sealed record PerformanceLimits(
     double MaxEvaluationMilliseconds,
     double MaxEndToEndMilliseconds,
-    long MaxManagedAllocatedBytes);
+    long MaxManagedAllocatedBytes,
+    long MaxPeakWorkingSetBytes);
