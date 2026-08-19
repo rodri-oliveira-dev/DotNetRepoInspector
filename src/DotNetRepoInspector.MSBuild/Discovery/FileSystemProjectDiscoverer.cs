@@ -32,7 +32,7 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
         CancellationToken cancellationToken) =>
         DiscoverCore(request, cancellationToken);
 
-    private IReadOnlyList<DiscoveredProject> DiscoverCore(
+    private DiscoveredProject[] DiscoverCore(
         ProjectDiscoveryRequest request,
         CancellationToken cancellationToken)
     {
