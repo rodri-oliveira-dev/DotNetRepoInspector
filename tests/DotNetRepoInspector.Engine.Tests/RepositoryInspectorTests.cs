@@ -183,11 +183,18 @@ public sealed class RepositoryInspectorTests
 
     private sealed class RecordingProjectDiscoverer : IProjectDiscoverer
     {
-        public CancellationToken ObservedToken { get; private set; }
+        public CancellationToken ObservedToken
+        {
+            get;
+            private set;
+        }
+
+        public IReadOnlyList<DiscoveredProject> Discover(ProjectDiscoveryRequest request) =>
+            Discover(request, CancellationToken.None);
 
         public IReadOnlyList<DiscoveredProject> Discover(
             ProjectDiscoveryRequest request,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(request);
             ObservedToken = cancellationToken;
@@ -197,7 +204,11 @@ public sealed class RepositoryInspectorTests
 
     private sealed class RecordingProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
     {
-        public CancellationToken ObservedToken { get; private set; }
+        public CancellationToken ObservedToken
+        {
+            get;
+            private set;
+        }
 
         public Task<MsBuildProjectFactsResult> EvaluateAsync(
             string projectPath,
@@ -220,7 +231,11 @@ public sealed class RepositoryInspectorTests
 
     private sealed class RecordingSdkInspector : IDotNetSdkInspector
     {
-        public CancellationToken ObservedToken { get; private set; }
+        public CancellationToken ObservedToken
+        {
+            get;
+            private set;
+        }
 
         public Task<DotNetSdkInspectionResult> InspectAsync(
             string repositoryRoot,
@@ -237,7 +252,11 @@ public sealed class RepositoryInspectorTests
 
     private sealed class RecordingGitProvider : IGitRepositoryMetadataProvider
     {
-        public CancellationToken ObservedToken { get; private set; }
+        public CancellationToken ObservedToken
+        {
+            get;
+            private set;
+        }
 
         public Task<GitRepositoryMetadataResult> InspectAsync(
             string path,
