@@ -8,6 +8,7 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`classification.md`](classification.md) — deterministic project classification rules and precedence.
 - [`diagnostics.md`](diagnostics.md) — stable diagnostic catalog and operational logging rules.
 - [`inspection-engine.md`](inspection-engine.md) — end-to-end inspection orchestration, failure semantics, determinism, and cancellation.
+- [`cli.md`](cli.md) — command-line usage, output streams, exit codes, and cancellation behavior.
 - [`project-reference-graph.md`](project-reference-graph.md) — normalized `ProjectReference` graph semantics.
 - [`schema/inspection-v1.md`](schema/inspection-v1.md) — public JSON contract and compatibility policy.
 - [`decisions/`](decisions/) — Architecture Decision Records for durable technical decisions.

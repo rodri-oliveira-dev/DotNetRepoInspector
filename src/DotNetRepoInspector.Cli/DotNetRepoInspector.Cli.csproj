@@ -7,6 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
   </ItemGroup>
 </Project>
