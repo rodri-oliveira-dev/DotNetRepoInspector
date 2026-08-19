@@ -6,7 +6,9 @@ public sealed record MsBuildEvaluationResult(
     IReadOnlyDictionary<string, string> Properties,
     MsBuildEvaluationError? Error)
 {
-    public IReadOnlyDictionary<string, IReadOnlyList<MsBuildEvaluationItem>> Items { get; init; } =
+    public IReadOnlyDictionary<
+        string,
+        IReadOnlyList<MsBuildEvaluationItem>> Items { get; init; } =
         new Dictionary<string, IReadOnlyList<MsBuildEvaluationItem>>(StringComparer.Ordinal);
 
     public static MsBuildEvaluationResult Success(
