@@ -23,7 +23,11 @@ public sealed class FixtureMatrixTests
         "multi-targeting",
         "project-reference-chain",
         "project-reference-circular",
+        "project-reference-conditional",
+        "project-reference-external",
+        "project-reference-fan-out",
         "project-reference-simple",
+        "project-reference-unresolved",
         "test-project",
         "web-sdk",
         "worker-sdk"
@@ -140,6 +144,24 @@ public sealed class FixtureMatrixTests
         AssertProjectReferences(
             "ProjectReferences/Circular/B/B.csproj",
             "../A/A.csproj");
+
+        AssertProjectReferences(
+            "ProjectReferences/FanOut/A/A.csproj",
+            "../C/C.csproj",
+            "../B/B.csproj");
+
+        AssertProjectReferences(
+            "ProjectReferences/Conditional/App/App.csproj",
+            "../Enabled/Enabled.csproj",
+            "../Disabled/Disabled.csproj");
+
+        AssertProjectReferences(
+            "ProjectReferences/Unresolved/App/App.csproj",
+            "../Missing/Missing.csproj");
+
+        AssertProjectReferences(
+            "ProjectReferences/External/Repository/App/App.csproj",
+            "../../Shared/Shared.csproj");
     }
 
     [Fact]
@@ -195,7 +217,9 @@ public sealed class FixtureMatrixTests
         return Path.Combine(_fixtureRoot, normalizedPath);
     }
 
-    private static void AssertProjectReferences(string relativeProjectPath, string? expectedReference = null)
+    private static void AssertProjectReferences(
+        string relativeProjectPath,
+        params string[] expectedReferences)
     {
         string projectPath = ResolveFixturePath(relativeProjectPath);
         XDocument document = XDocument.Load(projectPath);
@@ -205,13 +229,6 @@ public sealed class FixtureMatrixTests
             .Select(reference => reference.Attribute("Include")?.Value ?? string.Empty)
             .ToArray();
 
-        if (expectedReference is null)
-        {
-            Assert.Empty(actualReferences);
-            return;
-        }
-
-        Assert.Single(actualReferences);
-        Assert.Equal(expectedReference, actualReferences[0]);
+        Assert.Equal(expectedReferences, actualReferences);
     }
 }

@@ -49,26 +49,24 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
                 $"Project '{projectPath}' was not found.");
         }
 
-        var properties = request.Properties
-            .Where(property => !string.IsNullOrWhiteSpace(property))
-            .Select(property => property.Trim())
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(property => property, StringComparer.Ordinal)
-            .ToArray();
+        var properties = NormalizeRequestedNames(request.Properties);
+        var items = NormalizeRequestedNames(request.Items ?? []);
 
-        if (properties.Length == 0)
+        if (properties.Length == 0 && items.Length == 0)
         {
             return Failure(
                 MsBuildEvaluationErrorCode.InvalidRequest,
-                "At least one MSBuild property is required.");
+                "At least one MSBuild property or item is required.");
         }
 
-        var invalidProperty = properties.FirstOrDefault(property => !IsValidPropertyName(property));
-        if (invalidProperty is not null)
+        var invalidName = properties
+            .Concat(items)
+            .FirstOrDefault(name => !IsValidMsBuildName(name));
+        if (invalidName is not null)
         {
             return Failure(
                 MsBuildEvaluationErrorCode.InvalidRequest,
-                $"MSBuild property name '{invalidProperty}' is invalid.");
+                $"MSBuild property or item name '{invalidName}' is invalid.");
         }
 
         var workingDirectory = Path.GetDirectoryName(projectPath)!;
@@ -106,14 +104,23 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
                 "The .NET SDK resolver returned an empty version.");
         }
 
-        var arguments = new[]
+        var arguments = new List<string>
         {
             "msbuild",
             projectPath,
             "-nologo",
-            "-verbosity:quiet",
-            $"-getProperty:{string.Join(',', properties)}"
+            "-verbosity:quiet"
         };
+
+        if (properties.Length > 0)
+        {
+            arguments.Add($"-getProperty:{string.Join(',', properties)}");
+        }
+
+        if (items.Length > 0)
+        {
+            arguments.Add($"-getItem:{string.Join(',', items)}");
+        }
 
         ProcessExecutionResult evaluationResult;
         try
@@ -142,8 +149,24 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
 
         try
         {
-            var evaluatedProperties = ParseProperties(evaluationResult.StandardOutput, properties);
-            return MsBuildEvaluationResult.Success(resolvedSdkVersion, evaluatedProperties);
+            if (items.Length == 0 && properties.Length == 1)
+            {
+                var evaluatedProperties = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    [properties[0]] = evaluationResult.StandardOutput.TrimEnd('\r', '\n')
+                };
+
+                return MsBuildEvaluationResult.Success(resolvedSdkVersion, evaluatedProperties);
+            }
+
+            using var document = JsonDocument.Parse(evaluationResult.StandardOutput);
+            var evaluatedProperties = ParseProperties(document.RootElement, properties);
+            var evaluatedItems = ParseItems(document.RootElement, items);
+
+            return MsBuildEvaluationResult.Success(
+                resolvedSdkVersion,
+                evaluatedProperties,
+                evaluatedItems);
         }
         catch (JsonException exception)
         {
@@ -208,26 +231,30 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
             await standardError);
     }
 
+    private static string[] NormalizeRequestedNames(IEnumerable<string> names) =>
+        names
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name.Trim())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
     private static Dictionary<string, string> ParseProperties(
-        string standardOutput,
+        JsonElement root,
         string[] properties)
     {
-        if (properties.Length == 1)
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (properties.Length == 0)
         {
-            return new Dictionary<string, string>(StringComparer.Ordinal)
-            {
-                [properties[0]] = standardOutput.TrimEnd('\r', '\n')
-            };
+            return result;
         }
 
-        using var document = JsonDocument.Parse(standardOutput);
-        if (!document.RootElement.TryGetProperty("Properties", out var propertiesElement) ||
+        if (!root.TryGetProperty("Properties", out var propertiesElement) ||
             propertiesElement.ValueKind != JsonValueKind.Object)
         {
             throw new InvalidDataException("MSBuild output does not contain a 'Properties' object.");
         }
 
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var property in properties)
         {
             if (!propertiesElement.TryGetProperty(property, out var propertyElement))
@@ -243,15 +270,77 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         return result;
     }
 
-    private static bool IsValidPropertyName(string propertyName)
+    private static Dictionary<string, IReadOnlyList<MsBuildEvaluationItem>> ParseItems(
+        JsonElement root,
+        string[] itemNames)
     {
-        if (propertyName.Length == 0 ||
-            (!char.IsLetter(propertyName[0]) && propertyName[0] != '_'))
+        var result = new Dictionary<string, IReadOnlyList<MsBuildEvaluationItem>>(StringComparer.Ordinal);
+        if (itemNames.Length == 0)
+        {
+            return result;
+        }
+
+        if (!root.TryGetProperty("Items", out var itemsElement) ||
+            itemsElement.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidDataException("MSBuild output does not contain an 'Items' object.");
+        }
+
+        foreach (var itemName in itemNames)
+        {
+            if (!itemsElement.TryGetProperty(itemName, out var itemArray))
+            {
+                result[itemName] = [];
+                continue;
+            }
+
+            if (itemArray.ValueKind != JsonValueKind.Array)
+            {
+                throw new InvalidDataException($"MSBuild item '{itemName}' is not an array.");
+            }
+
+            var evaluatedItems = new List<MsBuildEvaluationItem>();
+            foreach (var itemElement in itemArray.EnumerateArray())
+            {
+                if (itemElement.ValueKind != JsonValueKind.Object ||
+                    !itemElement.TryGetProperty("Identity", out var identityElement) ||
+                    identityElement.ValueKind != JsonValueKind.String)
+                {
+                    throw new InvalidDataException($"MSBuild item '{itemName}' does not contain a valid Identity.");
+                }
+
+                var identity = identityElement.GetString() ?? string.Empty;
+                var metadata = new Dictionary<string, string>(StringComparer.Ordinal);
+                foreach (var property in itemElement.EnumerateObject())
+                {
+                    if (string.Equals(property.Name, "Identity", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    metadata[property.Name] = property.Value.ValueKind == JsonValueKind.String
+                        ? property.Value.GetString() ?? string.Empty
+                        : property.Value.ToString();
+                }
+
+                evaluatedItems.Add(new MsBuildEvaluationItem(identity, metadata));
+            }
+
+            result[itemName] = evaluatedItems;
+        }
+
+        return result;
+    }
+
+    private static bool IsValidMsBuildName(string name)
+    {
+        if (name.Length == 0 ||
+            (!char.IsLetter(name[0]) && name[0] != '_'))
         {
             return false;
         }
 
-        return propertyName
+        return name
             .Skip(1)
             .All(character =>
                 char.IsLetterOrDigit(character) ||

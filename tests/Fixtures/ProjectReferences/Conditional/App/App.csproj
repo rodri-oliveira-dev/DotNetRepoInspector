@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableProjectReference>true</EnableProjectReference>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Enabled/Enabled.csproj" Condition="'$(EnableProjectReference)' == 'true'" />
+    <ProjectReference Include="../Disabled/Disabled.csproj" Condition="'$(EnableProjectReference)' == 'false'" />
+  </ItemGroup>
+</Project>

@@ -8,4 +8,7 @@ public sealed record MsBuildProjectFacts(
     bool? IsTestProject,
     bool? IsPackable,
     IReadOnlyList<string> RuntimeIdentifiers,
-    IReadOnlyDictionary<string, string> Properties);
+    IReadOnlyDictionary<string, string> Properties)
+{
+    public IReadOnlyList<MsBuildProjectReference> ProjectReferences { get; init; } = [];
+}
