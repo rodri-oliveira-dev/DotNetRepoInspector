@@ -18,7 +18,10 @@ public sealed class CliConsole
         Logger = new CliLogger(standardError, verbosity);
     }
 
-    public CliLogger Logger { get; }
+    public CliLogger Logger
+    {
+        get;
+    }
 
     public void WriteJson(string json)
     {
