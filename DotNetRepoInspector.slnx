@@ -13,4 +13,7 @@
     <Project Path="tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj" />
+  </Folder>
 </Solution>

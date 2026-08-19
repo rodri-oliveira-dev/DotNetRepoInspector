@@ -1,0 +1,84 @@
+name: Validate performance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "benchmarks/**"
+      - "src/DotNetRepoInspector.Core/**"
+      - "src/DotNetRepoInspector.Engine/**"
+      - "src/DotNetRepoInspector.Git/**"
+      - "src/DotNetRepoInspector.MSBuild/**"
+      - ".github/performance-baseline.json"
+      - ".github/workflows/validate-performance.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "performance-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  synthetic-large-repository:
+    name: Synthetic repository (100 projects)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore performance harness
+        run: dotnet restore ./benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj
+
+      - name: Build performance harness
+        run: >-
+          dotnet build ./benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj
+          --configuration Release
+          --no-restore
+          --warnaserror
+          -p:RunAnalyzers=true
+
+      - name: Measure and enforce performance baseline
+        run: >-
+          dotnet run
+          --project ./benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj
+          --configuration Release
+          --no-build
+          --
+          --project-count 100
+          --timeout-seconds 300
+          --output ./artifacts/performance/metrics.json
+          --summary ./artifacts/performance/summary.md
+          --baseline ./.github/performance-baseline.json
+
+      - name: Publish performance summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f ./artifacts/performance/summary.md ]]; then
+            cat ./artifacts/performance/summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload performance artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: performance-synthetic-100-projects
+          path: artifacts/performance
+          if-no-files-found: warn
+          retention-days: 30
