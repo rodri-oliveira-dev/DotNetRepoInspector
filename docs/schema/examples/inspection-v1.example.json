@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "1.0",
+  "repository": {
+    "name": "sample-service",
+    "commitSha": "0123456789abcdef0123456789abcdef01234567",
+    "branch": "main",
+    "remoteUrl": "https://github.com/example/sample-service.git"
+  },
+  "dotNetSdk": {
+    "globalJsonPath": "global.json",
+    "configured": {
+      "version": "10.0.100",
+      "rollForward": "latestFeature",
+      "allowPrerelease": false
+    },
+    "resolvedVersion": "10.0.100"
+  },
+  "projects": [
+    {
+      "path": "src/App/App.csproj",
+      "name": "App",
+      "resolvedSdkVersion": "10.0.100",
+      "sdks": [
+        {
+          "name": "Microsoft.NET.Sdk.Web"
+        }
+      ],
+      "targetFrameworks": [
+        "net10.0"
+      ],
+      "outputType": "Exe",
+      "isTestProject": false,
+      "isPackable": false,
+      "runtimeIdentifiers": [],
+      "classification": {
+        "kind": "web",
+        "confidence": "high",
+        "signals": [
+          "sdk:Microsoft.NET.Sdk.Web"
+        ]
+      },
+      "references": [
+        {
+          "path": "src/Core/Core.csproj"
+        }
+      ],
+      "diagnostics": []
+    }
+  ],
+  "diagnostics": []
+}

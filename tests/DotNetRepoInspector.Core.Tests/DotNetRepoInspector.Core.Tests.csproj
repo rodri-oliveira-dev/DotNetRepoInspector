@@ -24,4 +24,10 @@
   <ItemGroup>
     <ProjectReference Include="../../src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../docs/schema/examples/inspection-v1.example.json"
+          Link="Examples/inspection-v1.example.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
