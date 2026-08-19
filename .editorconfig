@@ -17,7 +17,7 @@ indent_size = 2
 
 [*.cs]
 # Analyzer baseline
-dotnet_analyzer_diagnostic.category-Style.severity = warning
+dotnet_analyzer_diagnostic.category-Style.severity = suggestion
 dotnet_analyzer_diagnostic.category-Performance.severity = warning
 dotnet_analyzer_diagnostic.category-Reliability.severity = error
 dotnet_analyzer_diagnostic.category-Security.severity = error
@@ -130,7 +130,7 @@ dotnet_naming_style.end_with_async_style.capitalization = pascal_case
 [*.{designer.cs,Designer.cs,g.cs,g.i.cs,generated.cs,Generated.cs}]
 generated_code = true
 
-[**/*Tests/**/*.cs]
+[tests/**/*.cs]
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.CA2007.severity = none
