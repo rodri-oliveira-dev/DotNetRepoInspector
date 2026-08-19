@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DotNetRepoInspector inspection schema 1.2",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "repository",
+    "dotNetSdk",
+    "projects",
+    "diagnostics"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.2"
+    },
+    "repository": {
+      "$ref": "#/$defs/repository"
+    },
+    "dotNetSdk": {
+      "$ref": "#/$defs/dotNetSdk"
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/project"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "repository": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "commitSha": { "type": "string" },
+        "branch": { "type": "string" },
+        "remoteUrl": { "type": "string" },
+        "isDirty": { "type": "boolean" }
+      }
+    },
+    "configuredSdk": {
+      "type": "object",
+      "properties": {
+        "version": { "type": "string" },
+        "rollForward": { "type": "string" },
+        "allowPrerelease": { "type": "boolean" }
+      }
+    },
+    "dotNetSdk": {
+      "type": "object",
+      "properties": {
+        "globalJsonPath": { "type": "string" },
+        "configured": { "$ref": "#/$defs/configuredSdk" },
+        "resolvedVersion": { "type": "string" }
+      }
+    },
+    "projectSdk": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "required": ["kind", "signals"],
+      "properties": {
+        "kind": { "type": "string" },
+        "confidence": { "type": "string" },
+        "signals": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "projectReference": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string" }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["code", "severity", "message"],
+      "properties": {
+        "code": { "type": "string", "pattern": "^DRI[0-9]{4}$" },
+        "severity": { "enum": ["info", "warning", "error"] },
+        "message": { "type": "string" },
+        "source": { "type": "string" },
+        "details": { "type": "string" },
+        "context": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "path",
+        "sdks",
+        "targetFrameworks",
+        "runtimeIdentifiers",
+        "references",
+        "diagnostics"
+      ],
+      "properties": {
+        "path": { "type": "string" },
+        "name": { "type": "string" },
+        "resolvedSdkVersion": { "type": "string" },
+        "sdks": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/projectSdk" }
+        },
+        "targetFrameworks": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "outputType": { "type": "string" },
+        "isTestProject": { "type": "boolean" },
+        "isPackable": { "type": "boolean" },
+        "runtimeIdentifiers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "classification": { "$ref": "#/$defs/classification" },
+        "references": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/projectReference" }
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/diagnostic" }
+        }
+      }
+    }
+  }
+}

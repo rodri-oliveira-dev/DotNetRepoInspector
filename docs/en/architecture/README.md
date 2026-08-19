@@ -1,5 +1,7 @@
 # Architecture
 
+**Languages:** English | [Português (Brasil)](../../pt-BR/architecture/README.md)
+
 Current boundaries:
 
 - **Core** — normalized inspection model and classification concepts. It has no dependency on Git, MSBuild, CI providers, or persistence.

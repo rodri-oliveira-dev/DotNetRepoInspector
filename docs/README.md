@@ -1,9 +1,8 @@
 # Documentation
 
-Keep `README.md` as the project entry point and place deeper design material here.
+Choose a language:
 
-- [`architecture/`](architecture/) — current architecture, contracts, and implementation design.
-- [`inspection-engine.md`](inspection-engine.md) — end-to-end inspection orchestration, failure semantics, determinism, and cancellation.
-- [`decisions/`](decisions/) — Architecture Decision Records for durable technical decisions.
+- [English](en/README.md)
+- [Português (Brasil)](pt-BR/README.md)
 
-Documentation should distinguish current behavior from planned behavior while the project is in early development.
+Each language directory is self-contained: Markdown links point to documentation in the same language. Machine-readable schema and example files are mirrored in both trees so each documentation set can be browsed independently.
