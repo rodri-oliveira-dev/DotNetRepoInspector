@@ -67,7 +67,7 @@ public static class MsBuildDiagnosticMapper
         };
     }
 
-    private static IReadOnlyDictionary<string, string> CreateContext(
+    private static Dictionary<string, string> CreateContext(
         string component,
         string internalCode,
         int? exitCode)
