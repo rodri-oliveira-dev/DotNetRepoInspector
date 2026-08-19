@@ -151,12 +151,12 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         {
             if (items.Length == 0 && properties.Length == 1)
             {
-                var evaluatedProperties = new Dictionary<string, string>(StringComparer.Ordinal)
+                var scalarProperties = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
                     [properties[0]] = evaluationResult.StandardOutput.TrimEnd('\r', '\n')
                 };
 
-                return MsBuildEvaluationResult.Success(resolvedSdkVersion, evaluatedProperties);
+                return MsBuildEvaluationResult.Success(resolvedSdkVersion, scalarProperties);
             }
 
             using var document = JsonDocument.Parse(evaluationResult.StandardOutput);
