@@ -1,6 +1,6 @@
 # Inspection fixtures
 
-This directory contains synthetic .NET repository and project structures used to prove discovery, MSBuild evaluation, SDK detection, project-reference graph, and classification behavior.
+This directory contains synthetic .NET repository and project structures used to prove discovery, MSBuild evaluation, SDK detection, project-reference graph, classification, and compatibility behavior.
 
 Fixtures must be intentionally minimal and must not contain real application source, credentials, or secrets.
 
@@ -32,6 +32,10 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `ProjectReferences/External/Repository` | reference to an existing project outside the inspection root |
 | `Sdk/WithGlobalJson` | repository-local SDK configuration |
 | `Sdk/WithoutGlobalJson` | repository with no `global.json` in its fixture tree |
+| `Compatibility/Net8` | Inspector `net10.0` evaluating a repository pinned to .NET 8 and targeting `net8.0` |
+| `Compatibility/Net10` | current .NET 10 compatibility baseline |
+| `Compatibility/PathCasing` | mixed-case path and uppercase project extension portability |
+| `Compatibility/MissingSdk` | stable unavailable-SDK diagnostic behavior |
 | `InvalidProject` | malformed, non-evaluable project |
 | `EmptyRepository` | repository containing no project files |
 

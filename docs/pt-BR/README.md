@@ -9,6 +9,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`diagnostics.md`](diagnostics.md) — catálogo estável de diagnósticos e regras de logging operacional.
 - [`inspection-engine.md`](inspection-engine.md) — orquestração ponta a ponta da inspeção, semântica de falhas, determinismo e cancelamento.
 - [`cli.md`](cli.md) — uso da linha de comando, streams de saída, códigos de saída e comportamento de cancelamento.
+- [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
 - [`project-reference-graph.md`](project-reference-graph.md) — semântica normalizada do grafo de `ProjectReference`.
 - [`schema/inspection-v1.md`](schema/inspection-v1.md) — contrato JSON público e política de compatibilidade.
 - [`decisions/`](decisions/) — Architecture Decision Records para decisões técnicas duradouras.
