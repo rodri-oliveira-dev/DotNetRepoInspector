@@ -7,6 +7,7 @@ namespace DotNetRepoInspector.MSBuild.Evaluation;
 public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
 {
     private const int MaxDiagnosticLength = 4_000;
+    private static readonly string[] SdkVersionArguments = ["--version"];
     private readonly string _dotNetExecutable;
 
     public DotNetMsBuildProjectEvaluator(string dotNetExecutable = "dotnet")
@@ -76,7 +77,7 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         try
         {
             sdkResult = await RunDotNetAsync(
-                new[] { "--version" },
+                SdkVersionArguments,
                 workingDirectory,
                 cancellationToken);
         }
@@ -188,8 +189,8 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
             throw new Win32Exception($"Unable to start '{_dotNetExecutable}'.");
         }
 
-        var standardOutput = process.StandardOutput.ReadToEndAsync();
-        var standardError = process.StandardError.ReadToEndAsync();
+        var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
+        var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
 
         try
         {
@@ -207,11 +208,11 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
             await standardError);
     }
 
-    private static IReadOnlyDictionary<string, string> ParseProperties(
+    private static Dictionary<string, string> ParseProperties(
         string standardOutput,
-        IReadOnlyList<string> properties)
+        string[] properties)
     {
-        if (properties.Count == 1)
+        if (properties.Length == 1)
         {
             return new Dictionary<string, string>(StringComparer.Ordinal)
             {
