@@ -13,4 +13,5 @@ public static class InspectionDiagnosticCodes
     public const string InvalidInspectionRequest = "DRI1009";
     public const string RepositoryRootUnavailable = "DRI1010";
     public const string GlobalJsonReadFailed = "DRI1011";
+    public const string RepositoryMetadataUnavailable = "DRI1012";
 }

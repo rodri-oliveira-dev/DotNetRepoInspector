@@ -112,6 +112,16 @@ public static class InspectionDiagnostics
             source,
             context);
 
+    public static InspectionDiagnostic RepositoryMetadataUnavailable(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.RepositoryMetadataUnavailable,
+            InspectionDiagnosticSeverity.Warning,
+            "Repository metadata could not be fully collected.",
+            source,
+            context);
+
     private static InspectionDiagnostic Create(
         string code,
         string severity,
