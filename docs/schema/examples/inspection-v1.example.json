@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -47,5 +47,15 @@
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "code": "DRI1003",
+      "severity": "warning",
+      "message": "A project reference could not be resolved.",
+      "source": "src/App/App.csproj",
+      "context": {
+        "reference": "src/Missing/Missing.csproj"
+      }
+    }
+  ]
 }

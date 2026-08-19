@@ -5,4 +5,5 @@ public sealed record InspectionDiagnostic(
     string Severity,
     string Message,
     string? Source,
-    string? Details);
+    string? Details,
+    IReadOnlyDictionary<string, string>? Context = null);

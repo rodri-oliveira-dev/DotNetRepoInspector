@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DotNetRepoInspector inspection schema 1.0",
+  "title": "DotNetRepoInspector inspection schema 1.1",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.0"
+      "const": "1.1"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -89,11 +89,15 @@
       "type": "object",
       "required": ["code", "severity", "message"],
       "properties": {
-        "code": { "type": "string" },
-        "severity": { "type": "string" },
+        "code": { "type": "string", "pattern": "^DRI[0-9]{4}$" },
+        "severity": { "enum": ["info", "warning", "error"] },
         "message": { "type": "string" },
         "source": { "type": "string" },
-        "details": { "type": "string" }
+        "details": { "type": "string" },
+        "context": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
       }
     },
     "project": {
