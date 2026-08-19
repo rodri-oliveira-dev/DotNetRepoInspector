@@ -6,6 +6,16 @@ namespace DotNetRepoInspector.MSBuild.Tests;
 
 public sealed class DotNetMsBuildProjectEvaluatorTests
 {
+    private static readonly string[] EvaluatedProperties =
+    [
+        "TargetFramework",
+        "InspectorInheritedProperty",
+        "InspectorConditionalProperty"
+    ];
+
+    private static readonly string[] TargetFrameworkProperties = ["TargetFramework"];
+    private static readonly string[] InvalidPropertyNames = ["TargetFramework;Build"];
+
     [Fact]
     public async Task EvaluateAsync_EvaluatesProjectImportsAndConditions()
     {
@@ -18,14 +28,8 @@ public sealed class DotNetMsBuildProjectEvaluatorTests
 
         var evaluator = new DotNetMsBuildProjectEvaluator();
         var result = await evaluator.EvaluateAsync(
-            new MsBuildEvaluationRequest(
-                projectPath,
-                new[]
-                {
-                    "TargetFramework",
-                    "InspectorInheritedProperty",
-                    "InspectorConditionalProperty"
-                }));
+            new MsBuildEvaluationRequest(projectPath, EvaluatedProperties),
+            TestContext.Current.CancellationToken);
 
         Assert.True(result.Succeeded, result.Error?.Message ?? "MSBuild evaluation failed.");
         Assert.False(string.IsNullOrWhiteSpace(result.ResolvedSdkVersion));
@@ -41,7 +45,8 @@ public sealed class DotNetMsBuildProjectEvaluatorTests
         var result = await evaluator.EvaluateAsync(
             new MsBuildEvaluationRequest(
                 Path.Combine(Path.GetTempPath(), $"missing-{Guid.NewGuid():N}.csproj"),
-                new[] { "TargetFramework" }));
+                TargetFrameworkProperties),
+            TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(MsBuildEvaluationErrorCode.ProjectNotFound, result.Error?.Code);
@@ -59,9 +64,8 @@ public sealed class DotNetMsBuildProjectEvaluatorTests
 
         var evaluator = new DotNetMsBuildProjectEvaluator();
         var result = await evaluator.EvaluateAsync(
-            new MsBuildEvaluationRequest(
-                projectPath,
-                new[] { "TargetFramework;Build" }));
+            new MsBuildEvaluationRequest(projectPath, InvalidPropertyNames),
+            TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(MsBuildEvaluationErrorCode.InvalidRequest, result.Error?.Code);
@@ -79,7 +83,8 @@ public sealed class DotNetMsBuildProjectEvaluatorTests
 
         var evaluator = new DotNetMsBuildProjectEvaluator($"dotnet-missing-{Guid.NewGuid():N}");
         var result = await evaluator.EvaluateAsync(
-            new MsBuildEvaluationRequest(projectPath, new[] { "TargetFramework" }));
+            new MsBuildEvaluationRequest(projectPath, TargetFrameworkProperties),
+            TestContext.Current.CancellationToken);
 
         Assert.False(result.Succeeded);
         Assert.Equal(MsBuildEvaluationErrorCode.DotNetHostNotFound, result.Error?.Code);
