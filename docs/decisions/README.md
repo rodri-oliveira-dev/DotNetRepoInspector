@@ -10,4 +10,8 @@ An ADR should capture:
 - consequences/trade-offs;
 - status and superseding ADR when applicable.
 
-Likely early decisions include MSBuild evaluation strategy, classification precedence, JSON schema compatibility, GitHub Action packaging, and persistence/sink abstractions.
+## Records
+
+- [ADR 0001: Evaluate projects through `dotnet msbuild`](0001-msbuild-evaluation-strategy.md) — Accepted.
+
+Likely next decisions include classification precedence, JSON schema compatibility, GitHub Action packaging, and persistence/sink abstractions.

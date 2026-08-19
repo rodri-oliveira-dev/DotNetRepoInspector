@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup>
+    <InspectorInheritedProperty>from-directory-build-props</InspectorInheritedProperty>
+  </PropertyGroup>
+</Project>
