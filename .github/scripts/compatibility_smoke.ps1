@@ -108,7 +108,7 @@ Assert-Condition ($missingSdkDiagnostic.severity -eq "error") "Missing SDK diagn
 Write-Host "PASS: missing SDK -> DRI1002/error"
 
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ("DotNetRepoInspector-Compatibility-" + [Guid]::NewGuid().ToString("N"))
-Directory.CreateDirectory($tempRoot) | Out-Null
+[IO.Directory]::CreateDirectory($tempRoot) | Out-Null
 
 try {
     $projectPath = Join-Path $tempRoot "CrLfProject.csproj"
