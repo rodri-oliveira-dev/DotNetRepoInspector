@@ -19,6 +19,7 @@ Inspection diagnostics are part of the normalized result and are intended for bo
 | `DRI1009` | `error` | The inspection request is invalid. |
 | `DRI1010` | `error` | The repository root is unavailable. |
 | `DRI1011` | `error` | The applicable `global.json` could not be read. |
+| `DRI1012` | `warning` | Repository metadata could not be fully collected. |
 
 Codes are stable identifiers. Existing codes must not be repurposed for a different meaning. Automation should use `code` and `severity`, not message text.
 

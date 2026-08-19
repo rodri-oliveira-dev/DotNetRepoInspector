@@ -24,9 +24,12 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
         _excludedDirectoryNames = CreateExcludedDirectoryNameSet(options.ExcludedDirectoryNames);
     }
 
-    public IReadOnlyList<DiscoveredProject> Discover(ProjectDiscoveryRequest request)
+    public IReadOnlyList<DiscoveredProject> Discover(
+        ProjectDiscoveryRequest request,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (string.IsNullOrWhiteSpace(request.RepositoryRoot))
         {
@@ -49,10 +52,13 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
 
         while (pendingDirectories.Count > 0)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var currentDirectory = pendingDirectories.Pop();
 
             foreach (var filePath in Directory.EnumerateFiles(currentDirectory, "*", EnumerationOptions))
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (!_supportedProjectExtensions.Contains(Path.GetExtension(filePath)))
                 {
                     continue;
@@ -64,6 +70,8 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
 
             foreach (var directoryPath in Directory.EnumerateDirectories(currentDirectory, "*", EnumerationOptions))
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (ShouldExcludeDirectory(directoryPath, explicitlyExcludedDirectories))
                 {
                     continue;
