@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <InspectorConditionalProperty Condition="'$(InspectorInheritedProperty)' == 'from-directory-build-props'">condition-evaluated</InspectorConditionalProperty>
+  </PropertyGroup>
+</Project>
