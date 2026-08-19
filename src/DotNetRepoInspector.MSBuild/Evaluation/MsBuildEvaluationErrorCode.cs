@@ -4,6 +4,7 @@ public enum MsBuildEvaluationErrorCode
 {
     InvalidRequest,
     ProjectNotFound,
+    ProjectFileReadFailed,
     DotNetHostNotFound,
     SdkResolutionFailed,
     MsBuildEvaluationFailed,

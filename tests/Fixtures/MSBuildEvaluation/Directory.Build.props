@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
     <InspectorInheritedProperty>from-directory-build-props</InspectorInheritedProperty>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
 </Project>
