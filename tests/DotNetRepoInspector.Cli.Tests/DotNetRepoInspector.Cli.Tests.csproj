@@ -21,5 +21,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj" />
+    <ProjectReference Include="../../src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
+    <ProjectReference Include="../../src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../Fixtures/**/*"
+          Exclude="../Fixtures/**/bin/**;../Fixtures/**/obj/**"
+          Link="Fixtures/%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

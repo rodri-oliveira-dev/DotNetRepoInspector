@@ -1,5 +1,8 @@
 using System.Text.Json;
 
+using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Engine;
+
 using Xunit;
 
 namespace DotNetRepoInspector.Cli.Tests;
@@ -74,20 +77,30 @@ public sealed class CliLoggingTests
     }
 
     [Fact]
-    public void Program_DebugDoesNotEchoRawArguments()
+    public async Task CliApplication_DebugDoesNotEchoRawArguments()
     {
         using var output = new StringWriter();
         using var error = new StringWriter();
+        var application = new CliApplication(new NeverCalledInspector(), "1.0.0-test");
 
-        var exitCode = Program.Run(
+        var exitCode = await application.RunAsync(
             DebugArguments,
             output,
-            error);
+            error,
+            TestContext.Current.CancellationToken);
 
-        Assert.Equal(0, exitCode);
+        Assert.Equal(CliExitCodes.InvalidArguments, exitCode);
         Assert.Equal(string.Empty, output.ToString());
         Assert.Contains("[debug]", error.ToString(), StringComparison.Ordinal);
         Assert.Contains("argumentCount=\"2\"", error.ToString(), StringComparison.Ordinal);
         Assert.DoesNotContain("do-not-log-this", error.ToString(), StringComparison.Ordinal);
+    }
+
+    private sealed class NeverCalledInspector : IRepositoryInspector
+    {
+        public Task<InspectionReport> InspectAsync(
+            RepositoryInspectionRequest request,
+            CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The inspector should not be called for invalid arguments.");
     }
 }

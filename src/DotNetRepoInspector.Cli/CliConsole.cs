@@ -28,6 +28,12 @@ public sealed class CliConsole
         ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
         using var document = JsonDocument.Parse(json);
-        _standardOutput.WriteLine(json.TrimEnd());
+        WriteText(json);
+    }
+
+    public void WriteText(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        _standardOutput.WriteLine(text.TrimEnd());
     }
 }
