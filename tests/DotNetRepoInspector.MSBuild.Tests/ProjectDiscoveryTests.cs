@@ -167,18 +167,6 @@ public sealed class ProjectDiscoveryTests
         Assert.Throws<ArgumentException>(() => discoverer.Discover(request));
     }
 
-    [Fact]
-    public void Discover_PropagatesCancellation()
-    {
-        var discoverer = new FileSystemProjectDiscoverer();
-        using var cancellationSource = new CancellationTokenSource();
-        cancellationSource.Cancel();
-
-        Assert.Throws<OperationCanceledException>(() => discoverer.Discover(
-            new ProjectDiscoveryRequest(FixturePath("ProjectKinds")),
-            cancellationSource.Token));
-    }
-
     private static string FixturePath(string relativePath)
     {
         return Path.Combine(

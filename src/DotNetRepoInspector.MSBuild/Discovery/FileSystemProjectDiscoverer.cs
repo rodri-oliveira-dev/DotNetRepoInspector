@@ -25,9 +25,14 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
     }
 
     public IReadOnlyList<DiscoveredProject> Discover(ProjectDiscoveryRequest request) =>
-        Discover(request, CancellationToken.None);
+        DiscoverCore(request, CancellationToken.None);
 
-    public IReadOnlyList<DiscoveredProject> Discover(
+    IReadOnlyList<DiscoveredProject> IProjectDiscoverer.Discover(
+        ProjectDiscoveryRequest request,
+        CancellationToken cancellationToken) =>
+        DiscoverCore(request, cancellationToken);
+
+    private IReadOnlyList<DiscoveredProject> DiscoverCore(
         ProjectDiscoveryRequest request,
         CancellationToken cancellationToken)
     {
