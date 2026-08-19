@@ -12,6 +12,7 @@ from pathlib import Path
 PRODUCT_ASSEMBLIES = (
     "DotNetRepoInspector.Cli",
     "DotNetRepoInspector.Core",
+    "DotNetRepoInspector.Git",
     "DotNetRepoInspector.MSBuild",
 )
 
