@@ -8,6 +8,8 @@ namespace DotNetRepoInspector.Core.Tests;
 
 public sealed class DiagnosticContractTests
 {
+    private static readonly string[] ExpectedContextKeys = ["alpha", "zeta"];
+
     [Fact]
     public void PrincipalDiagnostics_HaveStableCodesAndSeverities()
     {
@@ -47,7 +49,7 @@ public sealed class DiagnosticContractTests
         Assert.Equal("warning", serializedDiagnostic.GetProperty("severity").GetString());
         Assert.Equal("src/App/App.csproj", serializedDiagnostic.GetProperty("source").GetString());
         Assert.Equal(
-            new[] { "alpha", "zeta" },
+            ExpectedContextKeys,
             serializedDiagnostic
                 .GetProperty("context")
                 .EnumerateObject()
