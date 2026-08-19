@@ -1,5 +1,7 @@
 # Command-line interface
 
+**Languages:** English | [Português (Brasil)](../pt-BR/cli.md)
+
 The CLI is the delivery boundary for running DotNetRepoInspector locally or from automation. It delegates repository analysis to `DotNetRepoInspector.Engine` and serializes the resulting `InspectionReport` with the versioned Core JSON contract.
 
 > The CLI is implemented but is not yet packaged as a .NET Tool. Tool packaging and the final public `repo-inspect` command are tracked separately. During development, run the CLI project directly.

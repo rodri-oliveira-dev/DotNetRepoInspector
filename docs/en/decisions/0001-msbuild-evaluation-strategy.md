@@ -1,5 +1,7 @@
 # ADR 0001: Evaluate projects through `dotnet msbuild`
 
+**Languages:** English | [Português (Brasil)](../../pt-BR/decisions/0001-msbuild-evaluation-strategy.md)
+
 - **Status:** Accepted
 - **Date:** 2026-08-19
 - **Decision owners:** DotNetRepoInspector maintainers

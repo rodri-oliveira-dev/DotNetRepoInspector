@@ -1,5 +1,7 @@
 # Project-reference graph
 
+**Languages:** English | [Português (Brasil)](../pt-BR/project-reference-graph.md)
+
 DotNetRepoInspector builds project-reference edges from the **evaluated** MSBuild `ProjectReference` item collection rather than parsing raw project XML. This means MSBuild conditions, imports, and item transformations are respected before a dependency becomes part of the graph.
 
 ## Path semantics

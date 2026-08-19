@@ -1,5 +1,7 @@
 # Inspection engine
 
+**Languages:** English | [Português (Brasil)](../pt-BR/inspection-engine.md)
+
 `DotNetRepoInspector.Engine` is the reusable application layer that performs a complete repository inspection in one operation. It is intentionally independent of the CLI, GitHub Actions, persistence, and policy/reporting integrations.
 
 ## API
