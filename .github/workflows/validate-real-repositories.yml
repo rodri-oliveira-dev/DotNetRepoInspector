@@ -1,0 +1,73 @@
+name: Validate real repositories
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/real-repositories/**"
+      - ".github/scripts/validate_real_repositories.ps1"
+      - ".github/workflows/validate-real-repositories.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "real-repositories-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  real-repositories:
+    name: Validate pinned real repositories
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup validation SDKs
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: |
+            8.0.424
+            9.0.317
+            10.0.400
+
+      - name: Show .NET information
+        run: dotnet --info
+
+      - name: Restore Inspector CLI
+        run: dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+
+      - name: Build Inspector CLI
+        run: >-
+          dotnet build ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+          --configuration Release
+          --no-restore
+          --warnaserror
+          -p:RunAnalyzers=true
+
+      - name: Validate pinned real repositories
+        shell: pwsh
+        run: >-
+          ./.github/scripts/validate_real_repositories.ps1
+          -ManifestPath ./.github/real-repositories/manifest.json
+          -CliProject ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+          -ArtifactsRoot ./artifacts/real-repositories
+
+      - name: Upload validation reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: real-repository-validation
+          path: artifacts/real-repositories
+          if-no-files-found: warn
+          retention-days: 14

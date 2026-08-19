@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "masstransit-sample-outbox",
+      "repository": "https://github.com/MassTransit/Sample-Outbox.git",
+      "commit": "1ab8e66ebf96e5733e68c2f4d2201276f38ed9c5",
+      "sourceAssertions": {
+        "requiredFiles": [
+          "src/Sample.Api/Sample.Api.csproj",
+          "src/Sample.Components/Sample.Components.csproj",
+          "src/Sample.Worker/Sample.Worker.csproj"
+        ]
+      },
+      "cases": [
+        {
+          "id": "web-worker-library",
+          "inspectionRoot": ".",
+          "expectedExitCode": 0,
+          "minimumProjectCount": 3,
+          "requiredProjects": [
+            {
+              "path": "src/Sample.Api/Sample.Api.csproj",
+              "classification": "web",
+              "sdkNames": [
+                "Microsoft.NET.Sdk.Web"
+              ],
+              "targetFrameworks": [
+                "net8.0"
+              ],
+              "references": [
+                "src/Sample.Components/Sample.Components.csproj"
+              ]
+            },
+            {
+              "path": "src/Sample.Components/Sample.Components.csproj",
+              "classification": "library",
+              "sdkNames": [
+                "Microsoft.NET.Sdk"
+              ],
+              "targetFrameworks": [
+                "net8.0"
+              ]
+            },
+            {
+              "path": "src/Sample.Worker/Sample.Worker.csproj",
+              "classification": "worker",
+              "sdkNames": [
+                "Microsoft.NET.Sdk.Worker"
+              ],
+              "targetFrameworks": [
+                "net8.0"
+              ],
+              "references": [
+                "src/Sample.Components/Sample.Components.csproj"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ardalis-clean-architecture",
+      "repository": "https://github.com/ardalis/CleanArchitecture.git",
+      "commit": "fbdc0951879f5e8dca1bebc273d4b28cb2934469",
+      "sourceAssertions": {
+        "requiredFiles": [
+          "Directory.Build.props",
+          "global.json",
+          "tests/Clean.Architecture.AspireTests/Clean.Architecture.AspireTests.csproj"
+        ]
+      },
+      "cases": [
+        {
+          "id": "test-project-with-ancestor-build-configuration",
+          "inspectionRoot": "tests/Clean.Architecture.AspireTests",
+          "expectedExitCode": 0,
+          "minimumProjectCount": 1,
+          "expectedSdk": {
+            "configuredVersion": "10.0.100",
+            "resolvedVersionPrefix": "10.0."
+          },
+          "requiredProjects": [
+            {
+              "path": "Clean.Architecture.AspireTests.csproj",
+              "classification": "test",
+              "isTestProject": true,
+              "sdkNames": [
+                "Microsoft.NET.Sdk"
+              ],
+              "targetFrameworks": [
+                "net9.0"
+              ],
+              "references": [
+                "../../src/Clean.Architecture.AspireHost/Clean.Architecture.AspireHost.csproj"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "polly",
+      "repository": "https://github.com/App-vNext/Polly.git",
+      "commit": "47e3b412e8c3b7e6db1629acd98f3e3b6b529d6c",
+      "sourceAssertions": {
+        "requiredFiles": [
+          "Directory.Build.props",
+          "global.json",
+          "src/Polly.Core/Polly.Core.csproj"
+        ]
+      },
+      "cases": [
+        {
+          "id": "multi-target-library",
+          "inspectionRoot": "src/Polly.Core",
+          "expectedExitCode": 0,
+          "minimumProjectCount": 1,
+          "expectedSdk": {
+            "configuredVersion": "10.0.400",
+            "resolvedVersion": "10.0.400"
+          },
+          "requiredProjects": [
+            {
+              "path": "Polly.Core.csproj",
+              "classification": "library",
+              "sdkNames": [
+                "Microsoft.NET.Sdk"
+              ],
+              "targetFrameworks": [
+                "net462",
+                "net472",
+                "net6.0",
+                "net8.0",
+                "netstandard2.0"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
