@@ -180,13 +180,13 @@ public sealed class InspectionContractTests
         var diagnostics = reverseCollections
             ? new[]
             {
-                new InspectionDiagnostic("Z002", "warning", "Second", null, null),
-                new InspectionDiagnostic("A001", "error", "First", "repository", null)
+                new InspectionDiagnostic("DRI9002", "warning", "Second", null, null),
+                new InspectionDiagnostic("DRI9001", "error", "First", "repository", null)
             }
             : new[]
             {
-                new InspectionDiagnostic("A001", "error", "First", "repository", null),
-                new InspectionDiagnostic("Z002", "warning", "Second", null, null)
+                new InspectionDiagnostic("DRI9001", "error", "First", "repository", null),
+                new InspectionDiagnostic("DRI9002", "warning", "Second", null, null)
             };
 
         return new InspectionReport(

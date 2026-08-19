@@ -71,11 +71,20 @@ jobs:
       - name: Restore
         run: dotnet restore ./DotNetRepoInspector.slnx
 
-      - name: Verify formatting
-        run: dotnet format whitespace ./DotNetRepoInspector.slnx --verify-no-changes --no-restore
+      - name: Verify formatting and analyzer fixes
+        run: >-
+          dotnet format ./DotNetRepoInspector.slnx
+          --verify-no-changes
+          --no-restore
+          --severity warn
 
-      - name: Build with static analysis
-        run: dotnet build ./DotNetRepoInspector.slnx --configuration Release --no-restore -p:RunAnalyzers=true
+      - name: Build with static analysis and zero warnings
+        run: >-
+          dotnet build ./DotNetRepoInspector.slnx
+          --configuration Release
+          --no-restore
+          --warnaserror
+          -p:RunAnalyzers=true
 
       - name: Test with coverage
         run: >-
