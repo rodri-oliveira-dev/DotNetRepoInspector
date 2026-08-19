@@ -115,6 +115,34 @@
       ]
     },
     {
+      "id": "compatibility-net8",
+      "path": "Compatibility/Net8",
+      "proves": [
+        "compatibility-net8"
+      ]
+    },
+    {
+      "id": "compatibility-net10",
+      "path": "Compatibility/Net10",
+      "proves": [
+        "compatibility-net10"
+      ]
+    },
+    {
+      "id": "compatibility-path-casing",
+      "path": "Compatibility/PathCasing",
+      "proves": [
+        "path-casing"
+      ]
+    },
+    {
+      "id": "compatibility-missing-sdk",
+      "path": "Compatibility/MissingSdk",
+      "proves": [
+        "sdk-resolution-missing"
+      ]
+    },
+    {
       "id": "invalid-project",
       "path": "InvalidProject",
       "proves": [

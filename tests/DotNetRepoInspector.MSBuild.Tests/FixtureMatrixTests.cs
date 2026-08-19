@@ -13,6 +13,8 @@ public sealed class FixtureMatrixTests
     private static readonly string[] _expectedSignals =
     [
         "conditional-property",
+        "compatibility-net10",
+        "compatibility-net8",
         "console-output",
         "directory-build-props",
         "empty-repository",
@@ -21,6 +23,7 @@ public sealed class FixtureMatrixTests
         "invalid-project",
         "library-output",
         "multi-targeting",
+        "path-casing",
         "project-reference-chain",
         "project-reference-circular",
         "project-reference-conditional",
@@ -28,6 +31,7 @@ public sealed class FixtureMatrixTests
         "project-reference-fan-out",
         "project-reference-simple",
         "project-reference-unresolved",
+        "sdk-resolution-missing",
         "test-project",
         "web-sdk",
         "worker-sdk"
