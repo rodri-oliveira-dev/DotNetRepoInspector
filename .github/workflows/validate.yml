@@ -105,18 +105,22 @@ jobs:
 
       - name: Test with coverage
         run: >-
-          dotnet test ./DotNetRepoInspector.slnx
+          dotnet test
+          --solution ./DotNetRepoInspector.slnx
           --configuration Release
           --no-build
           --no-restore
-          --logger trx
-          --collect:"XPlat Code Coverage"
           --results-directory ./artifacts/test-results
+          --
+          --report-trx
+          --coverlet
+          --coverlet-output-format cobertura
 
       - name: Consolidate and enforce coverage
         if: always()
         run: >-
           python ./.github/scripts/coverage_summary.py
+          --reports "artifacts/test-results/**/*cobertura*.xml"
           --baseline ./.github/coverage-baseline.json
 
       - name: Upload test and coverage artifacts
