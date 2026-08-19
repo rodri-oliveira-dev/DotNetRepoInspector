@@ -73,6 +73,34 @@
       ]
     },
     {
+      "id": "project-reference-fan-out",
+      "path": "ProjectReferences/FanOut",
+      "proves": [
+        "project-reference-fan-out"
+      ]
+    },
+    {
+      "id": "project-reference-conditional",
+      "path": "ProjectReferences/Conditional",
+      "proves": [
+        "project-reference-conditional"
+      ]
+    },
+    {
+      "id": "project-reference-unresolved",
+      "path": "ProjectReferences/Unresolved",
+      "proves": [
+        "project-reference-unresolved"
+      ]
+    },
+    {
+      "id": "project-reference-external",
+      "path": "ProjectReferences/External/Repository",
+      "proves": [
+        "project-reference-external"
+      ]
+    },
+    {
       "id": "sdk-with-global-json",
       "path": "Sdk/WithGlobalJson",
       "proves": [

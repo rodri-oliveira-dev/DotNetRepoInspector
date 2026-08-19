@@ -16,6 +16,8 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         "TargetFrameworks"
     ];
 
+    private static readonly string[] EvaluatedItemNames = ["ProjectReference"];
+
     private readonly IMsBuildProjectEvaluator _projectEvaluator;
 
     public MsBuildProjectFactsEvaluator()
@@ -34,7 +36,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         CancellationToken cancellationToken = default)
     {
         var evaluation = await _projectEvaluator.EvaluateAsync(
-            new MsBuildEvaluationRequest(projectPath, EvaluatedPropertyNames),
+            new MsBuildEvaluationRequest(projectPath, EvaluatedPropertyNames, EvaluatedItemNames),
             cancellationToken);
 
         if (!evaluation.Succeeded)
@@ -85,7 +87,10 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             NormalizeBoolean(properties, "IsTestProject"),
             NormalizeBoolean(properties, "IsPackable"),
             NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier"),
-            properties);
+            properties)
+        {
+            ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items)
+        };
 
         return MsBuildProjectFactsResult.Success(projectPath, facts);
     }
@@ -152,6 +157,40 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
                 sdkReference[..separatorIndex],
                 sdkReference[(separatorIndex + 1)..]));
         }
+    }
+
+    private static MsBuildProjectReference[] NormalizeProjectReferences(
+        string projectPath,
+        IReadOnlyDictionary<string, IReadOnlyList<MsBuildEvaluationItem>> evaluatedItems)
+    {
+        if (!evaluatedItems.TryGetValue("ProjectReference", out var projectReferences))
+        {
+            return [];
+        }
+
+        var projectDirectory = Path.GetDirectoryName(Path.GetFullPath(projectPath))!;
+
+        return projectReferences
+            .Select(item => new MsBuildProjectReference(
+                item.Identity,
+                ResolveProjectReferenceFullPath(projectDirectory, item)))
+            .Distinct()
+            .OrderBy(reference => reference.FullPath, StringComparer.Ordinal)
+            .ThenBy(reference => reference.Include, StringComparer.Ordinal)
+            .ToArray();
+    }
+
+    private static string ResolveProjectReferenceFullPath(
+        string projectDirectory,
+        MsBuildEvaluationItem item)
+    {
+        if (item.Metadata.TryGetValue("FullPath", out var fullPath) &&
+            !string.IsNullOrWhiteSpace(fullPath))
+        {
+            return Path.GetFullPath(fullPath);
+        }
+
+        return Path.GetFullPath(Path.Combine(projectDirectory, item.Identity));
     }
 
     private static string[] NormalizeList(

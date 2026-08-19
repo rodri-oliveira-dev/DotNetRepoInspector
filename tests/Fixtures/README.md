@@ -26,6 +26,10 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `ProjectReferences/Simple` | one project reference |
 | `ProjectReferences/Chain` | A → B → C |
 | `ProjectReferences/Circular` | A ↔ B |
+| `ProjectReferences/FanOut` | A → B and A → C |
+| `ProjectReferences/Conditional` | evaluated `ProjectReference` conditions |
+| `ProjectReferences/Unresolved` | missing project-reference target |
+| `ProjectReferences/External/Repository` | reference to an existing project outside the inspection root |
 | `Sdk/WithGlobalJson` | repository-local SDK configuration |
 | `Sdk/WithoutGlobalJson` | repository with no `global.json` in its fixture tree |
 | `InvalidProject` | malformed, non-evaluable project |
