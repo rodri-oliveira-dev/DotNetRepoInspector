@@ -26,8 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../Fixtures/MSBuildEvaluation/**/*"
-          Link="Fixtures/MSBuildEvaluation/%(RecursiveDir)%(Filename)%(Extension)"
+    <None Include="../Fixtures/**/*"
+          Exclude="../Fixtures/**/bin/**;../Fixtures/**/obj/**"
+          Link="Fixtures/%(RecursiveDir)%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
