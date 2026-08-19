@@ -25,6 +25,7 @@ public sealed class InspectionContractTests
 
         var repository = root.GetProperty("repository");
         Assert.Equal("sample", repository.GetProperty("name").GetString());
+        Assert.False(repository.GetProperty("isDirty").GetBoolean());
         Assert.False(repository.TryGetProperty("branch", out _));
 
         var projects = root.GetProperty("projects").EnumerateArray().ToArray();
@@ -66,6 +67,7 @@ public sealed class InspectionContractTests
 
     [Theory]
     [InlineData("1.0", true)]
+    [InlineData("1.2", true)]
     [InlineData("1.7", true)]
     [InlineData("2.0", false)]
     [InlineData("invalid", false)]
@@ -191,7 +193,7 @@ public sealed class InspectionContractTests
 
         return new InspectionReport(
             InspectionSchema.CurrentVersion,
-            new RepositoryMetadata("sample", "abc123", null, null),
+            new RepositoryMetadata("sample", "abc123", null, null, false),
             new DotNetSdkMetadata(
                 "..\\global.json",
                 new ConfiguredDotNetSdk("10.0.100", "latestFeature", false),

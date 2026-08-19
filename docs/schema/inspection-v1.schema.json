@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DotNetRepoInspector inspection schema 1.1",
+  "title": "DotNetRepoInspector inspection schema 1.2",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.1"
+      "const": "1.2"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -39,7 +39,8 @@
         "name": { "type": "string" },
         "commitSha": { "type": "string" },
         "branch": { "type": "string" },
-        "remoteUrl": { "type": "string" }
+        "remoteUrl": { "type": "string" },
+        "isDirty": { "type": "boolean" }
       }
     },
     "configuredSdk": {
