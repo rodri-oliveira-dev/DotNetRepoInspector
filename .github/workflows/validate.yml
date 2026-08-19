@@ -12,19 +12,56 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: "validate-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
 jobs:
-  build-test:
-    name: Restore, build and test
+  workflow-lint:
+    name: Validate GitHub Actions workflows
     runs-on: ubuntu-latest
+    timeout-minutes: 5
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          set -euo pipefail
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
+
+          curl --fail --silent --show-error --location "$url" --output "$archive"
+          echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check -
+          tar -xzf "$archive" actionlint
+          ./actionlint -version
+
+      - name: Validate workflow syntax and expressions
+        run: ./actionlint -shellcheck= -pyflakes= .github/workflows/*.yml
+
+  build-test-quality:
+    name: Build, test and quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
@@ -34,8 +71,40 @@ jobs:
       - name: Restore
         run: dotnet restore ./DotNetRepoInspector.slnx
 
-      - name: Build
-        run: dotnet build ./DotNetRepoInspector.slnx --configuration Release --no-restore
+      - name: Verify formatting
+        run: dotnet format whitespace ./DotNetRepoInspector.slnx --verify-no-changes --no-restore
 
-      - name: Test
-        run: dotnet test ./DotNetRepoInspector.slnx --configuration Release --no-build --no-restore
+      - name: Build with static analysis
+        run: dotnet build ./DotNetRepoInspector.slnx --configuration Release --no-restore -p:RunAnalyzers=true
+
+      - name: Test with coverage
+        run: >-
+          dotnet test ./DotNetRepoInspector.slnx
+          --configuration Release
+          --no-build
+          --no-restore
+          --collect:"XPlat Code Coverage"
+          --results-directory ./artifacts/test-results
+
+      - name: Summarize coverage
+        run: |
+          python - <<'PY'
+          import glob
+          import os
+          import xml.etree.ElementTree as ET
+
+          reports = sorted(glob.glob("artifacts/test-results/**/coverage.cobertura.xml", recursive=True))
+          if not reports:
+              raise SystemExit("No Cobertura coverage reports were generated.")
+
+          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
+          with open(summary_path, "a", encoding="utf-8") as summary:
+              summary.write("## Code coverage\n\n")
+              summary.write("| Report | Line coverage |\n")
+              summary.write("| --- | ---: |\n")
+
+              for report in reports:
+                  root = ET.parse(report).getroot()
+                  line_rate = float(root.attrib.get("line-rate", "0")) * 100
+                  summary.write(f"| `{report}` | {line_rate:.2f}% |\n")
+          PY

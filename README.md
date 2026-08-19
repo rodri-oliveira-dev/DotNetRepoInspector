@@ -1,5 +1,7 @@
 # DotNetRepoInspector
 
+[![CI](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml/badge.svg)](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml)
+
 **Inspect and classify .NET projects, extracting architecture metadata for CI/CD, automation, and technical governance.**
 
 > Status: early development. The repository is being bootstrapped and the public contracts described below are still subject to change.
