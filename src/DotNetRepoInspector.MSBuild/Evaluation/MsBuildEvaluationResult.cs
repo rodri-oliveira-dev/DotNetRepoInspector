@@ -8,8 +8,10 @@ public sealed record MsBuildEvaluationResult(
 {
     public IReadOnlyDictionary<
         string,
-        IReadOnlyList<MsBuildEvaluationItem>> Items { get; init; } =
-        new Dictionary<string, IReadOnlyList<MsBuildEvaluationItem>>(StringComparer.Ordinal);
+        IReadOnlyList<MsBuildEvaluationItem>> Items
+    {
+        get; init;
+    } = new Dictionary<string, IReadOnlyList<MsBuildEvaluationItem>>(StringComparer.Ordinal);
 
     public static MsBuildEvaluationResult Success(
         string resolvedSdkVersion,
