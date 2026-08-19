@@ -92,12 +92,51 @@ public static class InspectionJsonSerializer
     private static InspectionDiagnostic[] NormalizeDiagnostics(
         IReadOnlyList<InspectionDiagnostic> diagnostics) =>
         diagnostics
+            .Select(NormalizeDiagnostic)
             .OrderBy(diagnostic => diagnostic.Severity, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Code, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Source ?? string.Empty, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Message, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Details ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(diagnostic => DiagnosticContextSortKey(diagnostic.Context), StringComparer.Ordinal)
             .ToArray();
+
+    private static InspectionDiagnostic NormalizeDiagnostic(InspectionDiagnostic diagnostic)
+    {
+        ValidateDiagnosticShape(diagnostic);
+
+        IReadOnlyDictionary<string, string>? normalizedContext = null;
+        if (diagnostic.Context is not null)
+        {
+            var context = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (var pair in diagnostic.Context)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null)
+                {
+                    throw new JsonException(
+                        "A diagnostic context contains an invalid key or value.");
+                }
+
+                context[pair.Key] = pair.Value;
+            }
+
+            normalizedContext = context;
+        }
+
+        return diagnostic with
+        {
+            Source = NormalizeOptionalPath(diagnostic.Source),
+            Context = normalizedContext
+        };
+    }
+
+    private static string DiagnosticContextSortKey(
+        IReadOnlyDictionary<string, string>? context) =>
+        context is null
+            ? string.Empty
+            : string.Join(
+                "\u001f",
+                context.Select(pair => $"{pair.Key}\u001e{pair.Value}"));
 
     private static string NormalizePath(string path) =>
         path.Replace('\\', '/');
@@ -140,6 +179,17 @@ public static class InspectionJsonSerializer
         {
             throw new JsonException(
                 "A project entry is missing one or more required properties.");
+        }
+    }
+
+    private static void ValidateDiagnosticShape(InspectionDiagnostic diagnostic)
+    {
+        if (string.IsNullOrWhiteSpace(diagnostic.Code) ||
+            !InspectionDiagnosticSeverity.IsDefined(diagnostic.Severity) ||
+            string.IsNullOrWhiteSpace(diagnostic.Message))
+        {
+            throw new JsonException(
+                "A diagnostic entry has an invalid code, severity, or message.");
         }
     }
 }
