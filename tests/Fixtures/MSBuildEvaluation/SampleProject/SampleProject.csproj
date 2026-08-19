@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsTestProject Condition="'$(InspectorInheritedProperty)' == 'from-directory-build-props'">true</IsTestProject>
+    <RuntimeIdentifiers>linux-x64;win-x64;linux-x64</RuntimeIdentifiers>
     <InspectorConditionalProperty Condition="'$(InspectorInheritedProperty)' == 'from-directory-build-props'">condition-evaluated</InspectorConditionalProperty>
   </PropertyGroup>
 </Project>
