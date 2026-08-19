@@ -186,8 +186,8 @@ public sealed class CliApplication
             InspectionDiagnosticSeverity.Error,
             StringComparison.Ordinal);
 
-    private static IReadOnlyDictionary<string, string> ExceptionContext(Exception exception) =>
-        new Dictionary<string, string>(StringComparer.Ordinal)
+    private static Dictionary<string, string> ExceptionContext(Exception exception) =>
+        new(StringComparer.Ordinal)
         {
             ["exceptionType"] = exception.GetType().Name
         };
