@@ -166,6 +166,7 @@ The inspection engine should be validated primarily with synthetic fixture repos
 
 Tests should verify **evaluated behavior**, not assumptions based only on filenames or raw XML layout.
 
+
 ## Persistence and evidence
 
 Persistence is intentionally not required by the inspector. A future sink abstraction can allow inspection snapshots to be sent to a database, file, object storage, or HTTP endpoint.
