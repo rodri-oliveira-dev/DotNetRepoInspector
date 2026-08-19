@@ -24,9 +24,12 @@ public sealed class FileSystemProjectDiscoverer : IProjectDiscoverer
         _excludedDirectoryNames = CreateExcludedDirectoryNameSet(options.ExcludedDirectoryNames);
     }
 
+    public IReadOnlyList<DiscoveredProject> Discover(ProjectDiscoveryRequest request) =>
+        Discover(request, CancellationToken.None);
+
     public IReadOnlyList<DiscoveredProject> Discover(
         ProjectDiscoveryRequest request,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
