@@ -23,13 +23,15 @@ public sealed class MsBuildProjectFactsEvaluatorTests
         Assert.NotNull(result.Facts);
         Assert.False(string.IsNullOrWhiteSpace(result.Facts.ResolvedSdkVersion));
         Assert.Equal(
-            [new ProjectSdkReference("Microsoft.NET.Sdk")],
+            new[] { new ProjectSdkReference("Microsoft.NET.Sdk") },
             result.Facts.DeclaredProjectSdks);
-        Assert.Equal(["net10.0"], result.Facts.TargetFrameworks);
+        Assert.Equal(new[] { "net10.0" }, result.Facts.TargetFrameworks);
         Assert.Equal("Exe", result.Facts.OutputType);
-        Assert.True(result.Facts.IsTestProject);
-        Assert.False(result.Facts.IsPackable);
-        Assert.Equal(["linux-x64", "win-x64"], result.Facts.RuntimeIdentifiers);
+        Assert.Equal(true, result.Facts.IsTestProject);
+        Assert.Equal(false, result.Facts.IsPackable);
+        Assert.Equal(
+            new[] { "linux-x64", "win-x64" },
+            result.Facts.RuntimeIdentifiers);
     }
 
     [Fact]
@@ -47,7 +49,9 @@ public sealed class MsBuildProjectFactsEvaluatorTests
 
         Assert.True(result.Succeeded, result.Error?.Message ?? "Project facts evaluation failed.");
         Assert.NotNull(result.Facts);
-        Assert.Equal(["net8.0", "net10.0"], result.Facts.TargetFrameworks);
+        Assert.Equal(
+            new[] { "net8.0", "net10.0" },
+            result.Facts.TargetFrameworks);
     }
 
     [Fact]
@@ -106,16 +110,17 @@ public sealed class MsBuildProjectFactsEvaluatorTests
             Assert.True(result.Succeeded, result.Error?.Message ?? "Project facts evaluation failed.");
             Assert.NotNull(result.Facts);
             Assert.Equal(
-                [
+                new[]
+                {
                     new ProjectSdkReference("Microsoft.NET.Sdk"),
                     new ProjectSdkReference("Example.Project.Sdk", "1.2.3")
-                ],
+                },
                 result.Facts.DeclaredProjectSdks);
-            Assert.Equal(["net10.0"], result.Facts.TargetFrameworks);
+            Assert.Equal(new[] { "net10.0" }, result.Facts.TargetFrameworks);
             Assert.Null(result.Facts.OutputType);
             Assert.Null(result.Facts.IsTestProject);
-            Assert.True(result.Facts.IsPackable);
-            Assert.Equal(["linux-x64"], result.Facts.RuntimeIdentifiers);
+            Assert.Equal(true, result.Facts.IsPackable);
+            Assert.Equal(new[] { "linux-x64" }, result.Facts.RuntimeIdentifiers);
             Assert.Equal(string.Empty, result.Facts.Properties["IsTestProject"]);
             Assert.Equal("true", result.Facts.Properties["IsPackable"]);
         }
