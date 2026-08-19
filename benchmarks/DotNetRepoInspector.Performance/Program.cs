@@ -122,21 +122,23 @@ internal static class Program
         var builder = new StringBuilder();
         builder.AppendLine("## DotNetRepoInspector performance");
         builder.AppendLine();
-        builder.AppendLine($"Scenario: `{metrics.Scenario}` on `{metrics.OperatingSystem}` with `{metrics.Framework}` and SDK `{metrics.ResolvedSdkVersion ?? "unknown"}`.");
+        builder.AppendLine(string.Create(
+            CultureInfo.InvariantCulture,
+            $"Scenario: `{metrics.Scenario}` on `{metrics.OperatingSystem}` with `{metrics.Framework}` and SDK `{metrics.ResolvedSdkVersion ?? "unknown"}`."));
         builder.AppendLine();
         builder.AppendLine("| Metric | Value |");
         builder.AppendLine("| --- | ---: |");
-        builder.AppendLine($"| Projects discovered | {metrics.DiscoveredProjectCount} |");
-        builder.AppendLine($"| Project evaluations | {metrics.EvaluatedProjectCount} |");
-        builder.AppendLine($"| Discovery | {FormatMilliseconds(metrics.DiscoveryMilliseconds)} |");
-        builder.AppendLine($"| MSBuild evaluation | {FormatMilliseconds(metrics.EvaluationMilliseconds)} |");
-        builder.AppendLine($"| Serialization | {FormatMilliseconds(metrics.SerializationMilliseconds)} |");
-        builder.AppendLine($"| Other inspection overhead | {FormatMilliseconds(metrics.OtherInspectionMilliseconds)} |");
-        builder.AppendLine($"| Inspection | {FormatMilliseconds(metrics.InspectionMilliseconds)} |");
-        builder.AppendLine($"| End to end | {FormatMilliseconds(metrics.EndToEndMilliseconds)} |");
-        builder.AppendLine($"| Managed allocations | {FormatBytes(metrics.ManagedAllocatedBytes)} |");
-        builder.AppendLine($"| Peak working set | {FormatBytes(metrics.PeakWorkingSetBytes)} |");
-        builder.AppendLine($"| JSON size | {FormatBytes(metrics.JsonBytes)} |");
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Projects discovered | {metrics.DiscoveredProjectCount} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Project evaluations | {metrics.EvaluatedProjectCount} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Discovery | {FormatMilliseconds(metrics.DiscoveryMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| MSBuild evaluation | {FormatMilliseconds(metrics.EvaluationMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Serialization | {FormatMilliseconds(metrics.SerializationMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Other inspection overhead | {FormatMilliseconds(metrics.OtherInspectionMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Inspection | {FormatMilliseconds(metrics.InspectionMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| End to end | {FormatMilliseconds(metrics.EndToEndMilliseconds)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Managed allocations | {FormatBytes(metrics.ManagedAllocatedBytes)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| Peak working set | {FormatBytes(metrics.PeakWorkingSetBytes)} |"));
+        builder.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| JSON size | {FormatBytes(metrics.JsonBytes)} |"));
         builder.AppendLine();
         builder.AppendLine(baselinePath is null
             ? "No regression baseline was supplied; this run records measurements only."
@@ -220,7 +222,7 @@ internal static class Program
     }
 
     private static void AddLimitFailure(
-        ICollection<string> failures,
+        List<string> failures,
         string metricName,
         double actual,
         double maximum,
