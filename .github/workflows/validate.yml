@@ -113,9 +113,11 @@ jobs:
           --collect:"XPlat Code Coverage"
           --results-directory ./artifacts/test-results
 
-      - name: Consolidate coverage
+      - name: Consolidate and enforce coverage
         if: always()
-        run: python ./.github/scripts/coverage_summary.py
+        run: >-
+          python ./.github/scripts/coverage_summary.py
+          --baseline ./.github/coverage-baseline.json
 
       - name: Upload test and coverage artifacts
         if: always()
