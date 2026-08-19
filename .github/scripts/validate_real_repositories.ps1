@@ -313,7 +313,7 @@ try {
                 Write-Host "PASS: $scenarioName -> $($projects.Count) project(s), commit $($repository.commit.Substring(0, 12))"
             }
             catch {
-                $message = "$scenarioName: $($_.Exception.Message)"
+                $message = "${scenarioName}: $($_.Exception.Message)"
                 $failures.Add($message)
                 $summaryRows.Add("| $scenarioName | $repositoryId @ $($repository.commit.Substring(0, 12)) | - | FAIL |")
                 Write-Host "FAIL: $message"
