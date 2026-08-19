@@ -76,7 +76,7 @@ public static class CliOptionsParser
                 continue;
             }
 
-            if (argument.StartsWith("-", StringComparison.Ordinal))
+            if (argument.StartsWith('-'))
             {
                 return CliParseResult.Failure("An unknown command-line option was provided.");
             }
