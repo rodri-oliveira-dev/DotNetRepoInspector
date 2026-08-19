@@ -109,28 +109,21 @@ jobs:
           --configuration Release
           --no-build
           --no-restore
+          --logger trx
           --collect:"XPlat Code Coverage"
           --results-directory ./artifacts/test-results
 
-      - name: Summarize coverage
-        run: |
-          python - <<'PY'
-          import glob
-          import os
-          import xml.etree.ElementTree as ET
+      - name: Consolidate coverage
+        if: always()
+        run: python ./.github/scripts/coverage_summary.py
 
-          reports = sorted(glob.glob("artifacts/test-results/**/coverage.cobertura.xml", recursive=True))
-          if not reports:
-              raise SystemExit("No Cobertura coverage reports were generated.")
-
-          summary_path = os.environ["GITHUB_STEP_SUMMARY"]
-          with open(summary_path, "a", encoding="utf-8") as summary:
-              summary.write("## Code coverage\n\n")
-              summary.write("| Report | Line coverage |\n")
-              summary.write("| --- | ---: |\n")
-
-              for report in reports:
-                  root = ET.parse(report).getroot()
-                  line_rate = float(root.attrib.get("line-rate", "0")) * 100
-                  summary.write(f"| `{report}` | {line_rate:.2f}% |\n")
-          PY
+      - name: Upload test and coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-results-and-coverage
+          path: |
+            artifacts/test-results
+            artifacts/coverage
+          if-no-files-found: warn
+          retention-days: 14
