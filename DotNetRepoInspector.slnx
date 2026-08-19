@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
+    <Project Path="src/DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
+    <Project Path="src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DotNetRepoInspector.Core.Tests/DotNetRepoInspector.Core.Tests.csproj" />
+    <Project Path="tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj" />
+    <Project Path="tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj" />
+  </Folder>
+</Solution>
