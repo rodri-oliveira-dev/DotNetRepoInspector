@@ -8,11 +8,13 @@ namespace DotNetRepoInspector.Cli.Tests;
 
 public sealed class CliLoggingTests
 {
+    private static readonly string[] VerboseAndDebugArguments = ["--verbose", "--debug"];
+    private static readonly string[] DebugArguments = ["--debug", "--token=do-not-log-this"];
+
     [Fact]
     public void LoggingOptions_DebugOverridesVerbose()
     {
-        var options = CliLoggingOptions.Parse(
-            new[] { "--verbose", "--debug" });
+        var options = CliLoggingOptions.Parse(VerboseAndDebugArguments);
 
         Assert.Equal(CliVerbosity.Debug, options.Verbosity);
     }
@@ -20,7 +22,7 @@ public sealed class CliLoggingTests
     [Fact]
     public void Logger_FiltersVerboseAndDebugByConfiguredVerbosity()
     {
-        var error = new StringWriter();
+        using var error = new StringWriter();
         var logger = new CliLogger(error, CliVerbosity.Verbose);
 
         logger.Information("inspection.start", "Inspection started.");
@@ -36,7 +38,7 @@ public sealed class CliLoggingTests
     [Fact]
     public void Logger_RedactsSensitiveStructuredContext()
     {
-        var error = new StringWriter();
+        using var error = new StringWriter();
         var logger = new CliLogger(error, CliVerbosity.Debug);
 
         logger.Debug(
@@ -60,8 +62,8 @@ public sealed class CliLoggingTests
     [Fact]
     public void CliConsole_KeepsJsonOnStdoutWhenVerboseLogsAreEmitted()
     {
-        var output = new StringWriter();
-        var error = new StringWriter();
+        using var output = new StringWriter();
+        using var error = new StringWriter();
         var console = new CliConsole(output, error, CliVerbosity.Verbose);
 
         console.Logger.Verbose("inspection.discovery", "Discovery completed.");
@@ -76,11 +78,11 @@ public sealed class CliLoggingTests
     [Fact]
     public void Program_DebugDoesNotEchoRawArguments()
     {
-        var output = new StringWriter();
-        var error = new StringWriter();
+        using var output = new StringWriter();
+        using var error = new StringWriter();
 
         var exitCode = Program.Run(
-            new[] { "--debug", "--token=do-not-log-this" },
+            DebugArguments,
             output,
             error);
 
