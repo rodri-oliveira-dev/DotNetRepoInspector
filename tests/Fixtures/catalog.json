@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "project-web",
+      "path": "ProjectKinds/Web",
+      "proves": [
+        "web-sdk"
+      ]
+    },
+    {
+      "id": "project-worker",
+      "path": "ProjectKinds/Worker",
+      "proves": [
+        "worker-sdk"
+      ]
+    },
+    {
+      "id": "project-console",
+      "path": "ProjectKinds/Console",
+      "proves": [
+        "console-output"
+      ]
+    },
+    {
+      "id": "project-library",
+      "path": "ProjectKinds/Library",
+      "proves": [
+        "library-output"
+      ]
+    },
+    {
+      "id": "project-test",
+      "path": "ProjectKinds/Test",
+      "proves": [
+        "test-project"
+      ]
+    },
+    {
+      "id": "project-multi-targeting",
+      "path": "ProjectKinds/MultiTargeting",
+      "proves": [
+        "multi-targeting"
+      ]
+    },
+    {
+      "id": "msbuild-evaluation",
+      "path": "MSBuildEvaluation",
+      "proves": [
+        "directory-build-props",
+        "conditional-property"
+      ]
+    },
+    {
+      "id": "project-reference-simple",
+      "path": "ProjectReferences/Simple",
+      "proves": [
+        "project-reference-simple"
+      ]
+    },
+    {
+      "id": "project-reference-chain",
+      "path": "ProjectReferences/Chain",
+      "proves": [
+        "project-reference-chain"
+      ]
+    },
+    {
+      "id": "project-reference-circular",
+      "path": "ProjectReferences/Circular",
+      "proves": [
+        "project-reference-circular"
+      ]
+    },
+    {
+      "id": "sdk-with-global-json",
+      "path": "Sdk/WithGlobalJson",
+      "proves": [
+        "global-json-present"
+      ]
+    },
+    {
+      "id": "sdk-without-global-json",
+      "path": "Sdk/WithoutGlobalJson",
+      "proves": [
+        "global-json-absent"
+      ]
+    },
+    {
+      "id": "invalid-project",
+      "path": "InvalidProject",
+      "proves": [
+        "invalid-project"
+      ]
+    },
+    {
+      "id": "empty-repository",
+      "path": "EmptyRepository",
+      "proves": [
+        "empty-repository"
+      ]
+    }
+  ]
+}
