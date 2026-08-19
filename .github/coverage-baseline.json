@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "baselineLineCoverage": 70.95,
+  "minimumLineCoverage": 70.0,
+  "maximumDropPercentagePoints": 0.95
+}
