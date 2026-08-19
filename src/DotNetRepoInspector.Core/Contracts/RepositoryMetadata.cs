@@ -4,4 +4,5 @@ public sealed record RepositoryMetadata(
     string? Name,
     string? CommitSha,
     string? Branch,
-    string? RemoteUrl);
+    string? RemoteUrl,
+    bool? IsDirty = null);

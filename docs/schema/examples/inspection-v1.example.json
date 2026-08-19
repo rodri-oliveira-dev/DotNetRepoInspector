@@ -1,10 +1,11 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
     "branch": "main",
-    "remoteUrl": "https://github.com/example/sample-service.git"
+    "remoteUrl": "https://github.com/example/sample-service.git",
+    "isDirty": false
   },
   "dotNetSdk": {
     "globalJsonPath": "global.json",
