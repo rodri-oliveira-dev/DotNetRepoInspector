@@ -12,9 +12,9 @@ public sealed class FixtureMatrixTests
 
     private static readonly string[] _expectedSignals =
     [
-        "conditional-property",
         "compatibility-net10",
         "compatibility-net8",
+        "conditional-property",
         "console-output",
         "directory-build-props",
         "empty-repository",
