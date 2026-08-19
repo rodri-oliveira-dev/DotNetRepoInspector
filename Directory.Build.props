@@ -6,6 +6,8 @@
 
     <!-- Audit all transitive package dependencies during restore. -->
     <NuGetAuditMode>all</NuGetAuditMode>
+    <!-- Fail restore for high/critical vulnerabilities; keep low/moderate visible as warnings. -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1903;NU1904</WarningsAsErrors>
     <RestoreEnablePackagePruning>true</RestoreEnablePackagePruning>
 
     <!-- Prefer deterministic, reproducible CI output. -->

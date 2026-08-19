@@ -184,12 +184,32 @@ public static class InspectionJsonSerializer
 
     private static void ValidateDiagnosticShape(InspectionDiagnostic diagnostic)
     {
-        if (string.IsNullOrWhiteSpace(diagnostic.Code) ||
+        if (!IsValidDiagnosticCode(diagnostic.Code) ||
             !InspectionDiagnosticSeverity.IsDefined(diagnostic.Severity) ||
             string.IsNullOrWhiteSpace(diagnostic.Message))
         {
             throw new JsonException(
                 "A diagnostic entry has an invalid code, severity, or message.");
         }
+    }
+
+    private static bool IsValidDiagnosticCode(string? code)
+    {
+        if (code is null ||
+            code.Length != 7 ||
+            !code.StartsWith("DRI", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 3; index < code.Length; index++)
+        {
+            if (code[index] is < '0' or > '9')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

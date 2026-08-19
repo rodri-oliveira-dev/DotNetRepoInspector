@@ -90,7 +90,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         return MsBuildProjectFactsResult.Success(projectPath, facts);
     }
 
-    private static IReadOnlyList<ProjectSdkReference> ReadDeclaredProjectSdks(string projectPath)
+    private static ProjectSdkReference[] ReadDeclaredProjectSdks(string projectPath)
     {
         var settings = new XmlReaderSettings
         {
@@ -130,7 +130,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
 
     private static void AddSdkAttributeReferences(
         string? sdkAttribute,
-        ICollection<ProjectSdkReference> sdkReferences)
+        List<ProjectSdkReference> sdkReferences)
     {
         if (string.IsNullOrWhiteSpace(sdkAttribute))
         {
@@ -154,7 +154,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         }
     }
 
-    private static IReadOnlyList<string> NormalizeList(
+    private static string[] NormalizeList(
         IReadOnlyDictionary<string, string> properties,
         string pluralProperty,
         string singularProperty)
@@ -165,7 +165,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             .ToArray();
     }
 
-    private static IEnumerable<string> GetListValues(
+    private static string[] GetListValues(
         IReadOnlyDictionary<string, string> properties,
         string propertyName)
     {

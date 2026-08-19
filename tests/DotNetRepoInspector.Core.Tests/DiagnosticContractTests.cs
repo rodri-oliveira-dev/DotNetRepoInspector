@@ -71,6 +71,26 @@ public sealed class DiagnosticContractTests
         Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
     }
 
+    [Theory]
+    [InlineData("A001")]
+    [InlineData("DRI123")]
+    [InlineData("DRI12345")]
+    [InlineData("dri1234")]
+    [InlineData("DRI12A4")]
+    [InlineData("")]
+    public void Serialize_RejectsDiagnosticCodesOutsidePublishedFormat(string code)
+    {
+        var diagnostic = new InspectionDiagnostic(
+            code,
+            InspectionDiagnosticSeverity.Warning,
+            "Invalid diagnostic code.",
+            null,
+            null);
+        var report = CreateReport(diagnostic);
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
+    }
+
     [Fact]
     public void SchemaVersion_RepresentsAdditiveDiagnosticContextChange()
     {

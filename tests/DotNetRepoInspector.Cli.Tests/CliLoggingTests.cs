@@ -1,7 +1,5 @@
 using System.Text.Json;
 
-using DotNetRepoInspector.Cli;
-
 using Xunit;
 
 namespace DotNetRepoInspector.Cli.Tests;
