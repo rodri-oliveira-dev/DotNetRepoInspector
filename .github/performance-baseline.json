@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "scenario": "synthetic-100-projects",
+  "projectCount": 100,
+  "observed": {
+    "evaluationMilliseconds": 56995.2588,
+    "endToEndMilliseconds": 57249.3186,
+    "managedAllocatedBytes": 19048112,
+    "peakWorkingSetBytes": 82989056
+  },
+  "limits": {
+    "maxEvaluationMilliseconds": 85000,
+    "maxEndToEndMilliseconds": 90000,
+    "maxManagedAllocatedBytes": 33554432,
+    "maxPeakWorkingSetBytes": 134217728
+  }
+}
