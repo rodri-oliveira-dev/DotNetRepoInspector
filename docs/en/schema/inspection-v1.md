@@ -1,5 +1,7 @@
 # Inspection JSON contract — schema 1.x
 
+**Languages:** English | [Português (Brasil)](../../pt-BR/schema/inspection-v1.md)
+
 `DotNetRepoInspector.Core.Contracts` defines the stable inspection result independently of MSBuild internals, GitHub Actions, persistence, or any specific delivery mechanism.
 
 The current schema version is `1.2`.

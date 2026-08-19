@@ -1,5 +1,7 @@
 # Architecture Decision Records
 
+**Languages:** English | [Português (Brasil)](../../pt-BR/decisions/README.md)
+
 Record durable decisions here using sequential files such as `0001-msbuild-evaluation-strategy.md`.
 
 An ADR should capture:

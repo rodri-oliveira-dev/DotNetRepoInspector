@@ -1,5 +1,7 @@
 # Project classification
 
+**Languages:** English | [Português (Brasil)](../pt-BR/classification.md)
+
 DotNetRepoInspector classifies projects from evaluated structural facts instead of project names, directory names, or source-code inspection.
 
 The initial classifications are `web`, `worker`, `console`, `library`, `test`, and `unknown`.

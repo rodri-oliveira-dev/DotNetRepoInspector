@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../../docs/schema/examples/inspection-v1.example.json"
+    <None Include="../../docs/en/schema/examples/inspection-v1.example.json"
           Link="Examples/inspection-v1.example.json"
           CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

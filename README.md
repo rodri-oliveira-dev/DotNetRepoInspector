@@ -1,5 +1,7 @@
 # DotNetRepoInspector
 
+**Languages:** English | [Português (Brasil)](README.pt-BR.md)
+
 [![CI](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml/badge.svg)](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml)
 
 **Inspect and classify .NET projects, extracting architecture metadata for CI/CD, automation, and technical governance.**
@@ -105,6 +107,13 @@ dotnet repo-inspect .
 
 The Action integration is planned; this example documents the intended consumer experience rather than an already published release.
 
+## Documentation
+
+The documentation is organized by language and each language tree links only to files in the same language:
+
+- [English documentation](docs/en/README.md)
+- [Documentação em Português (Brasil)](docs/pt-BR/README.md)
+
 ## Architecture
 
 ```text
@@ -133,8 +142,14 @@ The Core owns normalized inspection models and classification rules. MSBuild-spe
 ├── .agents/skills/                    # Task-specific agent guidance
 ├── .vscode/                           # Portable VS Code recommendations/settings
 ├── docs/
-│   ├── architecture/                  # Architecture documentation
-│   └── decisions/                     # Architectural decision records
+│   ├── en/                            # English documentation
+│   │   ├── architecture/              # Architecture documentation
+│   │   ├── decisions/                 # Architectural decision records
+│   │   └── schema/                    # JSON contract documentation and examples
+│   └── pt-BR/                         # Portuguese (Brazil) documentation
+│       ├── architecture/
+│       ├── decisions/
+│       └── schema/
 ├── src/
 │   ├── DotNetRepoInspector.Core/      # Domain model, normalization, classification
 │   ├── DotNetRepoInspector.MSBuild/   # Project discovery and MSBuild evaluation
@@ -145,6 +160,8 @@ The Core owns normalized inspection models and classification rules. MSBuild-spe
 │   ├── DotNetRepoInspector.Cli.Tests/
 │   └── Fixtures/                      # Synthetic .NET repository/project fixtures
 ├── AGENTS.md
+├── README.md
+├── README.pt-BR.md
 ├── Directory.Build.props
 ├── Directory.Packages.props
 └── global.json
@@ -165,7 +182,6 @@ The inspection engine should be validated primarily with synthetic fixture repos
 - repositories with and without `global.json`.
 
 Tests should verify **evaluated behavior**, not assumptions based only on filenames or raw XML layout.
-
 
 ## Persistence and evidence
 

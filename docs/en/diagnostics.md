@@ -1,5 +1,7 @@
 # Diagnostics and operational logging
 
+**Languages:** English | [Português (Brasil)](../pt-BR/diagnostics.md)
+
 DotNetRepoInspector separates **inspection diagnostics** from **operational logs**.
 
 Inspection diagnostics are part of the normalized result and are intended for both people and automation. Operational logs explain how the tool executed and never change the normalized inspection schema.

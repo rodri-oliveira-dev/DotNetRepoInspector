@@ -4,7 +4,7 @@
 
 DotNetRepoInspector is an open-source .NET repository inspection tool. Its core responsibility is to discover .NET projects, evaluate effective MSBuild metadata, normalize that information, and classify projects for automation, CI/CD, and technical-governance use cases.
 
-Repository artifacts and public documentation should be written in English unless a task explicitly requests another language. User-facing conversation may follow the user's language.
+Repository artifacts and technical identifiers should be written in English unless a task explicitly requires otherwise. Public documentation is maintained in both English and Portuguese (Brazil) as described in the documentation rules below. User-facing conversation may follow the user's language.
 
 ## Sources of truth
 
@@ -12,14 +12,15 @@ Read only what is relevant to the task. Prefer, in this order when applicable:
 
 1. `README.md`
 2. `docs/README.md`
-3. `docs/architecture/`
-4. `docs/decisions/`
-5. `Directory.Build.props`
-6. `Directory.Packages.props`
-7. `.editorconfig`
-8. `global.json`
-9. the affected project and its closest tests
-10. synthetic repositories under `tests/Fixtures/` when inspection behavior is involved
+3. `docs/en/architecture/`
+4. `docs/en/decisions/`
+5. the corresponding `docs/pt-BR/` document when working on public documentation
+6. `Directory.Build.props`
+7. `Directory.Packages.props`
+8. `.editorconfig`
+9. `global.json`
+10. the affected project and its closest tests
+11. synthetic repositories under `tests/Fixtures/` when inspection behavior is involved
 
 Do not load the whole repository indiscriminately.
 
@@ -88,9 +89,21 @@ The repository uses Central Package Management.
 
 ## Documentation and ADRs
 
-Update the README only as the project entry point. Put detailed architecture documentation under `docs/architecture/`.
+Public documentation is bilingual and must remain synchronized between English and Portuguese (Brazil).
 
-Create an ADR under `docs/decisions/` when changing a durable architectural decision such as:
+- `README.md` is the English project entry point; `README.pt-BR.md` is its Portuguese counterpart.
+- English documentation lives under `docs/en/`; Portuguese documentation lives under `docs/pt-BR/`.
+- Whenever a public documentation file is **created, modified, renamed, moved, or deleted**, apply the equivalent change to both language versions in the same change set.
+- Language-specific documents should keep equivalent relative paths below `docs/en/` and `docs/pt-BR/` so the two trees remain structurally aligned.
+- When an equivalent document exists in the current language, links inside that document must point to files from the same language tree rather than crossing to the other locale.
+- `docs/README.md` is the language-selection entry point and may link to both language trees.
+- Preserve technical identifiers, type names, API names, commands, configuration keys, diagnostic codes, JSON property names, and other machine-readable values when translating prose.
+- Machine-readable artifacts mirrored in both trees, such as JSON schemas and canonical JSON examples, must remain semantically identical unless the contract itself changes.
+- If the English and Portuguese versions diverge, treat the English version as the semantic source of truth and update the Portuguese version in the same change.
+
+Update the root README files only as project entry points. Put detailed architecture documentation under `docs/en/architecture/` and `docs/pt-BR/architecture/`.
+
+Create matching ADRs under `docs/en/decisions/` and `docs/pt-BR/decisions/` when changing a durable architectural decision such as:
 
 - raw XML vs evaluated MSBuild;
 - process invocation vs in-process MSBuild APIs;
@@ -100,7 +113,7 @@ Create an ADR under `docs/decisions/` when changing a durable architectural deci
 - persistence/sink abstraction;
 - plugin/extensibility model.
 
-Do not rewrite historical ADRs to match later decisions. Supersede them explicitly.
+Do not rewrite historical ADRs to match later decisions. Supersede them explicitly in both language versions.
 
 ## Skills
 
