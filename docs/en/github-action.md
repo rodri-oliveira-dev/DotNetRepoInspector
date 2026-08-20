@@ -2,7 +2,7 @@
 
 **Languages:** English | [Português (Brasil)](../pt-BR/github-action.md)
 
-DotNetRepoInspector provides a reusable composite GitHub Action that runs the same .NET Tool and inspection engine used by the CLI. The Action is a delivery adapter only: project discovery, MSBuild evaluation, classification, configuration, diagnostics, JSON serialization, and exit semantics remain owned by the existing Inspector.
+DotNetRepoInspector provides a reusable composite GitHub Action that runs the same .NET Tool and inspection engine used by the CLI. The Action is a delivery adapter only: project discovery, MSBuild evaluation, classification, configuration, diagnostics, JSON serialization, optional persistence, and exit semantics remain owned by the existing Inspector components.
 
 > The Action implementation is present and validated in repository CI, but a public `v1` release is not published yet. `uses: rodri-oliveira-dev/DotNetRepoInspector@v1` becomes available after the release workflow publishes the matching `DotNetRepoInspector` package and creates the Action tags.
 
@@ -22,7 +22,7 @@ steps:
       path: .
 ```
 
-The Action itself does not require a GitHub token or write permission to inspect an already checked-out repository.
+The Action itself does not require a GitHub token or write permission to inspect an already checked-out repository. Without `sink-url`, no persistence endpoint is contacted.
 
 ## Inputs
 
@@ -35,6 +35,11 @@ The Action itself does not require a GitHub token or write permission to inspect
 | `no-config` | No | `false` | Set to `true` to ignore the default repository configuration file. Cannot be combined with `config`. |
 | `exclude` | No | empty | Newline-separated repository-relative directory or exact project paths to exclude. |
 | `classify` | No | empty | Newline-separated `<project-path>=<kind>` explicit classification overrides. |
+| `sink-url` | No | empty | Absolute HTTP/HTTPS endpoint. A non-empty value enables the built-in HTTP snapshot sink. |
+| `sink-token` | No | empty | Optional Bearer token for the HTTP sink. Supply it from a GitHub Actions secret. |
+| `sink-timeout-seconds` | No | `15` | Overall persistence timeout when `sink-url` is configured. Supported range is `1..300`. |
+| `sink-failure-mode` | No | `non-fatal` | Persistence failure policy: `non-fatal` or `fatal`. |
+| `sink-max-attempts` | No | `3` | Maximum HTTP attempts for transient failures. Supported range is `1..5`. |
 
 Supported classification kinds are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
@@ -59,6 +64,34 @@ The Action intentionally does not expose an `inspector-version` input. Each rele
 ```
 
 A classification override changes only the effective classification interpretation. MSBuild facts remain untouched. Schema `1.3` exposes `classification.source` and `classification.automaticKind` when an override is active so downstream automation can distinguish the configured result from the automatic result.
+
+## Optional HTTP snapshot persistence
+
+Set `sink-url` to enable the built-in HTTP/webhook sink. The Action invokes the same CLI persistence path and therefore uses the same `InspectionSnapshot`, idempotency key, retry classification, timeout, cancellation, and failure-mode semantics.
+
+```yaml
+- name: Inspect and persist architecture evidence
+  id: inspect
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    output: artifacts/inspection.json
+    sink-url: https://evidence.example/api/snapshots
+    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
+    sink-failure-mode: fatal
+```
+
+`sink-token` is mapped directly to `DOTNET_REPO_INSPECTOR_HTTP_TOKEN` for the tool process. It is not passed as a command-line argument. Do not embed credentials in `sink-url` or commit them into repository configuration.
+
+When the sink is enabled, the Action also supplies generic execution provenance to the snapshot factory:
+
+- execution ID: `github.run_id:github.run_attempt`;
+- provider: `github-actions`;
+- ref: `github.ref`.
+
+These values are generic snapshot metadata; the persistence contract does not depend on GitHub-specific model types.
+
+The HTTP sink retries only transport/timeouts and HTTP `408`, `429`, `500`, `502`, `503`, and `504`, with bounded attempts/backoff. Authentication failures and other non-transient client failures are not retried. See [`persistence.md`](persistence.md) for the complete delivery contract.
 
 ## Outputs
 
@@ -96,9 +129,12 @@ The Action preserves the CLI exit codes:
 | `2` | Invalid CLI/Action arguments reached the CLI boundary. |
 | `3` | Fatal inspection failure prevented a normal report. |
 | `4` | The report could not be written. |
-| `130` | Inspection was cancelled. |
+| `5` | Optional snapshot persistence failed while `sink-failure-mode` is `fatal`. |
+| `130` | Inspection or persistence was cancelled. |
 
 When the CLI returns a non-zero code, the Action publishes outputs that are still available and then fails with the same code. A workflow that intentionally wants to inspect those outputs after a failure can use `continue-on-error` and an `if: always()` follow-up step.
+
+A persistence exit code `5` does not mean the report was lost: inspection output is produced before the persistence attempt. With the default `non-fatal` mode, persistence failure is logged but does not replace the normal inspection exit code.
 
 ## Runtime and repository SDKs
 
@@ -114,11 +150,13 @@ It does not install the tool globally, modify the inspected repository's tool ma
 
 Repository CI has a narrowly scoped self-test hook that can replace only the package source with the locally packed `1.0.0` package. The hook is rejected outside `rodri-oliveira-dev/DotNetRepoInspector` and does not change the pinned version or the public Action inputs.
 
-## Permissions and trust boundary
+## Permissions, secrets, and trust boundary
 
 Inspection of an already checked-out repository needs no GitHub API access, token, secret, or write permission. Consumers remain responsible for permissions used by their own checkout and subsequent workflow steps.
 
-MSBuild evaluation is not a sandbox. The Inspector evaluates repository-controlled MSBuild configuration according to [ADR 0001](decisions/0001-msbuild-evaluation-strategy.md), so untrusted repositories must not be inspected in a privileged, secrets-bearing workflow without an explicit trust review.
+HTTP persistence is a separate, explicit network action. If `sink-token` is used, reference a GitHub Actions secret and scope that credential only to the external evidence endpoint. The Inspector does not copy it into the inspection JSON, snapshot payload, normal logs, or CLI arguments.
+
+MSBuild evaluation is not a sandbox. The Inspector evaluates repository-controlled MSBuild configuration according to [ADR 0001](decisions/0001-msbuild-evaluation-strategy.md), so untrusted repositories must not be inspected in a privileged, secrets-bearing workflow without an explicit trust review. This is especially important when a persistence token is available to the same job.
 
 ## Versioning
 

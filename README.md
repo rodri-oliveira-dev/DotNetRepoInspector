@@ -162,6 +162,34 @@ The direct executable name also works for a globally installed tool:
 dotnet-repo-inspect .
 ```
 
+### Optional HTTP snapshot persistence
+
+Snapshot persistence is opt-in. Without `--sink`, the Inspector does not contact a persistence endpoint.
+
+Send the canonical inspection snapshot to a consumer-owned HTTP/HTTPS endpoint:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+The HTTP sink sends a `POST` with the canonical `InspectionSnapshot` JSON and the snapshot key in the `Idempotency-Key` header. Retry is limited to transient transport/timeouts and HTTP `408`, `429`, `500`, `502`, `503`, and `504` responses.
+
+Bearer authentication is intentionally supplied only through the process environment, never through a CLI argument:
+
+```bash
+export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots \
+  --sink-failure-mode fatal
+```
+
+`--sink-failure-mode non-fatal` is the default. Use `fatal` when delivery of the evidence is required for the pipeline; a persistence failure then returns exit code `5` after the inspection report has already been produced.
+
+Never put sink tokens in `.dotnetrepoinspector.json`, the endpoint URL, committed scripts, or inspection JSON. See [the persistence documentation](docs/en/persistence.md) for timeout, cancellation, retry, idempotency, and secret-handling details.
+
 ### GitHub Actions
 
 The repository includes a reusable composite Action that executes the same .NET Tool and engine as the CLI:
@@ -180,9 +208,22 @@ The repository includes a reusable composite Action that executes the same .NET 
 
 Useful outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action preserves the CLI exit semantics and does not require a GitHub token or write permission for inspection of an existing checkout.
 
+Optional HTTP persistence can be enabled with Action inputs. Secrets stay out of the CLI argument list:
+
+```yaml
+- name: Inspect and persist evidence
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    output: artifacts/inspection.json
+    sink-url: https://evidence.example/api/snapshots
+    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
+    sink-failure-mode: fatal
+```
+
 > The Action implementation is validated in CI, but the public `v1` tag and matching NuGet package are not published yet. Publication is intentionally deferred to the release automation work.
 
-See [the GitHub Action documentation](docs/en/github-action.md) for inputs, outputs, SDK requirements, package-source isolation, failure handling, and downstream consumption examples.
+See [the GitHub Action documentation](docs/en/github-action.md) for inputs, outputs, SDK requirements, persistence, package-source isolation, failure handling, and downstream consumption examples.
 
 ## Documentation
 
@@ -197,20 +238,20 @@ The documentation is organized by language and each language tree links only to 
 Repository
     |
     v
-Inspection Engine
-    |
-    +-------------------+
-    |                   |
-    v                   v
-CLI / .NET Tool    GitHub Action
-    |
-    v
-JSON contract
+Inspection Engine ----> InspectionReport ----> JSON output
+                           |
+                           | optional
+                           v
+                 Snapshot Persistence
+                           |
+                           v
+                    HTTP/webhook
 
-Future adapters: sinks, policy/reporting
+Delivery hosts: CLI / .NET Tool and GitHub Action
+Future adapters: additional sinks, policy/reporting
 ```
 
-The Core owns normalized inspection models and classification rules. MSBuild-specific discovery/evaluation remains behind an adapter. Consumers such as the CLI, GitHub Action, and future persistence sinks depend on the normalized model rather than duplicate repository-detection logic.
+The Core owns normalized inspection models and classification rules. MSBuild-specific discovery/evaluation remains behind an adapter. `DotNetRepoInspector.Persistence` owns provider-independent snapshot/provenance contracts, while `DotNetRepoInspector.Persistence.Http` is the first concrete delivery adapter. Core and Engine remain independent from HTTP, database providers, and sink credentials.
 
 ## Repository structure
 
@@ -230,18 +271,22 @@ The Core owns normalized inspection models and classification rules. MSBuild-spe
 │       ├── decisions/
 │       └── schema/
 ├── src/
-│   ├── DotNetRepoInspector.Core/      # Domain model, normalization, classification
-│   ├── DotNetRepoInspector.Engine/    # End-to-end inspection orchestration
-│   ├── DotNetRepoInspector.Git/       # Git repository metadata adapter
-│   ├── DotNetRepoInspector.MSBuild/   # Project discovery and MSBuild evaluation
-│   └── DotNetRepoInspector.Cli/       # CLI and serialization boundary
+│   ├── DotNetRepoInspector.Core/              # Domain model, normalization, classification
+│   ├── DotNetRepoInspector.Engine/            # End-to-end inspection orchestration
+│   ├── DotNetRepoInspector.Git/               # Git repository metadata adapter
+│   ├── DotNetRepoInspector.MSBuild/           # Project discovery and MSBuild evaluation
+│   ├── DotNetRepoInspector.Persistence/       # Snapshot, provenance, sink abstractions
+│   ├── DotNetRepoInspector.Persistence.Http/  # Built-in HTTP/webhook sink
+│   └── DotNetRepoInspector.Cli/               # CLI, serialization, and delivery composition
 ├── tests/
 │   ├── DotNetRepoInspector.Core.Tests/
 │   ├── DotNetRepoInspector.Engine.Tests/
 │   ├── DotNetRepoInspector.Git.Tests/
 │   ├── DotNetRepoInspector.MSBuild.Tests/
+│   ├── DotNetRepoInspector.Persistence.Tests/
+│   ├── DotNetRepoInspector.Persistence.Http.Tests/
 │   ├── DotNetRepoInspector.Cli.Tests/
-│   └── Fixtures/                      # Synthetic .NET repository/project fixtures
+│   └── Fixtures/                              # Synthetic .NET repository/project fixtures
 ├── AGENTS.md
 ├── LICENSE
 ├── README.md
@@ -265,13 +310,15 @@ The inspection engine should be validated primarily with synthetic fixture repos
 - project references;
 - repositories with and without `global.json`.
 
-Tests should verify **evaluated behavior**, not assumptions based only on filenames or raw XML layout.
+Tests should verify **evaluated behavior**, not assumptions based only on filenames or raw XML layout. Persistence adapter tests use in-memory `HttpMessageHandler` implementations and do not depend on public infrastructure.
 
 ## Persistence and evidence
 
-Persistence is intentionally not required by the inspector. A future sink abstraction can allow inspection snapshots to be sent to a database, file, object storage, or HTTP endpoint.
+Persistence is optional and happens only after a usable `InspectionReport` exists. `InspectionSnapshotFactory` creates an attributable envelope containing repository/commit identity when available, UTC observation time, schema and Inspector version, a report digest, and a versioned idempotency key.
 
-A stored snapshot should be attributable to the inspected repository state, ideally including repository identity, branch/ref, commit SHA, timestamp, schema version, and inspector version. This makes historical architecture evidence reproducible without coupling the Core to a specific database.
+The generic publisher applies timeout/failure policy but does not know about HTTP or databases. The built-in HTTP adapter is selected explicitly by the delivery host and can send that snapshot to a consumer-owned endpoint without coupling Core or Engine to an infrastructure provider.
+
+A persistence failure does not become an inspection diagnostic. Consumers can choose `non-fatal` delivery, which preserves normal inspection exit semantics, or `fatal`, which returns exit code `5` while leaving the already-produced report unchanged.
 
 ## Roadmap
 
@@ -283,7 +330,7 @@ A stored snapshot should be attributable to the inspected repository state, idea
 - [ ] Add fixture-based tests
 - [x] Package the CLI as a .NET tool
 - [x] Implement a reusable GitHub Action; public release/tagging remains pending
-- [ ] Add optional snapshot sinks
+- [x] Add the first optional snapshot sink (HTTP/webhook)
 - [ ] Explore policy/compliance checks over normalized inspection results
 
 ## License

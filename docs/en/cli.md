@@ -110,6 +110,11 @@ The first positional argument is the repository path. When omitted, the current 
     --no-config              Ignore the default .dotnetrepoinspector.json file.
     --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
     --classify <path>=<kind> Override one project classification. Repeatable.
+    --sink http              Persist a snapshot through the built-in HTTP/webhook sink.
+    --sink-url <url>         HTTP/HTTPS endpoint used by the selected sink.
+    --sink-timeout-seconds   Overall persistence timeout in seconds. Default: 15.
+    --sink-failure-mode      Persistence failure mode: non-fatal or fatal. Default: non-fatal.
+    --sink-max-attempts      Maximum HTTP attempts for transient failures. Default: 3.
 -v, --verbose                Emit verbose operational logs to stderr.
     --debug                  Emit debug operational logs to stderr.
 -h, --help                   Show help.
@@ -142,6 +147,37 @@ dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
 
 Malformed CLI option values are rejected before inspection and return exit code `2`. Invalid repository configuration discovered by the Engine produces a normal JSON report containing `DRI1013/error` and returns exit code `1`.
 
+## Optional HTTP snapshot persistence
+
+Persistence is disabled unless `--sink http` is selected. A normal invocation continues to inspect locally without contacting a persistence endpoint.
+
+Minimal example:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+The HTTP adapter posts the canonical `InspectionSnapshot` envelope after the inspection report has been produced. It sends the snapshot idempotency key in the `Idempotency-Key` header and retries only failures classified as transient.
+
+The endpoint must be an absolute HTTP or HTTPS URL and must not contain embedded credentials. `--sink-timeout-seconds` accepts `1..300`; `--sink-max-attempts` accepts `1..5`.
+
+Bearer credentials are deliberately not accepted as command-line arguments. Provide them only through `DOTNET_REPO_INSPECTOR_HTTP_TOKEN` or the host's equivalent secret facility:
+
+```bash
+export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+Do not place sink credentials in `.dotnetrepoinspector.json`, the endpoint URL, committed scripts, or inspection JSON.
+
+`--sink-failure-mode non-fatal` is the default. A failed persistence attempt is logged to stderr while preserving the inspection's normal exit semantics. With `--sink-failure-mode fatal`, a persistence failure returns exit code `5` after the report has already been produced.
+
+See [`persistence.md`](persistence.md) for snapshot provenance, idempotency, retry classification, timeout, cancellation, and security semantics.
+
 ## Output streams
 
 For a normal inspection without `--output`, **stdout contains only the inspection JSON**. Operational logs, warnings, and errors are written to **stderr**. This keeps pipelines such as the following safe:
@@ -156,7 +192,7 @@ With `--output`, the JSON is written to the requested UTF-8 file and stdout rema
 dotnet repo-inspect . --output artifacts/inspection.json
 ```
 
-The JSON is produced by `InspectionJsonSerializer` and therefore follows the same versioned and deterministic contract documented under [`schema/inspection-v1.md`](schema/inspection-v1.md).
+Persistence does not change the inspection JSON contract. The JSON is produced by `InspectionJsonSerializer` and follows the same versioned and deterministic contract documented under [`schema/inspection-v1.md`](schema/inspection-v1.md).
 
 ## Exit codes
 
@@ -167,13 +203,14 @@ The JSON is produced by `InspectionJsonSerializer` and therefore follows the sam
 | `2` | Command-line arguments are invalid. |
 | `3` | A fatal inspection or serialization failure prevented a usable report. |
 | `4` | The report could not be written to stdout or the requested file. |
-| `130` | The operation was cancelled, including process interruption such as Ctrl+C. |
+| `5` | Snapshot persistence failed while configured with `--sink-failure-mode fatal`. |
+| `130` | The operation was cancelled, including inspection, persistence, or process interruption such as Ctrl+C. |
 
-A code of `1` is intentionally different from a fatal failure: the JSON report still exists and contains the structured diagnostics that explain the partial inspection result.
+A code of `1` is intentionally different from a fatal failure: the JSON report still exists and contains the structured diagnostics that explain the partial inspection result. Code `5` also occurs after the inspection report has been produced; it represents failure to deliver the optional snapshot, not a mutation of inspection diagnostics.
 
 ## Cancellation
 
-The process handles Ctrl+C cooperatively. The cancellation token is propagated through the CLI into the inspection engine and its long-running adapters. A cancelled invocation exits with code `130` and does not start an interactive recovery flow.
+The process handles Ctrl+C cooperatively. The cancellation token is propagated through the CLI into the inspection engine and, when enabled, snapshot publication and the HTTP request. A cancelled invocation exits with code `130` and does not start an interactive recovery flow.
 
 ## Examples
 
@@ -193,4 +230,14 @@ Enable operational detail without contaminating JSON stdout:
 
 ```bash
 dotnet repo-inspect . --verbose > inspection.json
+```
+
+Inspect, save the local report, and require snapshot persistence:
+
+```bash
+dotnet repo-inspect . \
+  --output artifacts/inspection.json \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots \
+  --sink-failure-mode fatal
 ```

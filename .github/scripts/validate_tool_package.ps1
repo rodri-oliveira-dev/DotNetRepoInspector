@@ -138,7 +138,9 @@ try {
         "DotNetRepoInspector.Core.dll",
         "DotNetRepoInspector.Engine.dll",
         "DotNetRepoInspector.Git.dll",
-        "DotNetRepoInspector.MSBuild.dll")) {
+        "DotNetRepoInspector.MSBuild.dll",
+        "DotNetRepoInspector.Persistence.dll",
+        "DotNetRepoInspector.Persistence.Http.dll")) {
         if (-not ($entryNames | Where-Object { $_.EndsWith("/$assemblyName", [StringComparison]::Ordinal) })) {
             throw "Required runtime assembly '$assemblyName' was not included in the tool package."
         }

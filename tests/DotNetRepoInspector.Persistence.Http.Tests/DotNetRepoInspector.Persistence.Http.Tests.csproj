@@ -4,8 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <RootNamespace>DotNetRepoInspector.Cli.Tests</RootNamespace>
-    <AssemblyName>DotNetRepoInspector.Cli.Tests</AssemblyName>
+    <RootNamespace>DotNetRepoInspector.Persistence.Http.Tests</RootNamespace>
+    <AssemblyName>DotNetRepoInspector.Persistence.Http.Tests</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,16 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj" />
     <ProjectReference Include="../../src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
-    <ProjectReference Include="../../src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
     <ProjectReference Include="../../src/DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="../Fixtures/**/*"
-          Exclude="../Fixtures/**/bin/**;../Fixtures/**/obj/**"
-          Link="Fixtures/%(RecursiveDir)%(Filename)%(Extension)"
-          CopyToOutputDirectory="PreserveNewest" />
+    <ProjectReference Include="../../src/DotNetRepoInspector.Persistence.Http/DotNetRepoInspector.Persistence.Http.csproj" />
   </ItemGroup>
 </Project>

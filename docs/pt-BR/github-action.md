@@ -2,7 +2,7 @@
 
 **Idiomas:** [English](../en/github-action.md) | Português (Brasil)
 
-O DotNetRepoInspector fornece uma GitHub Action reutilizável do tipo composite que executa a mesma .NET Tool e a mesma engine de inspeção usadas pela CLI. A Action é apenas um adapter de entrega: descoberta de projetos, avaliação MSBuild, classificação, configuração, diagnósticos, serialização JSON e semântica de códigos de saída continuam pertencendo ao Inspector existente.
+O DotNetRepoInspector fornece uma GitHub Action reutilizável do tipo composite que executa a mesma .NET Tool e a mesma engine de inspeção usadas pela CLI. A Action é apenas um adapter de entrega: descoberta de projetos, avaliação MSBuild, classificação, configuração, diagnósticos, serialização JSON, persistência opcional e semântica de códigos de saída continuam pertencendo aos componentes existentes do Inspector.
 
 > A implementação da Action já existe e é validada pelo CI do repositório, mas uma release pública `v1` ainda não foi publicada. `uses: rodri-oliveira-dev/DotNetRepoInspector@v1` passa a estar disponível depois que o fluxo de release publicar o pacote `DotNetRepoInspector` correspondente e criar as tags da Action.
 
@@ -22,7 +22,7 @@ steps:
       path: .
 ```
 
-A própria Action não precisa de token do GitHub nem de permissão de escrita para inspecionar um repositório que já esteja em checkout.
+A própria Action não precisa de token do GitHub nem de permissão de escrita para inspecionar um repositório que já esteja em checkout. Sem `sink-url`, nenhum endpoint de persistência é contatado.
 
 ## Inputs
 
@@ -35,6 +35,11 @@ A própria Action não precisa de token do GitHub nem de permissão de escrita p
 | `no-config` | Não | `false` | Use `true` para ignorar o arquivo padrão de configuração. Não pode ser combinado com `config`. |
 | `exclude` | Não | vazio | Diretórios ou caminhos exatos de projeto, relativos ao repositório e separados por linhas, a serem excluídos. |
 | `classify` | Não | vazio | Overrides explícitos `<project-path>=<kind>` separados por linhas. |
+| `sink-url` | Não | vazio | Endpoint HTTP/HTTPS absoluto. Um valor não vazio habilita o sink HTTP de snapshots built-in. |
+| `sink-token` | Não | vazio | Bearer token opcional para o sink HTTP. Forneça-o por um secret do GitHub Actions. |
+| `sink-timeout-seconds` | Não | `15` | Timeout total da persistência quando `sink-url` está configurado. Faixa suportada: `1..300`. |
+| `sink-failure-mode` | Não | `non-fatal` | Política de falha da persistência: `non-fatal` ou `fatal`. |
+| `sink-max-attempts` | Não | `3` | Máximo de tentativas HTTP para falhas transitórias. Faixa suportada: `1..5`. |
 
 Os tipos de classificação suportados são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
@@ -59,6 +64,34 @@ A Action intencionalmente não expõe um input `inspector-version`. Cada revisã
 ```
 
 Um override altera somente a interpretação efetiva da classificação. Os fatos do MSBuild permanecem intactos. O schema `1.3` expõe `classification.source` e `classification.automaticKind` quando um override está ativo, permitindo que automações distingam o resultado configurado do automático.
+
+## Persistência HTTP opcional de snapshots
+
+Defina `sink-url` para habilitar o sink HTTP/webhook built-in. A Action executa o mesmo caminho de persistência da CLI e, portanto, usa o mesmo `InspectionSnapshot`, chave de idempotência, classificação de retry, timeout, cancelamento e semântica de failure mode.
+
+```yaml
+- name: Inspecionar e persistir evidência de arquitetura
+  id: inspect
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    output: artifacts/inspection.json
+    sink-url: https://evidence.example/api/snapshots
+    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
+    sink-failure-mode: fatal
+```
+
+`sink-token` é mapeado diretamente para `DOTNET_REPO_INSPECTOR_HTTP_TOKEN` no processo da tool. Ele não é passado como argumento de linha de comando. Não incorpore credenciais em `sink-url` nem as versione na configuração do repositório.
+
+Quando o sink está habilitado, a Action também fornece proveniência genérica da execução para a snapshot factory:
+
+- execution ID: `github.run_id:github.run_attempt`;
+- provider: `github-actions`;
+- ref: `github.ref`.
+
+Esses valores são metadados genéricos do snapshot; o contrato de persistência não depende de tipos específicos do GitHub.
+
+O sink HTTP faz retry somente para falhas de transporte/timeouts e HTTP `408`, `429`, `500`, `502`, `503` e `504`, com quantidade de tentativas e backoff limitados. Falhas de autenticação e outros erros de cliente não transitórios não são repetidos. Consulte [`persistence.md`](persistence.md) para o contrato completo de delivery.
 
 ## Outputs
 
@@ -96,9 +129,12 @@ A Action preserva os códigos de saída da CLI:
 | `2` | Argumentos inválidos chegaram à fronteira da CLI/Action. |
 | `3` | Uma falha fatal de inspeção impediu um relatório normal. |
 | `4` | Não foi possível gravar o relatório. |
-| `130` | A inspeção foi cancelada. |
+| `5` | A persistência opcional do snapshot falhou enquanto `sink-failure-mode` está em `fatal`. |
+| `130` | A inspeção ou persistência foi cancelada. |
 
 Quando a CLI retorna um código diferente de zero, a Action publica os outputs ainda disponíveis e termina com o mesmo código. Um workflow que queira examinar esses outputs após uma falha pode usar `continue-on-error` e uma etapa posterior com `if: always()`.
+
+O código de persistência `5` não significa que o relatório foi perdido: a saída da inspeção é produzida antes da tentativa de persistência. No modo padrão `non-fatal`, a falha de persistência é registrada, mas não substitui o código de saída normal da inspeção.
 
 ## Runtime e SDKs do repositório
 
@@ -114,11 +150,13 @@ Ela não instala a Tool globalmente, não modifica o tool manifest do repositór
 
 O CI do próprio repositório possui um hook de self-test estritamente limitado que pode substituir apenas o package source pelo pacote `1.0.0` gerado localmente. Esse hook é rejeitado fora de `rodri-oliveira-dev/DotNetRepoInspector` e não altera a versão fixada nem os inputs públicos.
 
-## Permissões e fronteira de confiança
+## Permissões, secrets e fronteira de confiança
 
 Inspecionar um repositório já em checkout não requer acesso à API do GitHub, token, segredo ou permissão de escrita. O consumidor continua responsável pelas permissões usadas no próprio checkout e nas etapas posteriores.
 
-A avaliação MSBuild não é um sandbox. O Inspector avalia configurações controladas pelo repositório conforme a [ADR 0001](decisions/0001-msbuild-evaluation-strategy.md), portanto código não confiável não deve ser inspecionado em workflow privilegiado com segredos sem revisão explícita de confiança.
+A persistência HTTP é uma ação de rede separada e explícita. Se `sink-token` for usado, referencie um secret do GitHub Actions e limite essa credencial ao endpoint externo de evidências. O Inspector não a copia para o JSON de inspeção, payload do snapshot, logs normais ou argumentos da CLI.
+
+A avaliação MSBuild não é um sandbox. O Inspector avalia configurações controladas pelo repositório conforme a [ADR 0001](decisions/0001-msbuild-evaluation-strategy.md), portanto código não confiável não deve ser inspecionado em workflow privilegiado com segredos sem revisão explícita de confiança. Isso é especialmente importante quando um token de persistência está disponível no mesmo job.
 
 ## Versionamento
 

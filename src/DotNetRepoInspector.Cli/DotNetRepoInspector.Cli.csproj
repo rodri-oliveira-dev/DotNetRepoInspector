@@ -30,6 +30,8 @@
   <ItemGroup>
     <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <ProjectReference Include="../DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.Persistence.Http/DotNetRepoInspector.Persistence.Http.csproj" />
   </ItemGroup>
 
   <ItemGroup>

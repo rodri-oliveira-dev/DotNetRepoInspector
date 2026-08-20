@@ -18,6 +18,9 @@ Inspection Engine ----> InspectionReport
                            |
                            | opcional
                            v
+                 InspectionSnapshotFactory
+                           |
+                           v
                  InspectionSnapshotPublisher
                            |
                            v
@@ -27,7 +30,7 @@ Inspection Engine ----> InspectionReport
                  destino do consumidor
 ```
 
-`DotNetRepoInspector.Persistence` depende somente de `DotNetRepoInspector.Core`. `Core` e `Engine` não dependem de persistência.
+`DotNetRepoInspector.Persistence` depende somente de `DotNetRepoInspector.Core`. O adapter HTTP built-in vive no assembly separado `DotNetRepoInspector.Persistence.Http`. `Core` e `Engine` não dependem de persistência nem de HTTP.
 
 ## Contrato de extensão
 
@@ -57,7 +60,9 @@ Exceções inesperadas que atravessem a fronteira de extensão são convertidas 
 
 ## Comportamento opt-in
 
-Nenhum sink é criado ou chamado pela engine de inspeção. Um host escolhe explicitamente um sink e chama `InspectionSnapshotPublisher` depois que a inspeção produz um `InspectionReport`.
+Nenhum sink é criado ou chamado pela engine de inspeção. A CLI ou outro host de delivery escolhe explicitamente um sink e chama `InspectionSnapshotPublisher` depois que a inspeção produz um `InspectionReport`.
+
+Sem `--sink`, a CLI mantém o comportamento existente de não fazer acesso de rede para persistência. A configuração do repositório em `.dotnetrepoinspector.json` não habilita persistência.
 
 As opções genéricas de persistência são independentes das credenciais específicas do sink:
 
@@ -79,37 +84,113 @@ Dois escopos ficam explícitos:
 
 Consulte [`snapshot-provenance.md`](snapshot-provenance.md) e a ADR 0004 para o contrato completo.
 
-## Retry e idempotência
+## Sink HTTP/webhook built-in
 
-O publisher genérico não faz retry. Uma política genérica não consegue saber se uma falha do destino é transitória ou se repetir a requisição é seguro.
+A ADR 0003 seleciona entrega HTTP/webhook como primeiro sink built-in. `HttpInspectionSnapshotSink` envia o envelope canônico de snapshot para um endpoint fornecido pelo consumidor com:
 
-Sinks concretos podem fazer retry somente quando todas as condições abaixo forem atendidas:
+- HTTP `POST`;
+- `Content-Type: application/json`;
+- payload produzido por `InspectionSnapshotJsonSerializer`;
+- `Idempotency-Key: <snapshot.idempotencyKey>`;
+- `Authorization: Bearer <token>` opcional quando o token é fornecido pelo ambiente do host.
 
-1. o adapter consegue classificar a falha como transitória;
-2. quantidade de tentativas e backoff são limitados;
-3. timeout total e cancelamento do chamador são respeitados;
-4. replay utiliza a chave de idempotência do snapshot e é seguro para a semântica do destino.
+O endpoint deve ser uma URL HTTP ou HTTPS absoluta. URLs contendo user information embutida, como `https://user:password@example/...`, são rejeitadas. O adapter nunca lê o corpo da resposta para compor uma mensagem de falha.
 
-O primeiro sink HTTP da issue #22 consumirá esse contrato em vez de inventar identidade específica do destino.
+### Configuração pela CLI
+
+Habilite o sink explicitamente:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+Política de delivery opcional:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots \
+  --sink-timeout-seconds 30 \
+  --sink-max-attempts 3 \
+  --sink-failure-mode fatal
+```
+
+As opções suportadas para o sink HTTP são:
+
+| Opção | Padrão | Significado |
+| --- | --- | --- |
+| `--sink http` | desabilitado | Seleciona explicitamente o sink HTTP built-in. |
+| `--sink-url <url>` | nenhum | Endpoint HTTP/HTTPS absoluto fornecido pelo consumidor. Obrigatório quando o sink está habilitado. |
+| `--sink-timeout-seconds <1..300>` | `15` | Deadline total da persistência, incluindo retries. |
+| `--sink-max-attempts <1..5>` | `3` | Quantidade máxima de tentativas HTTP. |
+| `--sink-failure-mode non-fatal|fatal` | `non-fatal` | Define se uma falha de persistência deve falhar o comando/pipeline. |
+
+Intencionalmente **não existe argumento de CLI para token**. Para autenticação Bearer, defina `DOTNET_REPO_INSPECTOR_HTTP_TOKEN` no ambiente do processo ou secret facility equivalente:
+
+```bash
+export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
+dotnet repo-inspect . --sink http --sink-url https://evidence.example/api/snapshots
+```
+
+Não coloque tokens em `--sink-url`, argumentos de linha de comando, `.dotnetrepoinspector.json`, scripts versionados ou no JSON de inspeção.
+
+## Retry e classificação de falhas
+
+O publisher genérico não faz retry. Retry pertence ao adapter HTTP porque ele consegue classificar falhas de transporte/HTTP e repetir de forma segura o mesmo snapshot usando sua chave de idempotência.
+
+O sink HTTP faz retry somente para:
+
+- falhas de transporte `HttpRequestException`;
+- timeouts de requisição não causados por cancelamento do chamador;
+- HTTP `408`, `429`, `500`, `502`, `503` e `504`.
+
+Os retries usam backoff exponencial limitado, respeitam a quantidade máxima de tentativas configurada e permanecem dentro da fronteira total de timeout/cancelamento do publisher.
+
+Falhas de autenticação (`401`/`403`), `404` e outras respostas `4xx` não transitórias não são repetidas. As mensagens usam classificações estáveis e não copiam texto de exceção nem corpo da resposta.
+
+## Delivery fatal e non-fatal
+
+O relatório é produzido antes da tentativa de persistência.
+
+No modo padrão `non-fatal`, uma falha de persistência é registrada em stderr, mas a semântica normal de códigos de saída da inspeção é preservada. Com `fatal`, uma falha de persistência retorna o código de saída `5` da CLI. O `InspectionReport` já produzido não recebe diagnóstico de persistência em nenhum dos modos.
+
+Cancelamento do chamador, incluindo Ctrl+C, é propagado pela publicação do snapshot e pela requisição HTTP e termina pelo fluxo normal de cancelamento (`130`).
+
+## GitHub Action
+
+A Action reutilizável expõe `sink-url`, `sink-token`, `sink-timeout-seconds`, `sink-failure-mode` e `sink-max-attempts`. `sink-token` deve sempre referenciar um secret do GitHub Actions. A Action o mapeia diretamente para `DOTNET_REPO_INSPECTOR_HTTP_TOKEN`; o valor não é adicionado à lista de argumentos da CLI.
+
+Exemplo:
+
+```yaml
+- name: Inspecionar e persistir evidência
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    output: artifacts/inspection.json
+    sink-url: https://evidence.example/api/snapshots
+    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
+    sink-failure-mode: fatal
+```
+
+Quando a persistência está habilitada, a Action também fornece proveniência genérica da execução (`run_id:run_attempt`, provider e ref) para a snapshot factory, sem adicionar tipos específicos do GitHub ao contrato de persistência.
 
 ## Configuração e secrets
 
 Configuração de persistência pertence à camada de delivery, não à configuração de inspeção do repositório. O `.dotnetrepoinspector.json` do repositório não deve conter credenciais de sinks.
 
-Um futuro sink built-in poderá expor opções não sensíveis de seleção/política por inputs da CLI ou GitHub Action. Tokens, connection strings, API keys e valores equivalentes devem vir de variáveis de ambiente/secret stores apropriados ao host e nunca podem ser copiados para `InspectionReport`, `InspectionSnapshot`, contexto de diagnóstico ou logs normais.
+Tokens, connection strings, API keys e valores equivalentes devem vir de variáveis de ambiente/secret stores apropriados ao host e nunca podem ser copiados para `InspectionReport`, `InspectionSnapshot`, contexto de diagnóstico ou logs normais.
 
 Consulte [`security.md`](security.md) para as regras gerais de tratamento de secrets.
-
-## Primeiro sink concreto
-
-A ADR 0003 seleciona um adapter HTTP/webhook como primeiro sink built-in porque ele mantém o Inspector independente de bancos e cloud providers e funciona naturalmente em automações locais e CI/CD.
-
-O adapter HTTP não é implementado aqui de propósito. A issue #22 é responsável por essa implementação e utilizará o contrato de identidade/idempotência definido pela ADR 0004.
 
 ## Decisões relacionadas
 
 - [ADR 0003: Manter persistência opcional atrás de adapters de sink](decisions/0003-persistence-sink-architecture.md)
 - [ADR 0004: Definir proveniência e idempotência de snapshots a partir da evidência canônica](decisions/0004-snapshot-provenance-idempotency.md)
 - [Proveniência e idempotência de snapshots](snapshot-provenance.md)
+- [CLI](cli.md)
+- [GitHub Action](github-action.md)
 - [Schema de inspeção](schema/inspection-v1.md)
 - [Segurança e privacidade](security.md)

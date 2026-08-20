@@ -1,4 +1,7 @@
+using System.Globalization;
+
 using DotNetRepoInspector.Core.Classification;
+using DotNetRepoInspector.Persistence;
 
 namespace DotNetRepoInspector.Cli;
 
@@ -9,6 +12,11 @@ public static class CliOptionsParser
     private const string ConfigurationOption = "--config";
     private const string ExcludeOption = "--exclude";
     private const string ClassifyOption = "--classify";
+    private const string SinkOption = "--sink";
+    private const string SinkUrlOption = "--sink-url";
+    private const string SinkTimeoutOption = "--sink-timeout-seconds";
+    private const string SinkFailureModeOption = "--sink-failure-mode";
+    private const string SinkMaxAttemptsOption = "--sink-max-attempts";
 
     public static CliParseResult Parse(IReadOnlyList<string> args)
     {
@@ -20,9 +28,18 @@ public static class CliOptionsParser
         string? repositoryPath = null;
         string? outputPath = null;
         string? configurationPath = null;
+        string? sink = null;
+        string? sinkUrl = null;
+        var sinkTimeoutSeconds = CliPersistenceOptions.DefaultTimeoutSeconds;
+        var sinkFailureMode = PersistenceFailureMode.NonFatal;
+        var sinkMaxAttempts = CliPersistenceOptions.DefaultMaxAttempts;
         var disableConfigurationFile = false;
         var showHelp = false;
         var showVersion = false;
+        var sinkUrlSpecified = false;
+        var sinkTimeoutSpecified = false;
+        var sinkFailureModeSpecified = false;
+        var sinkMaxAttemptsSpecified = false;
 
         for (var index = 0; index < args.Count; index++)
         {
@@ -168,6 +185,155 @@ public static class CliOptionsParser
                 continue;
             }
 
+            if (string.Equals(argument, SinkOption, StringComparison.Ordinal))
+            {
+                if (sink is not null)
+                {
+                    return CliParseResult.Failure("The sink option can only be specified once.");
+                }
+
+                if (!TryReadOptionValue(args, ref index, out sink))
+                {
+                    return CliParseResult.Failure("The --sink option requires a sink name.");
+                }
+
+                sink = sink.Trim().ToLowerInvariant();
+                continue;
+            }
+
+            if (argument.StartsWith($"{SinkOption}=", StringComparison.Ordinal))
+            {
+                if (sink is not null)
+                {
+                    return CliParseResult.Failure("The sink option can only be specified once.");
+                }
+
+                sink = argument[(SinkOption.Length + 1)..].Trim().ToLowerInvariant();
+                if (sink.Length == 0)
+                {
+                    return CliParseResult.Failure("The --sink option requires a sink name.");
+                }
+
+                continue;
+            }
+
+            if (string.Equals(argument, SinkUrlOption, StringComparison.Ordinal))
+            {
+                if (sinkUrlSpecified)
+                {
+                    return CliParseResult.Failure("The sink URL option can only be specified once.");
+                }
+
+                if (!TryReadOptionValue(args, ref index, out sinkUrl))
+                {
+                    return CliParseResult.Failure("The --sink-url option requires an HTTP or HTTPS URL.");
+                }
+
+                sinkUrlSpecified = true;
+                continue;
+            }
+
+            if (argument.StartsWith($"{SinkUrlOption}=", StringComparison.Ordinal))
+            {
+                if (sinkUrlSpecified)
+                {
+                    return CliParseResult.Failure("The sink URL option can only be specified once.");
+                }
+
+                sinkUrl = argument[(SinkUrlOption.Length + 1)..];
+                if (string.IsNullOrWhiteSpace(sinkUrl))
+                {
+                    return CliParseResult.Failure("The --sink-url option requires an HTTP or HTTPS URL.");
+                }
+
+                sinkUrlSpecified = true;
+                continue;
+            }
+
+            if (string.Equals(argument, SinkTimeoutOption, StringComparison.Ordinal))
+            {
+                if (sinkTimeoutSpecified ||
+                    !TryReadOptionValue(args, ref index, out var value) ||
+                    !TryParseRange(value, 1, 300, out sinkTimeoutSeconds))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-timeout-seconds option requires an integer between 1 and 300.");
+                }
+
+                sinkTimeoutSpecified = true;
+                continue;
+            }
+
+            if (argument.StartsWith($"{SinkTimeoutOption}=", StringComparison.Ordinal))
+            {
+                var value = argument[(SinkTimeoutOption.Length + 1)..];
+                if (sinkTimeoutSpecified ||
+                    !TryParseRange(value, 1, 300, out sinkTimeoutSeconds))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-timeout-seconds option requires an integer between 1 and 300.");
+                }
+
+                sinkTimeoutSpecified = true;
+                continue;
+            }
+
+            if (string.Equals(argument, SinkFailureModeOption, StringComparison.Ordinal))
+            {
+                if (sinkFailureModeSpecified ||
+                    !TryReadOptionValue(args, ref index, out var value) ||
+                    !TryParseFailureMode(value, out sinkFailureMode))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-failure-mode option requires 'non-fatal' or 'fatal'.");
+                }
+
+                sinkFailureModeSpecified = true;
+                continue;
+            }
+
+            if (argument.StartsWith($"{SinkFailureModeOption}=", StringComparison.Ordinal))
+            {
+                var value = argument[(SinkFailureModeOption.Length + 1)..];
+                if (sinkFailureModeSpecified ||
+                    !TryParseFailureMode(value, out sinkFailureMode))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-failure-mode option requires 'non-fatal' or 'fatal'.");
+                }
+
+                sinkFailureModeSpecified = true;
+                continue;
+            }
+
+            if (string.Equals(argument, SinkMaxAttemptsOption, StringComparison.Ordinal))
+            {
+                if (sinkMaxAttemptsSpecified ||
+                    !TryReadOptionValue(args, ref index, out var value) ||
+                    !TryParseRange(value, 1, 5, out sinkMaxAttempts))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-max-attempts option requires an integer between 1 and 5.");
+                }
+
+                sinkMaxAttemptsSpecified = true;
+                continue;
+            }
+
+            if (argument.StartsWith($"{SinkMaxAttemptsOption}=", StringComparison.Ordinal))
+            {
+                var value = argument[(SinkMaxAttemptsOption.Length + 1)..];
+                if (sinkMaxAttemptsSpecified ||
+                    !TryParseRange(value, 1, 5, out sinkMaxAttempts))
+                {
+                    return CliParseResult.Failure(
+                        "The --sink-max-attempts option requires an integer between 1 and 5.");
+                }
+
+                sinkMaxAttemptsSpecified = true;
+                continue;
+            }
+
             if (argument.StartsWith('-'))
             {
                 return CliParseResult.Failure("An unknown command-line option was provided.");
@@ -186,6 +352,39 @@ public static class CliOptionsParser
             return CliParseResult.Failure("The --config and --no-config options cannot be used together.");
         }
 
+        bool hasSinkSpecificOptions =
+            sinkUrlSpecified ||
+            sinkTimeoutSpecified ||
+            sinkFailureModeSpecified ||
+            sinkMaxAttemptsSpecified;
+
+        if (sink is null && hasSinkSpecificOptions)
+        {
+            return CliParseResult.Failure("Sink-specific options require '--sink http'.");
+        }
+
+        CliPersistenceOptions persistenceOptions = CliPersistenceOptions.Disabled;
+        if (sink is not null)
+        {
+            if (!string.Equals(sink, "http", StringComparison.Ordinal))
+            {
+                return CliParseResult.Failure("The selected persistence sink is not supported.");
+            }
+
+            if (!TryCreateHttpEndpoint(sinkUrl, out Uri? endpoint))
+            {
+                return CliParseResult.Failure(
+                    "The HTTP sink requires a valid absolute HTTP or HTTPS --sink-url without embedded credentials.");
+            }
+
+            persistenceOptions = new CliPersistenceOptions(
+                sink,
+                endpoint,
+                sinkTimeoutSeconds,
+                sinkFailureMode,
+                sinkMaxAttempts);
+        }
+
         return CliParseResult.Success(new CliOptions(
             repositoryPath ?? ".",
             outputPath,
@@ -194,6 +393,7 @@ public static class CliOptionsParser
             disableConfigurationFile,
             excludedPaths.ToArray(),
             classificationOverrides,
+            persistenceOptions,
             showHelp,
             showVersion));
     }
@@ -238,6 +438,54 @@ public static class CliOptionsParser
         }
 
         classificationOverrides[projectPath] = kind;
+        return true;
+    }
+
+    private static bool TryParseRange(
+        string value,
+        int minimum,
+        int maximum,
+        out int parsed) =>
+        int.TryParse(
+            value,
+            NumberStyles.None,
+            CultureInfo.InvariantCulture,
+            out parsed) &&
+        parsed >= minimum &&
+        parsed <= maximum;
+
+    private static bool TryParseFailureMode(
+        string value,
+        out PersistenceFailureMode failureMode)
+    {
+        switch (value.Trim().ToLowerInvariant())
+        {
+            case "non-fatal":
+                failureMode = PersistenceFailureMode.NonFatal;
+                return true;
+            case "fatal":
+                failureMode = PersistenceFailureMode.Fatal;
+                return true;
+            default:
+                failureMode = default;
+                return false;
+        }
+    }
+
+    private static bool TryCreateHttpEndpoint(
+        string? value,
+        out Uri? endpoint)
+    {
+        endpoint = null;
+        if (string.IsNullOrWhiteSpace(value) ||
+            !Uri.TryCreate(value, UriKind.Absolute, out Uri? candidate) ||
+            (candidate.Scheme != Uri.UriSchemeHttp && candidate.Scheme != Uri.UriSchemeHttps) ||
+            !string.IsNullOrEmpty(candidate.UserInfo))
+        {
+            return false;
+        }
+
+        endpoint = candidate;
         return true;
     }
 
