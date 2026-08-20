@@ -9,10 +9,18 @@ on:
     paths:
       - .github/workflows/release.yml
       - .github/release.yml
+      - .github/release-readiness-v1.json
       - .github/scripts/release_metadata.py
       - .github/scripts/validate_tool_package.ps1
       - action.yml
+      - README.md
+      - README.pt-BR.md
+      - docs/en/schema/examples/inspection-v1.example.json
+      - docs/en/v1-release-readiness.md
+      - docs/pt-BR/v1-release-readiness.md
+      - src/DotNetRepoInspector.Core/Contracts/InspectionSchema.cs
       - src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+      - tests/DotNetRepoInspector.Cli.Tests/ReleaseReadinessTests.cs
   workflow_dispatch:
     inputs:
       version:
