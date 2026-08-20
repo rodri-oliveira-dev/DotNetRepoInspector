@@ -9,6 +9,7 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`diagnostics.md`](diagnostics.md) — stable diagnostic catalog and operational logging rules.
 - [`inspection-engine.md`](inspection-engine.md) — end-to-end inspection orchestration, failure semantics, determinism, and cancellation.
 - [`cli.md`](cli.md) — command-line usage, output streams, exit codes, and cancellation behavior.
+- [`github-action.md`](github-action.md) — reusable GitHub Action inputs, outputs, runtime bootstrap, permissions, and CI validation.
 - [`compatibility.md`](compatibility.md) — supported .NET SDK/TFM and operating-system compatibility matrix.
 - [`performance.md`](performance.md) — synthetic large-repository baseline, measured hotspots, and regression guardrails.
 - [`real-repository-validation.md`](real-repository-validation.md) — pinned public-repository validation harness and bug-reproduction policy.
