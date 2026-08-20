@@ -93,10 +93,15 @@ Performance e escalabilidade são deliberadamente adiadas para a issue #18, para
 
 ## Nota de segurança
 
-Não solicitar targets de build reduz execução desnecessária, mas a avaliação do MSBuild não é um sandbox nem uma fronteira de segurança. Repositórios e lógica de build importada ainda precisam ser tratados de acordo com o modelo de confiança do ambiente de execução. A revisão de segurança mais ampla está sendo acompanhada pela issue #24.
+Não solicitar targets de build reduz execução desnecessária, mas a avaliação do MSBuild não é um sandbox nem uma fronteira de segurança. Imports, resolução de SDK, propriedades originadas do ambiente e property functions ainda são processados durante a evaluation e podem acessar recursos disponíveis ao processo filho.
+
+O DotNetRepoInspector aplica controles de defesa em profundidade nessa fronteira: variáveis de ambiente com nomes que indicam credenciais e handles de arquivos de comando do CI são removidos dos processos `dotnet`/MSBuild criados pelo Inspector, a reutilização de nodes do MSBuild é desabilitada, argumentos não passam por shell e saída bruta de processos não é mapeada para o relatório normalizado. Esses controles reduzem exposição, mas não tornam segura a avaliação de repositórios não confiáveis em ambientes privilegiados ou contendo secrets.
+
+O modelo de confiança completo e as orientações operacionais são mantidos em [`../security.md`](../security.md).
 
 ## Referências
 
 - Microsoft Learn — Evaluate MSBuild items and properties: https://learn.microsoft.com/visualstudio/msbuild/evaluate-items-and-properties
 - Microsoft Learn — MSBuild command-line reference: https://learn.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+- Microsoft Learn — Secure MSBuild usage best practices: https://learn.microsoft.com/visualstudio/msbuild/msbuild-security-best-practices
 - Microsoft Learn — visão geral do `global.json`: https://learn.microsoft.com/dotnet/core/tools/global-json

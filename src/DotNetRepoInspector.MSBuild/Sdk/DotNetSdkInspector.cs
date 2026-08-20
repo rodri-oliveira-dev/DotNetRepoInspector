@@ -194,8 +194,7 @@ public sealed class DotNetSdkInspector : IDotNetSdkInspector
             CreateNoWindow = true
         };
 
-        startInfo.Environment["DOTNET_NOLOGO"] = "true";
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "true";
+        SecureProcessEnvironment.HardenDotNetProcess(startInfo);
         startInfo.ArgumentList.Add("--version");
 
         using var process = new Process { StartInfo = startInfo };

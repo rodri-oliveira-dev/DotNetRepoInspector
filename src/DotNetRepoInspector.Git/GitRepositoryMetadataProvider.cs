@@ -182,8 +182,9 @@ public sealed class GitRepositoryMetadataProvider : IGitRepositoryMetadataProvid
     {
         if (remoteUrl is null ||
             !Uri.TryCreate(remoteUrl, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
-            string.IsNullOrEmpty(uri.UserInfo))
+            (string.IsNullOrEmpty(uri.UserInfo) &&
+             string.IsNullOrEmpty(uri.Query) &&
+             string.IsNullOrEmpty(uri.Fragment)))
         {
             return remoteUrl;
         }
@@ -191,7 +192,9 @@ public sealed class GitRepositoryMetadataProvider : IGitRepositoryMetadataProvid
         var builder = new UriBuilder(uri)
         {
             UserName = string.Empty,
-            Password = string.Empty
+            Password = string.Empty,
+            Query = string.Empty,
+            Fragment = string.Empty
         };
 
         return builder.Uri.AbsoluteUri;
