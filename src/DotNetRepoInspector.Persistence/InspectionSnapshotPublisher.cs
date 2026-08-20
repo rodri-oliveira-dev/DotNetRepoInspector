@@ -8,6 +8,10 @@ public sealed class InspectionSnapshotPublisher
         "Design",
         "CA1031:Do not catch general exception types",
         Justification = "A sink is an extension boundary. Unexpected adapter exceptions are normalized without exposing exception details so non-fatal persistence remains isolated from inspection.")]
+    [SuppressMessage(
+        "Performance",
+        "CA1822:Mark members as static",
+        Justification = "The publisher is intentionally instance-based so delivery hosts can compose it as a service and the policy can evolve without changing the public calling model.")]
     public async Task<InspectionPersistenceResult> PublishAsync(
         InspectionSnapshot snapshot,
         IInspectionSnapshotSink sink,
