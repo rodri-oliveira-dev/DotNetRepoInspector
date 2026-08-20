@@ -6,6 +6,7 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 
 - [`architecture/`](architecture/) — current architecture, contracts, and implementation design.
 - [`classification.md`](classification.md) — deterministic project classification rules and precedence.
+- [`configuration.md`](configuration.md) — optional repository configuration, exclusions, classification overrides, and precedence.
 - [`diagnostics.md`](diagnostics.md) — stable diagnostic catalog and operational logging rules.
 - [`inspection-engine.md`](inspection-engine.md) — end-to-end inspection orchestration, failure semantics, determinism, and cancellation.
 - [`cli.md`](cli.md) — command-line usage, output streams, exit codes, and cancellation behavior.

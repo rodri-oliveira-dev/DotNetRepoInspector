@@ -175,11 +175,32 @@ public static class InspectionJsonSerializer
             project.RuntimeIdentifiers is null ||
             project.References is null ||
             project.Diagnostics is null ||
-            (project.Classification is not null && project.Classification.Signals is null))
+            !IsValidClassification(project.Classification))
         {
             throw new JsonException(
                 "A project entry is missing one or more required properties.");
         }
+    }
+
+    private static bool IsValidClassification(ProjectClassification? classification)
+    {
+        if (classification is null)
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(classification.Kind) || classification.Signals is null)
+        {
+            return false;
+        }
+
+        if (classification.Source is null)
+        {
+            return classification.AutomaticKind is null;
+        }
+
+        return classification.Source is "configuration" or "request" &&
+               !string.IsNullOrWhiteSpace(classification.AutomaticKind);
     }
 
     private static void ValidateDiagnosticShape(InspectionDiagnostic diagnostic)

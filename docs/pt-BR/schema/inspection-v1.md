@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` define o resultado estável da inspeção de forma independente dos detalhes internos do MSBuild, GitHub Actions, persistência ou qualquer mecanismo específico de delivery.
 
-A versão atual do schema é `1.2`.
+A versão atual do schema é `1.3`.
 
 ## Contrato de nível superior
 
@@ -30,6 +30,19 @@ Os metadados do repositório são normalizados independentemente da implementaç
 
 Um diretório que não esteja dentro de um repositório Git continua sendo um alvo de inspeção válido. Nesse caso, o objeto `repository` pode não conter propriedades derivadas do Git.
 
+## Classificação e overrides explícitos
+
+`projects[].classification.kind` é a classificação efetiva. Normalmente ela é produzida pelo classificador determinístico e `confidence` e `signals` descrevem a decisão automática.
+
+O schema `1.3` adiciona dois campos opcionais usados somente quando um override explícito altera esse resultado efetivo:
+
+- `source`: `configuration` quando o override veio do arquivo de configuração do repositório, ou `request` quando veio diretamente da camada de CLI/Action/request;
+- `automaticKind`: o tipo de classificação produzido pelo classificador automático antes da aplicação do override.
+
+Os `signals` automáticos continuam presentes mesmo quando existe override. O Inspector não reescreve fatos do MSBuild para fazê-los concordar com um override configurado, e a `confidence` automática é omitida em vez de ser apresentada como confiança na escolha manual.
+
+Consulte [`../configuration.md`](../configuration.md) para o formato de configuração e a precedência.
+
 ## Valores opcionais e ausentes
 
 O contrato distingue deliberadamente ausência de um valor explícito:
@@ -39,7 +52,7 @@ O contrato distingue deliberadamente ausência de um valor explícito:
 - `[]` significa que a coleção foi produzida e não contém entradas;
 - valores JSON `null` não são emitidos pelo serializer canônico.
 
-Essa distinção é especialmente importante para fatos MSBuild como `isTestProject` e `isPackable`, e para `repository.isDirty`, em que uma propriedade ausente não deve ser convertida em `false`.
+Essa distinção é especialmente importante para fatos MSBuild como `isTestProject` e `isPackable`, para `repository.isDirty` e para os campos de proveniência da classificação, que só existem quando um override está ativo.
 
 ## Diagnósticos
 
@@ -80,7 +93,8 @@ As versões do schema seguem uma política major/minor.
 
 - Campos opcionais e aditivos podem ser introduzidos em uma nova versão `1.x`.
 - O schema `1.1` adicionou o objeto opcional `context` ao diagnóstico e restringiu a severidade ao vocabulário documentado.
-- O schema `1.2` adiciona o booleano opcional `repository.isDirty`, preenchido pela inspeção de metadados Git.
+- O schema `1.2` adicionou o booleano opcional `repository.isDirty`, preenchido pela inspeção de metadados Git.
+- O schema `1.3` adiciona os campos opcionais `classification.source` e `classification.automaticKind` para distinguir overrides explícitos da classificação automática.
 - Consumidores do schema `1.x` devem ignorar campos desconhecidos e preservar a semântica documentada dos campos existentes.
 - Remover ou renomear um campo, alterar seu tipo, tornar obrigatório um campo opcional ou alterar seu significado é uma breaking change e exige uma nova versão major do schema, como `2.0`.
 - `InspectionSchema.IsCompatibleVersion` aceita versões com a major atual e rejeita uma major diferente.
@@ -108,7 +122,9 @@ O contrato estável intencionalmente não expõe tipos de resultado específicos
 | Projeto `IsTestProject` | `projects[].isTestProject` |
 | Projeto `IsPackable` | `projects[].isPackable` |
 | Projeto `RuntimeIdentifiers` | `projects[].runtimeIdentifiers` |
+| Resultado do classificador automático | `projects[].classification.kind` sem override; caso contrário `projects[].classification.automaticKind` |
+| Override explícito de classificação | `projects[].classification.kind` efetivo mais `projects[].classification.source` |
 
 O dicionário bruto `Properties` do MSBuild vindo da camada de avaliação é intencionalmente excluído. Ele é uma fonte interna de evidência, não parte do contrato público estável.
 
-Classificação, referências entre projetos e metadados Git do repositório mantêm suas formas normalizadas e são preenchidos pelas respectivas issues do engine sem exigir tipos específicos de infraestrutura no contrato do Core.
+Classificação, referências entre projetos e metadados Git do repositório mantêm suas formas normalizadas e são preenchidos pelos respectivos componentes da engine sem exigir tipos específicos de infraestrutura no contrato do Core.

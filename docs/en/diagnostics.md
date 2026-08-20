@@ -22,8 +22,14 @@ Inspection diagnostics are part of the normalized result and are intended for bo
 | `DRI1010` | `error` | The repository root is unavailable. |
 | `DRI1011` | `error` | The applicable `global.json` could not be read. |
 | `DRI1012` | `warning` | Repository metadata could not be fully collected. |
+| `DRI1013` | `error` | The inspection configuration is invalid, unsupported, unreadable, or violates path/classification rules. |
+| `DRI1014` | `warning` | A configured classification override did not match a discovered project. |
 
 Codes are stable identifiers. Existing codes must not be repurposed for a different meaning. Automation should use `code` and `severity`, not message text.
+
+For `DRI1013`, `context.reason` provides a stable non-sensitive reason such as `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path`, or `invalid-classification-kind`. Configuration details that could contain arbitrary repository content are not copied into diagnostics.
+
+For `DRI1014`, `source` identifies the configured repository-relative project path and `context.overrideSource` identifies whether the stale override came from `configuration` or the direct `request` layer.
 
 ## Diagnostic fields
 
@@ -34,7 +40,7 @@ Codes are stable identifiers. Existing codes must not be repurposed for a differ
 - `details`: optional controlled human-readable detail. It must not be the only source of machine semantics.
 - `context`: optional structured string map. Keys and values must be non-sensitive and are serialized in deterministic key order.
 
-Infrastructure adapters translate internal MSBuild and SDK failures to this catalog. Raw localized error messages are deliberately not required for classification of the failure.
+Infrastructure adapters and the configuration boundary translate internal failures to this catalog. Raw localized error messages are deliberately not required for classification of the failure.
 
 ## Operational logs
 

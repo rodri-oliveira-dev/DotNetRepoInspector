@@ -6,6 +6,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 
 - [`architecture/`](architecture/) — arquitetura atual, contratos e design de implementação.
 - [`classification.md`](classification.md) — regras determinísticas de classificação de projetos e sua precedência.
+- [`configuration.md`](configuration.md) — configuração opcional do repositório, exclusões, overrides de classificação e precedência.
 - [`diagnostics.md`](diagnostics.md) — catálogo estável de diagnósticos e regras de logging operacional.
 - [`inspection-engine.md`](inspection-engine.md) — orquestração ponta a ponta da inspeção, semântica de falhas, determinismo e cancelamento.
 - [`cli.md`](cli.md) — uso da linha de comando, streams de saída, códigos de saída e comportamento de cancelamento.

@@ -9,18 +9,27 @@ Usage:
   dotnet repo-inspect [path] [options]
 
 Arguments:
-  path                  Repository path to inspect. Defaults to the current directory.
+  path                         Repository path to inspect. Defaults to the current directory.
 
 Options:
-  -o, --output <file>   Write the inspection JSON to a file instead of stdout.
-  -v, --verbose         Emit verbose operational logs to stderr.
-      --debug           Emit debug operational logs to stderr.
-  -h, --help            Show this help text.
-      --version         Show the CLI version.
+  -o, --output <file>          Write the inspection JSON to a file instead of stdout.
+      --config <file>          Use a repository-relative configuration file.
+      --no-config              Ignore the default .dotnetrepoinspector.json file.
+      --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
+      --classify <path>=<kind> Override one project classification. Repeatable.
+  -v, --verbose                Emit verbose operational logs to stderr.
+      --debug                  Emit debug operational logs to stderr.
+  -h, --help                   Show this help text.
+      --version                Show the CLI version.
+
+Classification kinds:
+  web, worker, console, library, test, unknown
 
 Examples:
   dotnet repo-inspect .
   dotnet repo-inspect ../repository --output inspection.json
+  dotnet repo-inspect . --exclude generated --exclude samples/Legacy.csproj
+  dotnet repo-inspect . --classify src/App/App.csproj=web
   dotnet repo-inspect . --verbose > inspection.json
 
 Exit codes:

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DotNetRepoInspector inspection schema 1.2",
+  "title": "DotNetRepoInspector inspection schema 1.3",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.2"
+      "const": "1.3"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -76,7 +76,11 @@
         "signals": {
           "type": "array",
           "items": { "type": "string" }
-        }
+        },
+        "source": {
+          "enum": ["configuration", "request"]
+        },
+        "automaticKind": { "type": "string" }
       }
     },
     "projectReference": {

@@ -17,6 +17,8 @@ public sealed class DiagnosticContractTests
         var sdkUnavailable = InspectionDiagnostics.DotNetSdkUnavailable();
         var unresolvedReference = InspectionDiagnostics.ProjectReferenceUnresolved();
         var propertyNotEvaluable = InspectionDiagnostics.PropertyNotEvaluable();
+        var invalidConfiguration = InspectionDiagnostics.InvalidConfiguration();
+        var unmatchedOverride = InspectionDiagnostics.ClassificationOverrideTargetNotFound();
 
         Assert.Equal(InspectionDiagnosticCodes.InvalidProject, invalidProject.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Error, invalidProject.Severity);
@@ -26,6 +28,12 @@ public sealed class DiagnosticContractTests
         Assert.Equal(InspectionDiagnosticSeverity.Warning, unresolvedReference.Severity);
         Assert.Equal(InspectionDiagnosticCodes.PropertyNotEvaluable, propertyNotEvaluable.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Warning, propertyNotEvaluable.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.InvalidConfiguration, invalidConfiguration.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Error, invalidConfiguration.Severity);
+        Assert.Equal(
+            InspectionDiagnosticCodes.ClassificationOverrideTargetNotFound,
+            unmatchedOverride.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, unmatchedOverride.Severity);
     }
 
     [Fact]
@@ -94,10 +102,11 @@ public sealed class DiagnosticContractTests
     [Fact]
     public void SchemaVersion_RemainsCompatibleWithEarlierAdditiveChanges()
     {
-        Assert.Equal("1.2", InspectionSchema.CurrentVersion);
+        Assert.Equal("1.3", InspectionSchema.CurrentVersion);
         Assert.True(InspectionSchema.IsCompatibleVersion("1.0"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.1"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.2"));
+        Assert.True(InspectionSchema.IsCompatibleVersion("1.3"));
     }
 
     private static InspectionReport CreateReport(InspectionDiagnostic diagnostic) =>

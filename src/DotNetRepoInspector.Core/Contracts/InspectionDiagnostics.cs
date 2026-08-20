@@ -122,6 +122,26 @@ public static class InspectionDiagnostics
             source,
             context);
 
+    public static InspectionDiagnostic InvalidConfiguration(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.InvalidConfiguration,
+            InspectionDiagnosticSeverity.Error,
+            "The inspection configuration is invalid.",
+            source,
+            context);
+
+    public static InspectionDiagnostic ClassificationOverrideTargetNotFound(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.ClassificationOverrideTargetNotFound,
+            InspectionDiagnosticSeverity.Warning,
+            "A configured classification override did not match a discovered project.",
+            source,
+            context);
+
     private static InspectionDiagnostic Create(
         string code,
         string severity,

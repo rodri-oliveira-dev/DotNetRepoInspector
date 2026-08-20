@@ -22,8 +22,14 @@ Os diagnósticos de inspeção fazem parte do resultado normalizado e são desti
 | `DRI1010` | `error` | A raiz do repositório está indisponível. |
 | `DRI1011` | `error` | O `global.json` aplicável não pôde ser lido. |
 | `DRI1012` | `warning` | Os metadados do repositório não puderam ser coletados completamente. |
+| `DRI1013` | `error` | A configuração da inspeção é inválida, não suportada, ilegível ou viola regras de caminho/classificação. |
+| `DRI1014` | `warning` | Um override de classificação configurado não correspondeu a um projeto descoberto. |
 
 Os códigos são identificadores estáveis. Códigos existentes não devem ser reutilizados com outro significado. A automação deve utilizar `code` e `severity`, e não o texto de `message`.
+
+Para `DRI1013`, `context.reason` fornece um motivo estável e não sensível, como `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path` ou `invalid-classification-kind`. Detalhes da configuração que possam conter conteúdo arbitrário do repositório não são copiados para os diagnósticos.
+
+Para `DRI1014`, `source` identifica o caminho do projeto configurado, relativo ao repositório, e `context.overrideSource` informa se o override obsoleto veio de `configuration` ou da camada direta `request`.
 
 ## Campos de diagnóstico
 
@@ -34,7 +40,7 @@ Os códigos são identificadores estáveis. Códigos existentes não devem ser r
 - `details`: detalhe textual opcional e controlado. Não deve ser a única fonte de semântica para máquinas.
 - `context`: mapa estruturado opcional de strings. Chaves e valores não devem conter dados sensíveis e são serializados em ordem determinística de chaves.
 
-Adapters de infraestrutura traduzem falhas internas de MSBuild e SDK para este catálogo. Mensagens de erro brutas e localizadas não são necessárias para classificar a falha.
+Adapters de infraestrutura e a fronteira de configuração traduzem falhas internas para este catálogo. Mensagens de erro brutas e localizadas não são necessárias para classificar a falha.
 
 ## Logs operacionais
 

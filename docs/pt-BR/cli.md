@@ -105,14 +105,42 @@ O primeiro argumento posicional é o caminho do repositório. Quando omitido, o 
 ## Opções
 
 ```text
--o, --output <file>   Grava o JSON da inspeção em um arquivo em vez de stdout.
--v, --verbose         Emite logs operacionais detalhados em stderr.
-    --debug           Emite logs operacionais de debug em stderr.
--h, --help            Exibe a ajuda.
-    --version         Exibe a versão da CLI/pacote.
+-o, --output <file>          Grava o JSON da inspeção em um arquivo em vez de stdout.
+    --config <file>          Usa um arquivo de configuração relativo ao repositório.
+    --no-config              Ignora o arquivo padrão .dotnetrepoinspector.json.
+    --exclude <path>         Exclui um diretório ou projeto relativo ao repositório. Repetível.
+    --classify <path>=<kind> Sobrescreve a classificação de um projeto. Repetível.
+-v, --verbose                Emite logs operacionais detalhados em stderr.
+    --debug                  Emite logs operacionais de debug em stderr.
+-h, --help                   Exibe a ajuda.
+    --version                Exibe a versão da CLI/pacote.
 ```
 
+Os tipos de classificação suportados são `web`, `worker`, `console`, `library`, `test` e `unknown`.
+
 Apenas um caminho de repositório pode ser informado. A CLI é não interativa e não solicita valores ausentes, tornando seu comportamento adequado para CI.
+
+## Configuração do repositório
+
+Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório e overrides explícitos de classificação. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.
+
+Use `--config` para selecionar outro arquivo relativo ao repositório, ou `--no-config` para ignorar o carregamento automático do arquivo padrão. `--config` e `--no-config` são mutuamente exclusivos.
+
+Valores diretos de `--exclude` são aditivos às exclusões do arquivo. Uma entrada direta de `--classify` tem precedência sobre o override do arquivo para o mesmo projeto. Consulte [`configuration.md`](configuration.md) para formato versionado, regras de caminho, proveniência dos overrides, diagnósticos e política completa de precedência.
+
+Exemplos:
+
+```bash
+dotnet repo-inspect . \
+  --exclude generated \
+  --exclude samples/Legacy.csproj \
+  --classify src/App/App.csproj=web
+
+dotnet repo-inspect . --config config/inspector.json
+dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
+```
+
+Valores malformados das opções da CLI são rejeitados antes da inspeção e retornam código `2`. Configuração inválida do repositório identificada pela Engine produz um relatório JSON normal com `DRI1013/error` e retorna código `1`.
 
 ## Streams de saída
 
@@ -135,7 +163,7 @@ O JSON é produzido por `InspectionJsonSerializer` e, portanto, segue o mesmo co
 | Código | Significado |
 | ---: | --- |
 | `0` | A inspeção foi concluída e nenhum diagnóstico com severidade de erro foi produzido. |
-| `1` | Um relatório foi produzido, mas contém um ou mais diagnósticos com severidade de erro. |
+| `1` | Um relatório foi produzido, mas contém um ou mais diagnósticos com severidade de erro, incluindo configuração inválida do repositório. |
 | `2` | Os argumentos da linha de comando são inválidos. |
 | `3` | Uma falha fatal de inspeção ou serialização impediu a produção de um relatório utilizável. |
 | `4` | O relatório não pôde ser gravado em stdout ou no arquivo solicitado. |
