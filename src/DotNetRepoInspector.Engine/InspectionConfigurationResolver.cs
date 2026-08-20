@@ -6,20 +6,25 @@ using DotNetRepoInspector.Core.Contracts;
 
 namespace DotNetRepoInspector.Engine;
 
+internal sealed record EffectiveClassificationOverride(string Kind, string Source);
+
 internal sealed record EffectiveInspectionConfiguration(
     IReadOnlyList<string> ExcludedPaths,
-    IReadOnlyDictionary<string, string> ClassificationOverrides,
+    IReadOnlyDictionary<string, EffectiveClassificationOverride> ClassificationOverrides,
     InspectionDiagnostic? Error)
 {
     public bool Succeeded => Error is null;
 
     public static EffectiveInspectionConfiguration Success(
         IReadOnlyList<string> excludedPaths,
-        IReadOnlyDictionary<string, string> classificationOverrides) =>
+        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides) =>
         new(excludedPaths, classificationOverrides, null);
 
     public static EffectiveInspectionConfiguration Failure(InspectionDiagnostic error) =>
-        new(Array.Empty<string>(), new Dictionary<string, string>(StringComparer.Ordinal), error);
+        new(
+            Array.Empty<string>(),
+            new Dictionary<string, EffectiveClassificationOverride>(StringComparer.Ordinal),
+            error);
 }
 
 internal static class InspectionConfigurationResolver
@@ -27,6 +32,8 @@ internal static class InspectionConfigurationResolver
     public const string DefaultFileName = ".dotnetrepoinspector.json";
 
     private const string SupportedConfigurationSchemaVersion = "1";
+    private const string ConfigurationFileOverrideSource = "configuration";
+    private const string RequestOverrideSource = "request";
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
@@ -53,7 +60,7 @@ internal static class InspectionConfigurationResolver
         }
 
         var excludedPaths = new HashSet<string>(PathComparer);
-        var classificationOverrides = new Dictionary<string, string>(PathComparer);
+        var classificationOverrides = new Dictionary<string, EffectiveClassificationOverride>(PathComparer);
 
         if (!request.DisableConfigurationFile)
         {
@@ -136,6 +143,7 @@ internal static class InspectionConfigurationResolver
                     document.ClassificationOverrides,
                     classificationOverrides,
                     configurationSource,
+                    ConfigurationFileOverrideSource,
                     replaceExisting: false);
                 if (overrideError is not null)
                 {
@@ -169,6 +177,7 @@ internal static class InspectionConfigurationResolver
             request.ClassificationOverrides,
             classificationOverrides,
             "configuration",
+            RequestOverrideSource,
             replaceExisting: true);
         if (requestOverrideError is not null)
         {
@@ -207,8 +216,9 @@ internal static class InspectionConfigurationResolver
     private static InspectionDiagnostic? AddClassificationOverrides(
         string repositoryRoot,
         IEnumerable<KeyValuePair<string, string>>? overrides,
-        Dictionary<string, string> destination,
-        string? source,
+        Dictionary<string, EffectiveClassificationOverride> destination,
+        string? diagnosticSource,
+        string overrideSource,
         bool replaceExisting)
     {
         if (overrides is null)
@@ -220,20 +230,22 @@ internal static class InspectionConfigurationResolver
         {
             if (!TryNormalizeRelativePath(repositoryRoot, pair.Key, out var normalizedPath))
             {
-                return CreateError(source, "invalid-classification-path");
+                return CreateError(diagnosticSource, "invalid-classification-path");
             }
 
             if (!TryNormalizeClassificationKind(pair.Value, out var normalizedKind))
             {
-                return CreateError(source, "invalid-classification-kind");
+                return CreateError(diagnosticSource, "invalid-classification-kind");
             }
 
             if (!replaceExisting && destination.ContainsKey(normalizedPath))
             {
-                return CreateError(source, "duplicate-classification-override");
+                return CreateError(diagnosticSource, "duplicate-classification-override");
             }
 
-            destination[normalizedPath] = normalizedKind;
+            destination[normalizedPath] = new EffectiveClassificationOverride(
+                normalizedKind,
+                overrideSource);
         }
 
         return null;
