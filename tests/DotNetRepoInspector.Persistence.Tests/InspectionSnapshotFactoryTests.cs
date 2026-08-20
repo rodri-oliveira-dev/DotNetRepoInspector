@@ -22,8 +22,15 @@ public sealed class InspectionSnapshotFactoryTests
             new InspectionExecutionMetadata("100", "GitHub-Actions", "refs/heads/main"));
 
         timeProvider.SetUtcNow(FirstObservation.AddHours(1));
+        var secondReport = report with
+        {
+            Repository = report.Repository with
+            {
+                Branch = "release"
+            }
+        };
         var second = factory.Create(
-            report with { Repository = report.Repository with { Branch = "release" } },
+            secondReport,
             "1.2.3",
             new InspectionExecutionMetadata("101", "github-actions", "refs/heads/release"));
 
