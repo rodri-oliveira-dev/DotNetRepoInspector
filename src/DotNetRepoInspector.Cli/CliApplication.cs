@@ -5,25 +5,37 @@ using System.Text.Json;
 
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Engine;
+using DotNetRepoInspector.Persistence;
 
 namespace DotNetRepoInspector.Cli;
 
 public sealed class CliApplication
 {
     private readonly IRepositoryInspector _repositoryInspector;
+    private readonly ICliPersistenceCoordinator _persistenceCoordinator;
     private readonly string _version;
 
     public CliApplication(IRepositoryInspector repositoryInspector)
-        : this(repositoryInspector, GetProductVersion())
+        : this(repositoryInspector, new CliPersistenceCoordinator(), GetProductVersion())
     {
     }
 
     public CliApplication(IRepositoryInspector repositoryInspector, string version)
+        : this(repositoryInspector, new CliPersistenceCoordinator(), version)
+    {
+    }
+
+    public CliApplication(
+        IRepositoryInspector repositoryInspector,
+        ICliPersistenceCoordinator persistenceCoordinator,
+        string version)
     {
         ArgumentNullException.ThrowIfNull(repositoryInspector);
+        ArgumentNullException.ThrowIfNull(persistenceCoordinator);
         ArgumentException.ThrowIfNullOrWhiteSpace(version);
 
         _repositoryInspector = repositoryInspector;
+        _persistenceCoordinator = persistenceCoordinator;
         _version = version;
     }
 
@@ -167,6 +179,49 @@ public sealed class CliApplication
             return CliExitCodes.OutputFailed;
         }
 
+        InspectionPersistenceResult? persistenceResult;
+        try
+        {
+            persistenceResult = await _persistenceCoordinator.PublishAsync(
+                report,
+                _version,
+                options.Persistence,
+                cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            console.Logger.Warning(
+                "persistence.cancelled",
+                "Snapshot persistence was cancelled.");
+            return CliExitCodes.Cancelled;
+        }
+
+        if (persistenceResult is not null)
+        {
+            if (persistenceResult.Succeeded)
+            {
+                console.Logger.Verbose(
+                    "persistence.completed",
+                    "Snapshot persistence completed successfully.",
+                    PersistenceContext(persistenceResult));
+            }
+            else if (persistenceResult.ShouldFailExecution)
+            {
+                console.Logger.Error(
+                    "persistence.failed",
+                    persistenceResult.Failure?.Message ?? "Snapshot persistence failed.",
+                    PersistenceContext(persistenceResult));
+                return CliExitCodes.PersistenceFailed;
+            }
+            else
+            {
+                console.Logger.Warning(
+                    "persistence.failed",
+                    persistenceResult.Failure?.Message ?? "Snapshot persistence failed.",
+                    PersistenceContext(persistenceResult));
+            }
+        }
+
         var hasErrors = HasErrorDiagnostics(report);
         if (hasErrors)
         {
@@ -196,6 +251,15 @@ public sealed class CliApplication
         new(StringComparer.Ordinal)
         {
             ["exceptionType"] = exception.GetType().Name
+        };
+
+    private static Dictionary<string, string> PersistenceContext(
+        InspectionPersistenceResult result) =>
+        new(StringComparer.Ordinal)
+        {
+            ["sink"] = result.SinkName,
+            ["code"] = result.Failure?.Code ?? "none",
+            ["transient"] = (result.Failure?.IsTransient ?? false) ? "true" : "false"
         };
 
     private static string GetProductVersion()

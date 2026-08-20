@@ -31,6 +31,26 @@ inputs:
     description: Newline-separated '<project-path>=<kind>' classification overrides.
     required: false
     default: ""
+  sink-url:
+    description: Optional HTTP/HTTPS endpoint that enables snapshot persistence through the built-in HTTP sink.
+    required: false
+    default: ""
+  sink-token:
+    description: Optional bearer token for the HTTP sink. Supply it from a GitHub Actions secret.
+    required: false
+    default: ""
+  sink-timeout-seconds:
+    description: Overall persistence timeout in seconds when sink-url is configured.
+    required: false
+    default: "15"
+  sink-failure-mode:
+    description: Persistence failure mode when sink-url is configured. Supported values are non-fatal and fatal.
+    required: false
+    default: non-fatal
+  sink-max-attempts:
+    description: Maximum HTTP attempts for transient persistence failures. Supported range is 1 to 5.
+    required: false
+    default: "3"
 
 outputs:
   report-path:
@@ -66,7 +86,15 @@ runs:
         DRI_INPUT_NO_CONFIG: "${{ inputs['no-config'] }}"
         DRI_INPUT_EXCLUDE: "${{ inputs.exclude }}"
         DRI_INPUT_CLASSIFY: "${{ inputs.classify }}"
+        DRI_INPUT_SINK_URL: "${{ inputs['sink-url'] }}"
+        DRI_INPUT_SINK_TIMEOUT_SECONDS: "${{ inputs['sink-timeout-seconds'] }}"
+        DRI_INPUT_SINK_FAILURE_MODE: "${{ inputs['sink-failure-mode'] }}"
+        DRI_INPUT_SINK_MAX_ATTEMPTS: "${{ inputs['sink-max-attempts'] }}"
         DRI_TOOL_VERSION: "1.0.0"
+        DOTNET_REPO_INSPECTOR_HTTP_TOKEN: "${{ inputs['sink-token'] }}"
+        DOTNET_REPO_INSPECTOR_EXECUTION_ID: "${{ github.run_id }}:${{ github.run_attempt }}"
+        DOTNET_REPO_INSPECTOR_EXECUTION_PROVIDER: github-actions
+        DOTNET_REPO_INSPECTOR_EXECUTION_REF: "${{ github.ref }}"
       run: '& (Join-Path $env:DRI_ACTION_PATH ".github/action/invoke.ps1")'
 
 branding:

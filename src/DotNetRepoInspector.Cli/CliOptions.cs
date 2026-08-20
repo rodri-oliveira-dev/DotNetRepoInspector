@@ -8,6 +8,7 @@ public sealed record CliOptions(
     bool DisableConfigurationFile,
     IReadOnlyList<string> ExcludedPaths,
     IReadOnlyDictionary<string, string> ClassificationOverrides,
+    CliPersistenceOptions Persistence,
     bool ShowHelp,
     bool ShowVersion);
 

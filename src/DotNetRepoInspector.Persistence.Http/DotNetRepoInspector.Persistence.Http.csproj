@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>DotNetRepoInspector.Persistence.Http</RootNamespace>
+    <AssemblyName>DotNetRepoInspector.Persistence.Http</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
+  </ItemGroup>
+</Project>

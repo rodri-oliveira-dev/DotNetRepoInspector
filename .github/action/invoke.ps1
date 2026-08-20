@@ -187,6 +187,23 @@ foreach ($classificationOverride in @(Get-InputLines -Value $env:DRI_INPUT_CLASS
     $arguments += @("--classify", $classificationOverride)
 }
 
+$sinkUrl = $env:DRI_INPUT_SINK_URL
+if ([string]::IsNullOrWhiteSpace($sinkUrl)) {
+    if (-not [string]::IsNullOrWhiteSpace($env:DOTNET_REPO_INSPECTOR_HTTP_TOKEN)) {
+        throw "sink-token requires sink-url."
+    }
+}
+else {
+    $arguments += @("--sink", "http", "--sink-url", $sinkUrl)
+    $arguments += @(
+        "--sink-timeout-seconds",
+        ($env:DRI_INPUT_SINK_TIMEOUT_SECONDS ?? "15"),
+        "--sink-failure-mode",
+        ($env:DRI_INPUT_SINK_FAILURE_MODE ?? "non-fatal"),
+        "--sink-max-attempts",
+        ($env:DRI_INPUT_SINK_MAX_ATTEMPTS ?? "3"))
+}
+
 & $toolCommand @arguments
 $exitCode = $LASTEXITCODE
 
