@@ -112,9 +112,17 @@ try {
     Assert-Equal "Repository type" "git" $repository.Attributes["type"].Value
     Assert-Equal "Repository URL" "https://github.com/rodri-oliveira-dev/DotNetRepoInspector" $repository.Attributes["url"].Value
 
+    $packageType = $metadata.SelectSingleNode("*[local-name()='packageTypes']/*[local-name()='packageType']")
+    if ($null -eq $packageType) {
+        throw "NuGet package type metadata was not found."
+    }
+
+    Assert-Equal "Package type" "DotnetTool" $packageType.Attributes["name"].Value
+
     $tags = (Get-MetadataNode $metadata "tags").InnerText
+    $tagValues = @($tags -split '[;\s]+' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
     foreach ($requiredTag in @("dotnet", "tool", "msbuild", "inspection")) {
-        if (-not ($tags.Split(';', [StringSplitOptions]::RemoveEmptyEntries) -contains $requiredTag)) {
+        if ($tagValues -notcontains $requiredTag) {
             throw "Required NuGet tag '$requiredTag' was not found."
         }
     }
@@ -145,9 +153,10 @@ try {
     }
 
     $unnecessaryEntries = @($entryNames | Where-Object {
-        $_.EndsWith(".pdb", [StringComparison]::OrdinalIgnoreCase) -or
         $_.EndsWith(".cs", [StringComparison]::OrdinalIgnoreCase) -or
-        $_.EndsWith(".csproj", [StringComparison]::OrdinalIgnoreCase)
+        $_.EndsWith(".csproj", [StringComparison]::OrdinalIgnoreCase) -or
+        $_.EndsWith(".sln", [StringComparison]::OrdinalIgnoreCase) -or
+        $_.EndsWith(".slnx", [StringComparison]::OrdinalIgnoreCase)
     })
 
     if ($unnecessaryEntries.Count -ne 0) {
