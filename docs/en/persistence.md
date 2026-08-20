@@ -18,6 +18,9 @@ Inspection Engine ----> InspectionReport
                            |
                            | optional
                            v
+                 InspectionSnapshotFactory
+                           |
+                           v
                  InspectionSnapshotPublisher
                            |
                            v
@@ -27,7 +30,7 @@ Inspection Engine ----> InspectionReport
                  consumer-owned destination
 ```
 
-`DotNetRepoInspector.Persistence` depends only on `DotNetRepoInspector.Core`. `Core` and `Engine` do not depend on persistence.
+`DotNetRepoInspector.Persistence` depends only on `DotNetRepoInspector.Core`. The built-in HTTP adapter lives in the separate `DotNetRepoInspector.Persistence.Http` assembly. `Core` and `Engine` do not depend on persistence or HTTP.
 
 ## Extension contract
 
@@ -57,7 +60,9 @@ Unexpected exceptions crossing the extension boundary are converted by `Inspecti
 
 ## Opt-in behavior
 
-No sink is created or invoked by the inspection engine. A host explicitly chooses a sink and calls `InspectionSnapshotPublisher` after inspection succeeds far enough to produce an `InspectionReport`.
+No sink is created or invoked by the inspection engine. The CLI or another delivery host explicitly chooses a sink and calls `InspectionSnapshotPublisher` after inspection has produced an `InspectionReport`.
+
+Without `--sink`, the CLI keeps its existing zero-network persistence behavior. Repository configuration in `.dotnetrepoinspector.json` does not enable persistence.
 
 Generic persistence options are independent from sink-specific credentials:
 
@@ -79,37 +84,113 @@ Two scopes are explicit:
 
 See [`snapshot-provenance.md`](snapshot-provenance.md) and ADR 0004 for the complete contract.
 
-## Retry and idempotency
+## Built-in HTTP/webhook sink
 
-The generic publisher does not retry. A generic retry policy cannot know whether a destination failure is transient or whether replaying the request is safe.
+ADR 0003 selects HTTP/webhook delivery as the first built-in sink. `HttpInspectionSnapshotSink` sends the canonical snapshot envelope to a consumer-owned endpoint with:
 
-Concrete sinks may retry only when all of the following are true:
+- HTTP `POST`;
+- `Content-Type: application/json`;
+- the payload produced by `InspectionSnapshotJsonSerializer`;
+- `Idempotency-Key: <snapshot.idempotencyKey>`;
+- optional `Authorization: Bearer <token>` when a token is supplied through the host environment.
 
-1. the adapter can classify the failure as transient;
-2. retry count and backoff are bounded;
-3. the overall timeout and caller cancellation are respected;
-4. replay uses the snapshot idempotency key and is safe for the destination semantics.
+The endpoint must be an absolute HTTP or HTTPS URL. URLs containing embedded user information such as `https://user:password@example/...` are rejected. The adapter never reads a response body into a failure message.
 
-The first HTTP sink in issue #22 will consume this contract rather than inventing destination-specific snapshot identity.
+### CLI configuration
+
+Enable the sink explicitly:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+Optional delivery policy:
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots \
+  --sink-timeout-seconds 30 \
+  --sink-max-attempts 3 \
+  --sink-failure-mode fatal
+```
+
+Supported HTTP sink CLI options are:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `--sink http` | disabled | Explicitly selects the built-in HTTP sink. |
+| `--sink-url <url>` | none | Consumer-owned absolute HTTP/HTTPS endpoint. Required when the sink is enabled. |
+| `--sink-timeout-seconds <1..300>` | `15` | Overall persistence deadline, including retries. |
+| `--sink-max-attempts <1..5>` | `3` | Maximum number of HTTP attempts. |
+| `--sink-failure-mode non-fatal|fatal` | `non-fatal` | Whether persistence failure should fail the command/pipeline. |
+
+There is intentionally **no CLI token argument**. For Bearer authentication, set `DOTNET_REPO_INSPECTOR_HTTP_TOKEN` in the process environment or equivalent secret facility:
+
+```bash
+export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
+dotnet repo-inspect . --sink http --sink-url https://evidence.example/api/snapshots
+```
+
+Do not put tokens in `--sink-url`, command-line arguments, `.dotnetrepoinspector.json`, committed scripts, or the inspection JSON.
+
+## Retry and failure classification
+
+The generic publisher does not retry. Retry belongs to the HTTP adapter because it can classify HTTP/transport failures and safely replay the same snapshot using its idempotency key.
+
+The HTTP sink retries only:
+
+- `HttpRequestException` transport failures;
+- request timeouts not caused by caller cancellation;
+- HTTP `408`, `429`, `500`, `502`, `503`, and `504`.
+
+Retries use bounded exponential backoff, respect the configured maximum attempt count, and remain inside the publisher's overall timeout/cancellation boundary.
+
+Authentication failures (`401`/`403`), `404`, and other non-transient `4xx` responses are not retried. Failure messages use stable classifications and do not copy exception text or response bodies.
+
+## Fatal and non-fatal delivery
+
+The report is produced before persistence is attempted.
+
+With the default `non-fatal` mode, a persistence failure is logged to stderr but normal inspection exit semantics are preserved. With `fatal`, a persistence failure returns CLI exit code `5`. The already-produced `InspectionReport` is not rewritten with a persistence diagnostic in either mode.
+
+Caller cancellation, including Ctrl+C, is propagated through snapshot publication and the HTTP request and exits through the normal cancellation path (`130`).
+
+## GitHub Action
+
+The reusable Action exposes `sink-url`, `sink-token`, `sink-timeout-seconds`, `sink-failure-mode`, and `sink-max-attempts`. `sink-token` should always reference a GitHub Actions secret. The Action maps it directly to `DOTNET_REPO_INSPECTOR_HTTP_TOKEN`; it is not appended to the CLI argument list.
+
+Example:
+
+```yaml
+- name: Inspect and persist evidence
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    output: artifacts/inspection.json
+    sink-url: https://evidence.example/api/snapshots
+    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
+    sink-failure-mode: fatal
+```
+
+When persistence is enabled, the Action also supplies generic execution provenance (`run_id:run_attempt`, provider, and ref) to the snapshot factory without adding GitHub-specific types to the persistence contract.
 
 ## Configuration and secrets
 
 Persistence configuration is a delivery concern, not repository-inspection configuration. The repository's `.dotnetrepoinspector.json` must not contain sink credentials.
 
-A future built-in sink may expose non-secret selection/policy options through CLI or GitHub Action inputs. Tokens, connection strings, API keys, and similar values must come from environment/secret facilities appropriate to the host and must never be copied into `InspectionReport`, `InspectionSnapshot`, diagnostic context, or normal logs.
+Tokens, connection strings, API keys, and similar values must come from environment/secret facilities appropriate to the host and must never be copied into `InspectionReport`, `InspectionSnapshot`, diagnostic context, or normal logs.
 
 See [`security.md`](security.md) for the project-wide secret-handling rules.
-
-## First concrete sink
-
-ADR 0003 selects an HTTP/webhook adapter as the first built-in sink because it keeps the Inspector independent from database engines and cloud providers while working naturally in local automation and CI/CD.
-
-The HTTP adapter itself is intentionally not implemented here. Issue #22 owns that implementation and will use the identity/idempotency contract defined by ADR 0004.
 
 ## Related decisions
 
 - [ADR 0003: Keep snapshot persistence optional behind sink adapters](decisions/0003-persistence-sink-architecture.md)
 - [ADR 0004: Define snapshot provenance and idempotency from canonical evidence](decisions/0004-snapshot-provenance-idempotency.md)
 - [Snapshot provenance and idempotency](snapshot-provenance.md)
+- [CLI](cli.md)
+- [GitHub Action](github-action.md)
 - [Inspection schema](schema/inspection-v1.md)
 - [Security and privacy](security.md)
