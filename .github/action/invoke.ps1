@@ -50,6 +50,23 @@ function Resolve-WorkspacePath {
     return $candidate
 }
 
+function Get-InputLines {
+    param(
+        [AllowEmptyString()]
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return @()
+    }
+
+    return @(
+        $Value -split "\r?\n" |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
+}
+
 if ([string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE)) {
     throw "GITHUB_WORKSPACE is not available."
 }
@@ -74,6 +91,13 @@ $verbosityArgument = switch ($verbosity) {
     "verbose" { "--verbose" }
     "debug" { "--debug" }
     default { throw "Unsupported verbosity '$($env:DRI_INPUT_VERBOSITY)'. Expected normal, verbose, or debug." }
+}
+
+$noConfig = switch (($env:DRI_INPUT_NO_CONFIG ?? "false").Trim().ToLowerInvariant()) {
+    "" { $false }
+    "false" { $false }
+    "true" { $true }
+    default { throw "Unsupported no-config value. Expected true or false." }
 }
 
 $repositoryInput = if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_PATH)) { "." } else { $env:DRI_INPUT_PATH }
@@ -145,6 +169,22 @@ if (-not (Test-Path -LiteralPath $toolCommand -PathType Leaf)) {
 $arguments = @($repositoryPath, "--output", $reportPath)
 if ($null -ne $verbosityArgument) {
     $arguments += $verbosityArgument
+}
+
+if (-not [string]::IsNullOrWhiteSpace($env:DRI_INPUT_CONFIG)) {
+    $arguments += @("--config", $env:DRI_INPUT_CONFIG)
+}
+
+if ($noConfig) {
+    $arguments += "--no-config"
+}
+
+foreach ($excludedPath in @(Get-InputLines -Value $env:DRI_INPUT_EXCLUDE)) {
+    $arguments += @("--exclude", $excludedPath)
+}
+
+foreach ($classificationOverride in @(Get-InputLines -Value $env:DRI_INPUT_CLASSIFY)) {
+    $arguments += @("--classify", $classificationOverride)
 }
 
 & $toolCommand @arguments
