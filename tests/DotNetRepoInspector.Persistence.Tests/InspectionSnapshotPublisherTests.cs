@@ -169,7 +169,10 @@ public sealed class InspectionSnapshotPublisherTests
             _write = write;
         }
 
-        public string Name { get; }
+        public string Name
+        {
+            get;
+        }
 
         public Task<InspectionSinkWriteResult> WriteAsync(
             InspectionSnapshot snapshot,
