@@ -8,9 +8,15 @@ public sealed class InspectionSinkWriteResult
         Failure = failure;
     }
 
-    public bool Succeeded { get; }
+    public bool Succeeded
+    {
+        get;
+    }
 
-    public InspectionSinkFailure? Failure { get; }
+    public InspectionSinkFailure? Failure
+    {
+        get;
+    }
 
     public static InspectionSinkWriteResult Success() => new(true, null);
 
