@@ -285,11 +285,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '.id')"
-          gh api --method PATCH \
-            "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
-            -F draft=false \
-            -F prerelease="${IS_PRERELEASE}" >/dev/null
+          gh release edit "${RELEASE_TAG}" \
+            --draft=false \
+            --prerelease="${IS_PRERELEASE}" >/dev/null
 
       - name: Move stable GitHub Action aliases
         if: "${{ needs.build.outputs.is-prerelease == 'false' }}"
