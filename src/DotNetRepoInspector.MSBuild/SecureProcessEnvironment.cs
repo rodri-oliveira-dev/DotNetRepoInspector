@@ -29,10 +29,16 @@ internal static class SecureProcessEnvironment
     private static readonly HashSet<string> SensitiveExactNames = new(
         [
             "DOCKER_CONFIG",
+            "GITHUB_ENV",
+            "GITHUB_OUTPUT",
+            "GITHUB_PATH",
+            "GITHUB_STATE",
+            "GITHUB_STEP_SUMMARY",
             "GPG_AGENT_INFO",
             "KUBECONFIG",
             "SSH_AGENT_PID",
-            "SSH_AUTH_SOCK"
+            "SSH_AUTH_SOCK",
+            "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS"
         ],
         StringComparer.OrdinalIgnoreCase);
 
