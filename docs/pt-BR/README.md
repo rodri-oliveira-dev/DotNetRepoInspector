@@ -14,6 +14,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`inspection-engine.md`](inspection-engine.md) — orquestração ponta a ponta da inspeção, semântica de falhas, determinismo e cancelamento.
 - [`cli.md`](cli.md) — uso da linha de comando, streams de saída, códigos de saída e comportamento de cancelamento.
 - [`github-action.md`](github-action.md) — inputs, outputs, bootstrap de runtime, permissões e validação no CI da GitHub Action reutilizável.
+- [`releases.md`](releases.md) — Semantic Versioning, compatibilidade de schema, publicação protegida, artifacts, tags e provenance.
 - [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
 - [`performance.md`](performance.md) — baseline sintética para repositórios grandes, hotspots medidos e guardrails de regressão.
 - [`real-repository-validation.md`](real-repository-validation.md) — harness de validação com repositórios públicos fixados por commit e política de reprodução de bugs.
