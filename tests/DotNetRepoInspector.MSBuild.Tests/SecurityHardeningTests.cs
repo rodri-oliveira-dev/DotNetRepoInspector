@@ -10,7 +10,7 @@ public sealed class SecurityHardeningTests
     private const string SafeEnvironmentName = "DRI_SECURITY_TEST_SETTING";
 
     [Fact]
-    public async Task EvaluateAsync_RemovesCredentialLikeEnvironmentVariablesFromMsBuild()
+    public async Task EvaluateAsync_RemovesCredentialsAndDisablesNodeReuse()
     {
         var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Security-").FullName;
         var previousSecret = Environment.GetEnvironmentVariable(SecretEnvironmentName);
@@ -30,6 +30,7 @@ public sealed class SecurityHardeningTests
                     <TargetFramework>net10.0</TargetFramework>
                     <ObservedSecret>$({{SecretEnvironmentName}})</ObservedSecret>
                     <ObservedSafe>$({{SafeEnvironmentName}})</ObservedSafe>
+                    <ObservedNodeReuse>$(MSBUILDDISABLENODEREUSE)</ObservedNodeReuse>
                   </PropertyGroup>
                 </Project>
                 """,
@@ -39,12 +40,13 @@ public sealed class SecurityHardeningTests
             var result = await evaluator.EvaluateAsync(
                 new MsBuildEvaluationRequest(
                     projectPath,
-                    ["ObservedSecret", "ObservedSafe"]),
+                    ["ObservedSecret", "ObservedSafe", "ObservedNodeReuse"]),
                 TestContext.Current.CancellationToken);
 
             Assert.True(result.Succeeded, result.Error?.Message ?? "MSBuild evaluation failed.");
             Assert.Equal(string.Empty, result.Properties["ObservedSecret"]);
             Assert.Equal("safe-setting", result.Properties["ObservedSafe"]);
+            Assert.Equal("1", result.Properties["ObservedNodeReuse"]);
         }
         finally
         {
