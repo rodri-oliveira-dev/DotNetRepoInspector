@@ -90,6 +90,7 @@ runs:
         DRI_INPUT_SINK_TIMEOUT_SECONDS: "${{ inputs['sink-timeout-seconds'] }}"
         DRI_INPUT_SINK_FAILURE_MODE: "${{ inputs['sink-failure-mode'] }}"
         DRI_INPUT_SINK_MAX_ATTEMPTS: "${{ inputs['sink-max-attempts'] }}"
+        # Public v1 contract is checked against .github/release-readiness-v1.json.
         DRI_TOOL_VERSION: "1.0.0"
         DOTNET_REPO_INSPECTOR_HTTP_TOKEN: "${{ inputs['sink-token'] }}"
         DOTNET_REPO_INSPECTOR_EXECUTION_ID: "${{ github.run_id }}:${{ github.run_attempt }}"

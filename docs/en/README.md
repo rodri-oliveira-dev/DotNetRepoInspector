@@ -15,6 +15,7 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`cli.md`](cli.md) — command-line usage, output streams, exit codes, and cancellation behavior.
 - [`github-action.md`](github-action.md) — reusable GitHub Action inputs, outputs, runtime bootstrap, permissions, and CI validation.
 - [`releases.md`](releases.md) — Semantic Versioning, schema compatibility, protected publication, release artifacts, tags, and provenance.
+- [`v1-release-readiness.md`](v1-release-readiness.md) — v1.0.0 public baseline, automated readiness gate, first-publication checklist, and post-release verification.
 - [`compatibility.md`](compatibility.md) — supported .NET SDK/TFM and operating-system compatibility matrix.
 - [`performance.md`](performance.md) — synthetic large-repository baseline, measured hotspots, and regression guardrails.
 - [`real-repository-validation.md`](real-repository-validation.md) — pinned public-repository validation harness and bug-reproduction policy.
@@ -22,4 +23,4 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`schema/inspection-v1.md`](schema/inspection-v1.md) — public JSON contract and compatibility policy.
 - [`decisions/`](decisions/) — Architecture Decision Records for durable technical decisions.
 
-Documentation should distinguish current behavior from planned behavior while the project is in early development.
+Documentation distinguishes the public v1 compatibility surface from explicitly post-v1 evolution work.

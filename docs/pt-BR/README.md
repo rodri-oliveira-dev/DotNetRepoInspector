@@ -15,6 +15,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`cli.md`](cli.md) — uso da linha de comando, streams de saída, códigos de saída e comportamento de cancelamento.
 - [`github-action.md`](github-action.md) — inputs, outputs, bootstrap de runtime, permissões e validação no CI da GitHub Action reutilizável.
 - [`releases.md`](releases.md) — Semantic Versioning, compatibilidade de schema, publicação protegida, artifacts, tags e provenance.
+- [`v1-release-readiness.md`](v1-release-readiness.md) — baseline pública da v1.0.0, gate automatizado de readiness, checklist da primeira publicação e verificação pós-release.
 - [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
 - [`performance.md`](performance.md) — baseline sintética para repositórios grandes, hotspots medidos e guardrails de regressão.
 - [`real-repository-validation.md`](real-repository-validation.md) — harness de validação com repositórios públicos fixados por commit e política de reprodução de bugs.
@@ -22,4 +23,4 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`schema/inspection-v1.md`](schema/inspection-v1.md) — contrato JSON público e política de compatibilidade.
 - [`decisions/`](decisions/) — Architecture Decision Records para decisões técnicas duradouras.
 
-Enquanto o projeto estiver em desenvolvimento inicial, a documentação deve distinguir o comportamento atual do comportamento planejado.
+A documentação distingue a superfície pública de compatibilidade da v1 do trabalho explicitamente planejado para pós-v1.
