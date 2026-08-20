@@ -15,5 +15,6 @@ An ADR should capture:
 ## Records
 
 - [ADR 0001: Evaluate projects through `dotnet msbuild`](0001-msbuild-evaluation-strategy.md) — Accepted.
+- [ADR 0002: Distribute the GitHub Action as a composite action over the .NET Tool](0002-github-action-distribution-strategy.md) — Accepted.
 
-Likely next decisions include classification precedence, JSON schema compatibility, GitHub Action packaging, and persistence/sink abstractions.
+Likely next decisions include classification precedence, JSON schema compatibility, and persistence/sink abstractions.
