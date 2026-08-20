@@ -173,7 +173,10 @@ public sealed class InspectionSnapshotFactory
             Branch = null,
             RemoteUrl = repositoryIdentity
         };
-        InspectionReport canonicalReport = report with { Repository = canonicalRepository };
+        InspectionReport canonicalReport = report with
+        {
+            Repository = canonicalRepository
+        };
         return ComputeSha256(InspectionJsonSerializer.Serialize(canonicalReport));
     }
 
