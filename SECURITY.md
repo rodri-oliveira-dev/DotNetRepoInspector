@@ -1,5 +1,7 @@
 # Security Policy
 
+**Languages:** English | [Português (Brasil)](SECURITY.pt-BR.md)
+
 ## Reporting a vulnerability
 
 Please do not open a public issue for a suspected vulnerability that could expose secrets, private repository data, arbitrary code execution, or another user's environment.

@@ -41,7 +41,7 @@ jobs:
           archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
 
-          curl --fail --silent --show-error --location "$url" --output "$archive"
+          curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" "$url" --output "$archive"
           echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check -
           tar -xzf "$archive" actionlint
           ./actionlint -version
@@ -220,6 +220,7 @@ jobs:
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
           /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"
+          /d:sonar.coverage.exclusions=".github/**"
           /d:sonar.qualitygate.wait="${SONAR_QUALITY_GATE_WAIT}"
           /d:sonar.qualitygate.timeout=300
 
