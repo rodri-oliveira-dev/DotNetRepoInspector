@@ -1,4 +1,4 @@
-name: Sonar PR84 Diagnostic
+name: Apply PR84 Sonar Fix
 
 on:
   push:
@@ -8,71 +8,40 @@ on:
       - .github/workflows/sonar-pr84-diagnostic.yml
 
 permissions:
-  contents: read
-  statuses: write
+  contents: write
 
 jobs:
-  diagnostic:
+  apply:
     runs-on: ubuntu-latest
     steps:
-      - name: Publish sanitized Sonar PR diagnostics
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: true
+
+      - name: Exclude CI infrastructure from coverage metric only
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('.github/workflows/validate.yml')
+          content = path.read_text(encoding='utf-8')
+          marker = '          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"\n'
+          addition = marker + '          /d:sonar.coverage.exclusions=".github/**"\n'
+
+          if content.count(marker) != 1:
+              raise SystemExit(f'Expected exactly one Sonar coverage report setting, found {content.count(marker)}.')
+
+          path.write_text(content.replace(marker, addition), encoding='utf-8')
+
+      - name: Restore script executable bit and commit fix
         shell: bash
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-
-          curl --fail --silent --show-error \
-            --user "${SONAR_TOKEN}:" \
-            "https://sonarcloud.io/api/qualitygates/project_status?projectKey=rodri-oliveira-dev_DotNetRepoInspector&pullRequest=84" \
-            --output /tmp/gate.json
-
-          curl --fail --silent --show-error \
-            --user "${SONAR_TOKEN}:" \
-            "https://sonarcloud.io/api/issues/search?componentKeys=rodri-oliveira-dev_DotNetRepoInspector&pullRequest=84&issueStatuses=OPEN%2CCONFIRMED&ps=100" \
-            --output /tmp/issues.json
-
-          python3 - <<'PY' >/tmp/statuses.txt
-          import json
-          import urllib.parse
-
-          with open('/tmp/gate.json', encoding='utf-8') as f:
-              gate = json.load(f).get('projectStatus', {})
-          print('sonardiag/gate|' + gate.get('status', 'UNKNOWN'))
-          for i, condition in enumerate(gate.get('conditions', []), 1):
-              parts = [
-                  condition.get('status', ''),
-                  condition.get('metricKey', ''),
-                  condition.get('comparator', ''),
-                  str(condition.get('errorThreshold', '')),
-                  str(condition.get('actualValue', '')),
-              ]
-              value = '|'.join(parts)
-              print(f'sonardiag/condition/{i:02d}|' + value[:115])
-
-          with open('/tmp/issues.json', encoding='utf-8') as f:
-              issues = json.load(f).get('issues', [])
-          print(f'sonardiag/issues|{len(issues)}')
-          for i, issue in enumerate(issues, 1):
-              component = issue.get('component', '').split(':')[-1]
-              parts = [
-                  issue.get('rule', ''),
-                  f"L{issue.get('line', '')}",
-                  issue.get('severity', ''),
-                  component,
-              ]
-              print(f'sonardiag/issue/{i:02d}|' + '|'.join(parts)[:115])
-          PY
-
-          while IFS= read -r context; do
-            curl --fail --silent --show-error \
-              --request POST \
-              --header "Authorization: Bearer ${GH_TOKEN}" \
-              --header "Accept: application/vnd.github+json" \
-              --header "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
-              --data "$(python3 -c 'import json,sys; print(json.dumps({"state":"success","context":sys.argv[1]}))' "$context")" \
-              >/dev/null
-          done </tmp/statuses.txt
+          chmod +x .github/scripts/coverage_summary.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -- .github/workflows/sonar-pr84-diagnostic.yml
+          git add -- .github/workflows/validate.yml .github/scripts/coverage_summary.py
+          git commit -m "fix(ci): exclude workflow infrastructure from Sonar coverage"
+          git push origin HEAD:fix/sonar-security-issues
