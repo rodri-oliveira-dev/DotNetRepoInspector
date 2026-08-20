@@ -93,10 +93,15 @@ Performance and scalability are intentionally deferred to issue #18 so optimizat
 
 ## Security note
 
-Not requesting build targets reduces unnecessary execution, but MSBuild evaluation is not a sandbox or a security boundary. Repositories and imported build logic must still be treated according to the execution environment's trust model. The broader security review is tracked by issue #24.
+Not requesting build targets reduces unnecessary execution, but MSBuild evaluation is not a sandbox or a security boundary. Imports, SDK resolution, environment-backed properties, and property functions still execute during evaluation and can access resources available to the child process.
+
+DotNetRepoInspector applies defense-in-depth controls at this boundary: credential-like environment variables and CI command-file handles are removed from Inspector-owned `dotnet`/MSBuild processes, MSBuild node reuse is disabled, arguments do not pass through a shell, and raw process output is not mapped into the normalized inspection report. These controls reduce exposure but do not make untrusted repositories safe to evaluate in a secrets-bearing or privileged environment.
+
+The complete trust model and operational guidance are maintained in [`../security.md`](../security.md).
 
 ## References
 
 - Microsoft Learn — Evaluate MSBuild items and properties: https://learn.microsoft.com/visualstudio/msbuild/evaluate-items-and-properties
 - Microsoft Learn — MSBuild command-line reference: https://learn.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
+- Microsoft Learn — Secure MSBuild usage best practices: https://learn.microsoft.com/visualstudio/msbuild/msbuild-security-best-practices
 - Microsoft Learn — `global.json` overview: https://learn.microsoft.com/dotnet/core/tools/global-json
