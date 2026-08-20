@@ -85,7 +85,12 @@ public sealed class CliApplication
                 "Repository inspection started.");
 
             report = await _repositoryInspector.InspectAsync(
-                new RepositoryInspectionRequest(options.RepositoryPath),
+                new RepositoryInspectionRequest(
+                    options.RepositoryPath,
+                    ConfigurationPath: options.ConfigurationPath,
+                    DisableConfigurationFile: options.DisableConfigurationFile,
+                    ExcludedPaths: options.ExcludedPaths,
+                    ClassificationOverrides: options.ClassificationOverrides),
                 cancellationToken);
         }
         catch (OperationCanceledException)
