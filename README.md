@@ -134,7 +134,6 @@ dotnet pack ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj \
   --configuration Release \
   --output ./artifacts/packages \
   -p:Version=0.0.0-local
-
 dotnet tool install --global DotNetRepoInspector \
   --version 0.0.0-local \
   --add-source ./artifacts/packages
@@ -165,15 +164,25 @@ dotnet-repo-inspect .
 
 ### GitHub Actions
 
+The repository includes a reusable composite Action that executes the same .NET Tool and engine as the CLI:
+
 ```yaml
+- name: Checkout
+  uses: actions/checkout@v7
+
 - name: Inspect .NET repository
   id: inspect
   uses: rodri-oliveira-dev/DotNetRepoInspector@v1
   with:
     path: .
+    output: artifacts/inspection.json
 ```
 
-The Action integration is planned; this example documents the intended consumer experience rather than an already published release.
+Useful outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action preserves the CLI exit semantics and does not require a GitHub token or write permission for inspection of an existing checkout.
+
+> The Action implementation is validated in CI, but the public `v1` tag and matching NuGet package are not published yet. Publication is intentionally deferred to the release automation work.
+
+See [the GitHub Action documentation](docs/en/github-action.md) for inputs, outputs, SDK requirements, package-source isolation, failure handling, and downstream consumption examples.
 
 ## Documentation
 
@@ -188,27 +197,29 @@ The documentation is organized by language and each language tree links only to 
 Repository
     |
     v
-DotNetRepoInspector.MSBuild
+Inspection Engine
+    |
+    +-------------------+
+    |                   |
+    v                   v
+CLI / .NET Tool    GitHub Action
     |
     v
-DotNetRepoInspector.Core
-    |
-    +------------------+
-    |                  |
-    v                  v
-CLI / JSON        Future integrations
-                  (GitHub Action, sinks,
-                   policy/reporting)
+JSON contract
+
+Future adapters: sinks, policy/reporting
 ```
 
-The Core owns normalized inspection models and classification rules. MSBuild-specific discovery/evaluation remains behind an adapter. Consumers such as the CLI, GitHub Action, and future persistence sinks should depend on the normalized model rather than duplicate repository-detection logic.
+The Core owns normalized inspection models and classification rules. MSBuild-specific discovery/evaluation remains behind an adapter. Consumers such as the CLI, GitHub Action, and future persistence sinks depend on the normalized model rather than duplicate repository-detection logic.
 
 ## Repository structure
 
 ```text
 .
 ├── .agents/skills/                    # Task-specific agent guidance
+├── .github/action/                    # GitHub Action bootstrap/invocation glue
 ├── .vscode/                           # Portable VS Code recommendations/settings
+├── action.yml                         # Reusable composite GitHub Action
 ├── docs/
 │   ├── en/                            # English documentation
 │   │   ├── architecture/              # Architecture documentation
@@ -220,10 +231,14 @@ The Core owns normalized inspection models and classification rules. MSBuild-spe
 │       └── schema/
 ├── src/
 │   ├── DotNetRepoInspector.Core/      # Domain model, normalization, classification
+│   ├── DotNetRepoInspector.Engine/    # End-to-end inspection orchestration
+│   ├── DotNetRepoInspector.Git/       # Git repository metadata adapter
 │   ├── DotNetRepoInspector.MSBuild/   # Project discovery and MSBuild evaluation
 │   └── DotNetRepoInspector.Cli/       # CLI and serialization boundary
 ├── tests/
 │   ├── DotNetRepoInspector.Core.Tests/
+│   ├── DotNetRepoInspector.Engine.Tests/
+│   ├── DotNetRepoInspector.Git.Tests/
 │   ├── DotNetRepoInspector.MSBuild.Tests/
 │   ├── DotNetRepoInspector.Cli.Tests/
 │   └── Fixtures/                      # Synthetic .NET repository/project fixtures
@@ -267,7 +282,7 @@ A stored snapshot should be attributable to the inspected repository state, idea
 - [ ] Define and version the JSON contract
 - [ ] Add fixture-based tests
 - [x] Package the CLI as a .NET tool
-- [ ] Publish a reusable GitHub Action
+- [x] Implement a reusable GitHub Action; public release/tagging remains pending
 - [ ] Add optional snapshot sinks
 - [ ] Explore policy/compliance checks over normalized inspection results
 
