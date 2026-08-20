@@ -168,6 +168,151 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  sonar:
+    name: SonarQube Cloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: build-test-quality
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      (
+        github.event_name == 'pull_request' &&
+        github.event.pull_request.head.repo.full_name == github.repository
+      )
+
+    steps:
+      - name: Verify SONAR_TOKEN
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "${SONAR_TOKEN}" ]; then
+            echo "SONAR_TOKEN repository secret is required."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore tools
+        run: dotnet tool restore
+
+      - name: Restore
+        run: dotnet restore ./DotNetRepoInspector.slnx
+
+      - name: Begin Sonar analysis
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >-
+          dotnet sonarscanner begin
+          /k:"rodri-oliveira-dev_DotNetRepoInspector"
+          /o:"rodri-oliveira-dev"
+          /d:sonar.token="${SONAR_TOKEN}"
+          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"
+          /d:sonar.qualitygate.wait=true
+          /d:sonar.qualitygate.timeout=300
+
+      - name: Build for Sonar
+        run: >-
+          dotnet build ./DotNetRepoInspector.slnx
+          --configuration Release
+          --no-restore
+          --no-incremental
+          --disable-build-servers
+          -p:RunAnalyzers=true
+
+      - name: Test with OpenCover
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $testProjects = @(
+            "tests/DotNetRepoInspector.Core.Tests/DotNetRepoInspector.Core.Tests.csproj",
+            "tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj",
+            "tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj",
+            "tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj",
+            "tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj",
+            "tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj",
+            "tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj"
+          )
+
+          foreach ($project in $testProjects) {
+            $name = [IO.Path]::GetFileNameWithoutExtension($project)
+            $resultsDirectory = "./artifacts/coverage/sonar/$name"
+
+            dotnet test $project `
+              --configuration Release `
+              --no-build `
+              --no-restore `
+              --results-directory $resultsDirectory `
+              -- `
+              --coverlet `
+              --coverlet-output-format opencover
+
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+
+            $generatedReports = @(
+              Get-ChildItem -LiteralPath $resultsDirectory -Recurse -File |
+                Where-Object {
+                  $_.Name -like "*opencover*.xml" -and
+                  $_.Name -ne "coverage.opencover.xml"
+                }
+            )
+
+            if ($generatedReports.Count -ne 1) {
+              $found = if ($generatedReports.Count -eq 0) {
+                "<none>"
+              } else {
+                $generatedReports.FullName -join ", "
+              }
+
+              throw "Expected exactly one generated OpenCover report for '$name', found $($generatedReports.Count): $found"
+            }
+
+            $normalizedReport = Join-Path $resultsDirectory "coverage.opencover.xml"
+            Copy-Item -LiteralPath $generatedReports[0].FullName -Destination $normalizedReport -Force
+            Write-Host "Normalized OpenCover report: $normalizedReport"
+          }
+
+      - name: Verify OpenCover reports
+        shell: pwsh
+        run: |
+          $reports = @(
+            Get-ChildItem `
+              -Path "./artifacts/coverage/sonar" `
+              -Filter "coverage.opencover.xml" `
+              -Recurse `
+              -File
+          )
+
+          if ($reports.Count -ne 7) {
+            $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
+            throw "Expected seven normalized OpenCover reports, found $($reports.Count): $found"
+          }
+
+          Write-Host "Found $($reports.Count) normalized OpenCover reports."
+          $reports | ForEach-Object { Write-Host $_.FullName }
+
+      - name: End Sonar analysis
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >-
+          dotnet sonarscanner end
+          /d:sonar.token="${SONAR_TOKEN}"
+
   action-smoke:
     name: GitHub Action (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
