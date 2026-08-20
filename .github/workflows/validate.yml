@@ -218,7 +218,7 @@ jobs:
           /k:"rodri-oliveira-dev_DotNetRepoInspector"
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
-          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/**/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"
           /d:sonar.qualitygate.wait=true
           /d:sonar.qualitygate.timeout=300
 
@@ -262,6 +262,28 @@ jobs:
             if ($LASTEXITCODE -ne 0) {
               exit $LASTEXITCODE
             }
+
+            $generatedReports = @(
+              Get-ChildItem -LiteralPath $resultsDirectory -Recurse -File |
+                Where-Object {
+                  $_.Name -like "*opencover*.xml" -and
+                  $_.Name -ne "coverage.opencover.xml"
+                }
+            )
+
+            if ($generatedReports.Count -ne 1) {
+              $found = if ($generatedReports.Count -eq 0) {
+                "<none>"
+              } else {
+                $generatedReports.FullName -join ", "
+              }
+
+              throw "Expected exactly one generated OpenCover report for '$name', found $($generatedReports.Count): $found"
+            }
+
+            $normalizedReport = Join-Path $resultsDirectory "coverage.opencover.xml"
+            Copy-Item -LiteralPath $generatedReports[0].FullName -Destination $normalizedReport -Force
+            Write-Host "Normalized OpenCover report: $normalizedReport"
           }
 
       - name: Verify OpenCover reports
@@ -275,11 +297,12 @@ jobs:
               -File
           )
 
-          if ($reports.Count -eq 0) {
-            throw "No OpenCover coverage reports were generated."
+          if ($reports.Count -ne 7) {
+            $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
+            throw "Expected seven normalized OpenCover reports, found $($reports.Count): $found"
           }
 
-          Write-Host "Found $($reports.Count) OpenCover report(s)."
+          Write-Host "Found $($reports.Count) normalized OpenCover reports."
           $reports | ForEach-Object { Write-Host $_.FullName }
 
       - name: End Sonar analysis
