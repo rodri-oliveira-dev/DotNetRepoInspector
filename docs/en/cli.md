@@ -78,7 +78,6 @@ Install that exact package globally from the local feed:
 dotnet tool install --global DotNetRepoInspector \
   --version 0.0.0-local \
   --add-source ./artifacts/packages
-
 dotnet repo-inspect --version
 ```
 
@@ -106,14 +105,42 @@ The first positional argument is the repository path. When omitted, the current 
 ## Options
 
 ```text
--o, --output <file>   Write the inspection JSON to a file instead of stdout.
--v, --verbose         Emit verbose operational logs to stderr.
-    --debug           Emit debug operational logs to stderr.
--h, --help            Show help.
-    --version         Show the CLI/package version.
+-o, --output <file>          Write the inspection JSON to a file instead of stdout.
+    --config <file>          Use a repository-relative configuration file.
+    --no-config              Ignore the default .dotnetrepoinspector.json file.
+    --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
+    --classify <path>=<kind> Override one project classification. Repeatable.
+-v, --verbose                Emit verbose operational logs to stderr.
+    --debug                  Emit debug operational logs to stderr.
+-h, --help                   Show help.
+    --version                Show the CLI/package version.
 ```
 
+Supported classification kinds are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
+
 Only one repository path may be supplied. The CLI is non-interactive and does not prompt for missing values, making its behavior suitable for CI.
+
+## Repository configuration
+
+When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions and explicit classification overrides. It is completely optional; when absent, the existing zero-configuration behavior is preserved.
+
+Use `--config` to select another repository-relative file, or `--no-config` to skip automatic loading of the default file. `--config` and `--no-config` are mutually exclusive.
+
+Direct `--exclude` values are additive to file exclusions. A direct `--classify` entry has precedence over a file classification override for the same project. See [`configuration.md`](configuration.md) for the versioned file format, path rules, override provenance, diagnostics, and full precedence policy.
+
+Examples:
+
+```bash
+dotnet repo-inspect . \
+  --exclude generated \
+  --exclude samples/Legacy.csproj \
+  --classify src/App/App.csproj=web
+
+dotnet repo-inspect . --config config/inspector.json
+dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
+```
+
+Malformed CLI option values are rejected before inspection and return exit code `2`. Invalid repository configuration discovered by the Engine produces a normal JSON report containing `DRI1013/error` and returns exit code `1`.
 
 ## Output streams
 
@@ -136,7 +163,7 @@ The JSON is produced by `InspectionJsonSerializer` and therefore follows the sam
 | Code | Meaning |
 | ---: | --- |
 | `0` | Inspection completed and no error-severity diagnostics were produced. |
-| `1` | A report was produced, but it contains one or more error-severity diagnostics. |
+| `1` | A report was produced, but it contains one or more error-severity diagnostics, including invalid repository configuration. |
 | `2` | Command-line arguments are invalid. |
 | `3` | A fatal inspection or serialization failure prevented a usable report. |
 | `4` | The report could not be written to stdout or the requested file. |
