@@ -168,6 +168,131 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  action-smoke:
+    name: GitHub Action (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    env:
+      ACTION_TEST_TOOL_VERSION: "1.0.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK for test package
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore CLI package graph
+        run: dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+
+      - name: Pack exact Action test version
+        shell: pwsh
+        run: >-
+          dotnet pack ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+          --configuration Release
+          --no-restore
+          --output ./artifacts/action-smoke/packages
+          -p:Version=$env:ACTION_TEST_TOOL_VERSION
+          -p:TreatWarningsAsErrors=true
+          -p:RunAnalyzers=true
+
+      - name: Configure isolated self-test package source
+        shell: pwsh
+        run: |
+          $source = (Resolve-Path -LiteralPath "./artifacts/action-smoke/packages").Path
+          "DOTNET_REPO_INSPECTOR_SELF_TEST_PACKAGE_SOURCE=$source" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+
+      - name: Run reusable Action
+        id: inspect
+        uses: ./
+        with:
+          path: ./tests/Fixtures/ProjectKinds
+          output: ./artifacts/action-smoke/report.json
+          verbosity: debug
+
+      - name: Validate Action outputs
+        shell: pwsh
+        env:
+          REPORT_PATH: "${{ steps.inspect.outputs.report-path }}"
+          SCHEMA_VERSION: "${{ steps.inspect.outputs.schema-version }}"
+          INSPECTOR_VERSION: "${{ steps.inspect.outputs.inspector-version }}"
+          EXIT_CODE: "${{ steps.inspect.outputs.exit-code }}"
+        run: |
+          if ($env:EXIT_CODE -ne "0") {
+            throw "Expected Action exit code 0, actual '$env:EXIT_CODE'."
+          }
+
+          if ($env:INSPECTOR_VERSION -ne $env:ACTION_TEST_TOOL_VERSION) {
+            throw "Expected Inspector version '$env:ACTION_TEST_TOOL_VERSION', actual '$env:INSPECTOR_VERSION'."
+          }
+
+          if ($env:SCHEMA_VERSION -ne "1.2") {
+            throw "Expected schema version 1.2, actual '$env:SCHEMA_VERSION'."
+          }
+
+          if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
+            throw "report-path must be absolute. Actual: '$env:REPORT_PATH'."
+          }
+
+          if (-not (Test-Path -LiteralPath $env:REPORT_PATH -PathType Leaf)) {
+            throw "Action report '$env:REPORT_PATH' was not created."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if (@($report.projects).Count -eq 0) {
+            throw "Action report does not contain inspected projects."
+          }
+
+      - name: Verify non-zero CLI exit propagation and default report path
+        if: matrix.os == 'ubuntu-latest'
+        id: expected-failure
+        continue-on-error: true
+        uses: ./
+        with:
+          path: ./tests/Fixtures/Compatibility/MissingSdk
+
+      - name: Validate failure propagation
+        if: matrix.os == 'ubuntu-latest' && always()
+        shell: pwsh
+        env:
+          STEP_OUTCOME: "${{ steps.expected-failure.outcome }}"
+          EXIT_CODE: "${{ steps.expected-failure.outputs.exit-code }}"
+          REPORT_PATH: "${{ steps.expected-failure.outputs.report-path }}"
+          SCHEMA_VERSION: "${{ steps.expected-failure.outputs.schema-version }}"
+        run: |
+          if ($env:STEP_OUTCOME -ne "failure") {
+            throw "Expected the missing-SDK Action invocation to fail, actual outcome '$env:STEP_OUTCOME'."
+          }
+
+          if ($env:EXIT_CODE -ne "1") {
+            throw "Expected propagated CLI exit code 1, actual '$env:EXIT_CODE'."
+          }
+
+          if ($env:SCHEMA_VERSION -ne "1.2") {
+            throw "Expected schema version 1.2 from the partial report, actual '$env:SCHEMA_VERSION'."
+          }
+
+          if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
+            throw "Default report-path must be absolute. Actual: '$env:REPORT_PATH'."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          $diagnostic = @($report.diagnostics) | Where-Object { $_.code -eq "DRI1002" } | Select-Object -First 1
+          if ($null -eq $diagnostic -or $diagnostic.severity -ne "error") {
+            throw "Expected DRI1002/error in the report produced by the failing Action invocation."
+          }
+
   compatibility:
     name: Compatibility (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
