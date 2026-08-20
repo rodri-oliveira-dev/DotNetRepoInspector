@@ -123,6 +123,40 @@ jobs:
           --reports "artifacts/test-results/**/*cobertura*.xml"
           --baseline ./.github/coverage-baseline.json
 
+      - name: Pack .NET Tool
+        env:
+          TOOL_PACKAGE_VERSION: "0.0.0-ci.${{ github.run_number }}"
+        run: >-
+          dotnet pack ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+          --configuration Release
+          --no-restore
+          --output ./artifacts/packages
+          -p:Version=${TOOL_PACKAGE_VERSION}
+          -p:TreatWarningsAsErrors=true
+          -p:RunAnalyzers=true
+
+      - name: Validate .NET Tool package
+        shell: pwsh
+        env:
+          TOOL_PACKAGE_VERSION: "0.0.0-ci.${{ github.run_number }}"
+        run: >-
+          ./.github/scripts/validate_tool_package.ps1
+          -PackageDirectory ./artifacts/packages
+          -Version $env:TOOL_PACKAGE_VERSION
+          -FixturePath ./tests/Fixtures/ProjectKinds
+          -ArtifactsDirectory ./artifacts/tool-package-smoke
+
+      - name: Upload .NET Tool package validation artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dotnet-tool-package-validation
+          path: |
+            artifacts/packages
+            artifacts/tool-package-smoke
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Upload test and coverage artifacts
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
