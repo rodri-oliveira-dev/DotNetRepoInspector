@@ -2,7 +2,6 @@ using System.Net;
 using System.Text.Json;
 
 using DotNetRepoInspector.Core.Contracts;
-using DotNetRepoInspector.Persistence;
 
 using Xunit;
 
