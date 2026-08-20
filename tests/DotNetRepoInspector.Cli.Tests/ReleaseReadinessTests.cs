@@ -25,11 +25,11 @@ public sealed class ReleaseReadinessTests
         Assert.Equal(productVersion, actionVersion);
         Assert.Equal($"v{parsedProductVersion.Major}", actionMajorAlias);
 
-        Assert.Equal(schemaVersion, InspectionSchema.CurrentVersion);
+        Assert.Equal(InspectionSchema.CurrentVersion, schemaVersion);
         Assert.True(Version.TryParse(schemaVersion, out Version? parsedSchemaVersion));
         Assert.NotNull(parsedSchemaVersion);
         Assert.Equal(parsedProductVersion.Major, parsedSchemaVersion.Major);
-        Assert.Equal(parsedSchemaVersion.Major, InspectionSchema.CurrentMajorVersion);
+        Assert.Equal(InspectionSchema.CurrentMajorVersion, parsedSchemaVersion.Major);
     }
 
     [Fact]
