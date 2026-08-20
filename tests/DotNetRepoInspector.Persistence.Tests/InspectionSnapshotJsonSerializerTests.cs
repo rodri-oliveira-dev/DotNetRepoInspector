@@ -53,7 +53,7 @@ public sealed class InspectionSnapshotJsonSerializerTests
             Diagnostics =
             [
                 new InspectionDiagnostic(
-                    "TEST0001",
+                    "DRI9999",
                     InspectionDiagnosticSeverity.Warning,
                     "Diagnostic for serializer regression test.",
                     "test",
