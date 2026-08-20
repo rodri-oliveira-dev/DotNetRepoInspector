@@ -72,8 +72,15 @@ public sealed class InspectionSnapshotJsonSerializerTests
         string json = InspectionSnapshotJsonSerializer.Serialize(snapshot);
 
         Assert.DoesNotContain(secret, json, StringComparison.Ordinal);
-        Assert.Contains("<redacted>", json, StringComparison.Ordinal);
-        Assert.Contains("visible", json, StringComparison.Ordinal);
+
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement context = document.RootElement
+            .GetProperty("report")
+            .GetProperty("diagnostics")[0]
+            .GetProperty("context");
+
+        Assert.Equal("<redacted>", context.GetProperty("accessToken").GetString());
+        Assert.Equal("visible", context.GetProperty("safeValue").GetString());
     }
 
     private static InspectionReport CreateReport() =>
