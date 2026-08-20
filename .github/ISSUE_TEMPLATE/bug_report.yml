@@ -1,0 +1,64 @@
+name: Bug report
+description: Report reproducible incorrect behavior in DotNetRepoInspector.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please do not include credentials, private repository contents, or sensitive exploit details. For suspected security vulnerabilities, follow the repository Security Policy instead of opening a public issue.
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and why it is incorrect.
+      placeholder: The Inspector reported ... but I expected ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide concise steps, a minimal public repository, or enough evaluated project metadata to reproduce the problem. Classification bugs should ideally be reducible to a small synthetic fixture.
+      placeholder: |
+        1. Inspect ...
+        2. Project contains/evaluates ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Inspector version or commit
+      description: Use the package version, Action ref, or commit SHA you tested.
+      placeholder: 1.0.0, v1, or abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Execution mode
+      options:
+        - CLI / .NET Tool
+        - GitHub Action
+        - Running from source
+        - Library / adapter tests
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Relevant environment details
+      description: Include OS, installed .NET SDKs, global.json behavior, or CI runner details only when they may affect reproduction.
+      placeholder: Ubuntu 24.04; .NET SDK 10.0.400; repository global.json requests 8.0.x
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add logs or JSON excerpts only after removing secrets and unrelated/private data.
