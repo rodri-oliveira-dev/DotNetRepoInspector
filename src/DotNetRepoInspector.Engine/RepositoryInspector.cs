@@ -13,6 +13,10 @@ namespace DotNetRepoInspector.Engine;
 
 public sealed class RepositoryInspector : IRepositoryInspector
 {
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
+
     private readonly IProjectDiscoverer _projectDiscoverer;
     private readonly IMsBuildProjectFactsEvaluator _projectFactsEvaluator;
     private readonly IDotNetSdkInspector _sdkInspector;
@@ -59,6 +63,15 @@ public sealed class RepositoryInspector : IRepositoryInspector
         cancellationToken.ThrowIfCancellationRequested();
 
         var repositoryRoot = NormalizeRepositoryRoot(request.RepositoryRoot);
+        var configuration = await InspectionConfigurationResolver.ResolveAsync(
+            repositoryRoot,
+            request,
+            cancellationToken);
+        if (!configuration.Succeeded)
+        {
+            return CreateConfigurationFailureReport(configuration.Error!);
+        }
+
         var diagnostics = new List<InspectionDiagnostic>();
 
         var gitResult = await _gitMetadataProvider.InspectAsync(
@@ -74,10 +87,17 @@ public sealed class RepositoryInspector : IRepositoryInspector
         AddSdkDiagnostic(repositoryRoot, sdkResult, diagnostics);
 
         var discoveredProjects = _projectDiscoverer.Discover(
-            new ProjectDiscoveryRequest(repositoryRoot, request.ExcludedDirectories),
-            cancellationToken);
+                new ProjectDiscoveryRequest(repositoryRoot, configuration.ExcludedPaths),
+                cancellationToken)
+            .Where(project => !IsProjectExcluded(project.RelativePath, configuration.ExcludedPaths))
+            .ToArray();
 
-        var evaluations = new List<EvaluatedProject>(discoveredProjects.Count);
+        AddUnmatchedClassificationOverrideDiagnostics(
+            configuration.ClassificationOverrides,
+            discoveredProjects,
+            diagnostics);
+
+        var evaluations = new List<EvaluatedProject>(discoveredProjects.Length);
         var successfulProjects = new Dictionary<string, MsBuildProjectFacts>(StringComparer.Ordinal);
 
         foreach (var discoveredProject in discoveredProjects.OrderBy(
@@ -109,7 +129,10 @@ public sealed class RepositoryInspector : IRepositoryInspector
             StringComparer.Ordinal);
 
         var projects = evaluations
-            .Select(evaluation => BuildProjectInspection(evaluation, graphByProjectPath))
+            .Select(evaluation => BuildProjectInspection(
+                evaluation,
+                graphByProjectPath,
+                configuration.ClassificationOverrides))
             .OrderBy(static project => project.Path, StringComparer.Ordinal)
             .ToArray();
 
@@ -122,7 +145,8 @@ public sealed class RepositoryInspector : IRepositoryInspector
 
     private ProjectInspection BuildProjectInspection(
         EvaluatedProject evaluatedProject,
-        Dictionary<string, ProjectReferenceGraphNode> graphByProjectPath)
+        Dictionary<string, ProjectReferenceGraphNode> graphByProjectPath,
+        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides)
     {
         var result = evaluatedProject.Result;
         if (!result.Succeeded || result.Facts is null)
@@ -172,6 +196,11 @@ public sealed class RepositoryInspector : IRepositoryInspector
         var projectDiagnostics = graphNode is null
             ? Array.Empty<InspectionDiagnostic>()
             : OrderDiagnostics(graphNode.Diagnostics);
+        var automaticClassification = _classificationAdapter.Classify(facts);
+        var classification = ApplyClassificationOverride(
+            evaluatedProject.RelativePath,
+            automaticClassification,
+            classificationOverrides);
 
         return new ProjectInspection(
             evaluatedProject.RelativePath,
@@ -183,10 +212,76 @@ public sealed class RepositoryInspector : IRepositoryInspector
             facts.IsTestProject,
             facts.IsPackable,
             NormalizeValues(facts.RuntimeIdentifiers),
-            _classificationAdapter.Classify(facts),
+            classification,
             references,
             projectDiagnostics);
     }
+
+    private static ProjectClassification ApplyClassificationOverride(
+        string projectPath,
+        ProjectClassification automaticClassification,
+        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides)
+    {
+        if (!classificationOverrides.TryGetValue(projectPath, out var configuredOverride))
+        {
+            return automaticClassification;
+        }
+
+        return new ProjectClassification(
+            configuredOverride.Kind,
+            null,
+            automaticClassification.Signals,
+            configuredOverride.Source,
+            automaticClassification.Kind);
+    }
+
+    private static bool IsProjectExcluded(
+        string projectPath,
+        IReadOnlyList<string> excludedPaths)
+    {
+        var normalizedProjectPath = NormalizePath(projectPath);
+        return excludedPaths.Contains(normalizedProjectPath, PathComparer);
+    }
+
+    private static void AddUnmatchedClassificationOverrideDiagnostics(
+        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides,
+        IReadOnlyList<DiscoveredProject> discoveredProjects,
+        List<InspectionDiagnostic> diagnostics)
+    {
+        if (classificationOverrides.Count == 0)
+        {
+            return;
+        }
+
+        var discoveredPaths = discoveredProjects
+            .Select(static project => NormalizePath(project.RelativePath))
+            .ToHashSet(PathComparer);
+
+        foreach (var pair in classificationOverrides.OrderBy(
+                     static pair => pair.Key,
+                     StringComparer.Ordinal))
+        {
+            if (discoveredPaths.Contains(pair.Key))
+            {
+                continue;
+            }
+
+            diagnostics.Add(InspectionDiagnostics.ClassificationOverrideTargetNotFound(
+                pair.Key,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["component"] = "configuration",
+                    ["overrideSource"] = pair.Value.Source
+                }));
+        }
+    }
+
+    private static InspectionReport CreateConfigurationFailureReport(InspectionDiagnostic diagnostic) =>
+        InspectionReport.Create(
+            new RepositoryMetadata(null, null, null, null, null),
+            new DotNetSdkMetadata(null, null, null),
+            Array.Empty<ProjectInspection>(),
+            [diagnostic]);
 
     private static string NormalizeRepositoryRoot(string repositoryRoot)
     {
