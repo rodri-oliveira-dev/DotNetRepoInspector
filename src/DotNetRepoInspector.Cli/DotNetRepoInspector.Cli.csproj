@@ -4,10 +4,43 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>DotNetRepoInspector.Cli</RootNamespace>
     <AssemblyName>DotNetRepoInspector.Cli</AssemblyName>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dotnet-repo-inspect</ToolCommandName>
+    <PackageId>DotNetRepoInspector</PackageId>
+    <Title>DotNetRepoInspector</Title>
+    <Authors>Rodrigo de Oliveira</Authors>
+    <Description>Inspect and classify .NET projects, extracting architecture metadata for CI/CD, automation, and technical governance.</Description>
+    <PackageTags>dotnet;tool;msbuild;repository;inspection;architecture;ci-cd</PackageTags>
+    <PackageProjectUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+
+    <!-- DotNetRepoInspector is distributed as one tool package. Include the runtime
+         outputs of internal ProjectReferences instead of declaring unpublished
+         DotNetRepoInspector.* projects as NuGet package dependencies. -->
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyToolRuntimeDependencies</TargetsForTfmSpecificBuildOutput>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <ProjectReference Include="../DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" Link="README.md" />
+  </ItemGroup>
+
+  <Target Name="CopyToolRuntimeDependencies" DependsOnTargets="ResolveReferences">
+    <ItemGroup>
+      <BuildOutputInPackage
+        Include="@(ReferenceCopyLocalPaths)"
+        TargetPath="%(ReferenceCopyLocalPaths.DestinationSubPath)" />
+    </ItemGroup>
+  </Target>
 </Project>

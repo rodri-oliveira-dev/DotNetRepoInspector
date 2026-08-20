@@ -5,6 +5,7 @@
 [![Build & Tests](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml/badge.svg)](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
+[![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-yellow.svg)](LICENSE)
 
 **Inspecione e classifique projetos .NET, extraindo metadados de arquitetura para CI/CD, automação e governança técnica.**
 
@@ -89,12 +90,76 @@ O schema exato ainda não é definitivo, mas o formato pretendido é semelhante 
 }
 ```
 
-## Uso planejado
+## Instalar como .NET Tool
 
-### CLI
+A CLI é empacotada com o package ID NuGet `DotNetRepoInspector` e o comando da tool `dotnet-repo-inspect`. Como o comando começa com `dotnet-`, a invocação pública é:
 
 ```bash
 dotnet repo-inspect .
+```
+
+O pacote tem como alvo .NET 10. É necessário um runtime/SDK .NET compatível na máquina onde a tool será executada.
+
+> O empacotamento e a instalação são validados no CI, mas o pacote ainda não foi publicado no NuGet.org. Os comandos abaixo que usam o feed público passam a se aplicar quando houver uma release publicada.
+
+### Instalação global
+
+```bash
+dotnet tool install --global DotNetRepoInspector
+dotnet repo-inspect --help
+```
+
+Atualize posteriormente com:
+
+```bash
+dotnet tool update --global DotNetRepoInspector
+```
+
+### Tool manifest local
+
+```bash
+dotnet new tool-manifest
+dotnet tool install DotNetRepoInspector
+dotnet repo-inspect .
+```
+
+Se o repositório já possuir um tool manifest, não execute `dotnet new tool-manifest` novamente. Restaure as tools fixadas com `dotnet tool restore` e atualize esta tool com `dotnet tool update DotNetRepoInspector`.
+
+### Gerar e instalar um pacote local
+
+Contribuidores podem validar o pacote distribuível sem publicar nada:
+
+```bash
+dotnet pack ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj \
+  --configuration Release \
+  --output ./artifacts/packages \
+  -p:Version=0.0.0-local
+dotnet tool install --global DotNetRepoInspector \
+  --version 0.0.0-local \
+  --add-source ./artifacts/packages
+dotnet repo-inspect --version
+```
+
+A versão pode, portanto, ser fornecida pela automação de CI/release por `-p:Version=...` sem editar o arquivo de projeto. Consulte [a documentação da CLI](docs/pt-BR/cli.md) para instalação local, comandos de atualização/desinstalação, comportamento da saída e códigos de saída.
+
+## Uso
+
+Inspecione o repositório atual e grave JSON em stdout:
+
+```bash
+dotnet repo-inspect .
+```
+
+Salve a inspeção em um arquivo:
+
+```bash
+dotnet repo-inspect . --output inspection.json
+```
+
+O nome direto do executável também funciona para uma tool instalada globalmente:
+
+```bash
+dotnet-repo-inspect .
 ```
 
 ### GitHub Actions
@@ -162,6 +227,7 @@ O Core contém os modelos normalizados de inspeção e as regras de classificaç
 │   ├── DotNetRepoInspector.Cli.Tests/
 │   └── Fixtures/                      # Fixtures sintéticas de repositórios/projetos .NET
 ├── AGENTS.md
+├── LICENSE
 ├── README.md
 ├── README.pt-BR.md
 ├── Directory.Build.props
@@ -199,10 +265,14 @@ Um snapshot armazenado deve poder ser associado ao estado inspecionado do reposi
 - [ ] Implementar classificação determinística de projetos
 - [ ] Definir e versionar o contrato JSON
 - [ ] Adicionar testes baseados em fixtures
-- [ ] Empacotar a CLI como uma .NET tool
+- [x] Empacotar a CLI como uma .NET tool
 - [ ] Publicar uma GitHub Action reutilizável
 - [ ] Adicionar sinks opcionais para snapshots
 - [ ] Explorar verificações de políticas/compliance sobre resultados normalizados da inspeção
+
+## Licença
+
+O DotNetRepoInspector é licenciado sob a [Licença MIT](LICENSE).
 
 ## Contribuindo
 
