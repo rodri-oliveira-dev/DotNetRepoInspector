@@ -68,6 +68,17 @@ Generic persistence options are independent from sink-specific credentials:
 
 Persistence failures are not `DRI` inspection diagnostics because they describe delivery of an already-produced report, not inspection of the repository.
 
+## Snapshot provenance and idempotency
+
+Before publishing, the host creates an `InspectionSnapshot` through `InspectionSnapshotFactory`. The envelope includes Inspector version, canonical repository identity, commit/ref, UTC observation time, optional generic execution metadata, a normalized report digest, and a versioned idempotency key.
+
+Two scopes are explicit:
+
+- `RepositoryState` for clean commits with canonical remote identity, allowing equivalent re-runs to share a key;
+- `Observation` for dirty or otherwise ambiguous repository states, avoiding accidental deduplication.
+
+See [`snapshot-provenance.md`](snapshot-provenance.md) and ADR 0004 for the complete contract.
+
 ## Retry and idempotency
 
 The generic publisher does not retry. A generic retry policy cannot know whether a destination failure is transient or whether replaying the request is safe.
@@ -77,9 +88,9 @@ Concrete sinks may retry only when all of the following are true:
 1. the adapter can classify the failure as transient;
 2. retry count and backoff are bounded;
 3. the overall timeout and caller cancellation are respected;
-4. replay is safe under the idempotency model defined by issue #21.
+4. replay uses the snapshot idempotency key and is safe for the destination semantics.
 
-Issue #21 defines snapshot identity, provenance, and idempotency before a concrete network sink is implemented.
+The first HTTP sink in issue #22 will consume this contract rather than inventing destination-specific snapshot identity.
 
 ## Configuration and secrets
 
@@ -93,10 +104,12 @@ See [`security.md`](security.md) for the project-wide secret-handling rules.
 
 ADR 0003 selects an HTTP/webhook adapter as the first built-in sink because it keeps the Inspector independent from database engines and cloud providers while working naturally in local automation and CI/CD.
 
-The HTTP adapter itself is intentionally not implemented here. Issue #22 owns that implementation after issue #21 defines the evidence identity/idempotency contract.
+The HTTP adapter itself is intentionally not implemented here. Issue #22 owns that implementation and will use the identity/idempotency contract defined by ADR 0004.
 
 ## Related decisions
 
-- [ADR 0003: Keep persistence optional behind sink adapters](decisions/0003-persistence-sink-architecture.md)
+- [ADR 0003: Keep snapshot persistence optional behind sink adapters](decisions/0003-persistence-sink-architecture.md)
+- [ADR 0004: Define snapshot provenance and idempotency from canonical evidence](decisions/0004-snapshot-provenance-idempotency.md)
+- [Snapshot provenance and idempotency](snapshot-provenance.md)
 - [Inspection schema](schema/inspection-v1.md)
 - [Security and privacy](security.md)

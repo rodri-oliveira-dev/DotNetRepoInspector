@@ -10,6 +10,7 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`diagnostics.md`](diagnostics.md) — stable diagnostic catalog and operational logging rules.
 - [`security.md`](security.md) — data collection boundary, MSBuild trust model, secret handling, Action permissions, and sink credential guidance.
 - [`persistence.md`](persistence.md) — optional snapshot persistence, sink extension contract, timeout, failure mode, and retry boundary.
+- [`snapshot-provenance.md`](snapshot-provenance.md) — evidence identity, UTC provenance, report digest, and idempotency semantics.
 - [`inspection-engine.md`](inspection-engine.md) — end-to-end inspection orchestration, failure semantics, determinism, and cancellation.
 - [`cli.md`](cli.md) — command-line usage, output streams, exit codes, and cancellation behavior.
 - [`github-action.md`](github-action.md) — reusable GitHub Action inputs, outputs, runtime bootstrap, permissions, and CI validation.

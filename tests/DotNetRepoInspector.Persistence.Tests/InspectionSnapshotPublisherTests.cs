@@ -21,7 +21,7 @@ public sealed class InspectionSnapshotPublisherTests
         var publisher = new InspectionSnapshotPublisher();
 
         var result = await publisher.PublishAsync(
-            new InspectionSnapshot(report),
+            CreateSnapshot(report),
             sink,
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -49,7 +49,7 @@ public sealed class InspectionSnapshotPublisherTests
         var publisher = new InspectionSnapshotPublisher();
 
         var result = await publisher.PublishAsync(
-            new InspectionSnapshot(report),
+            CreateSnapshot(report),
             sink,
             new InspectionPersistenceOptions { FailureMode = failureMode },
             TestContext.Current.CancellationToken);
@@ -74,7 +74,7 @@ public sealed class InspectionSnapshotPublisherTests
         var publisher = new InspectionSnapshotPublisher();
 
         var result = await publisher.PublishAsync(
-            new InspectionSnapshot(CreateReport()),
+            CreateSnapshot(CreateReport()),
             sink,
             new InspectionPersistenceOptions
             {
@@ -102,7 +102,7 @@ public sealed class InspectionSnapshotPublisherTests
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
             () => publisher.PublishAsync(
-                new InspectionSnapshot(CreateReport()),
+                CreateSnapshot(CreateReport()),
                 sink,
                 cancellationToken: cancellationSource.Token));
     }
@@ -118,7 +118,7 @@ public sealed class InspectionSnapshotPublisherTests
         var publisher = new InspectionSnapshotPublisher();
 
         var result = await publisher.PublishAsync(
-            new InspectionSnapshot(CreateReport()),
+            CreateSnapshot(CreateReport()),
             sink,
             cancellationToken: TestContext.Current.CancellationToken);
 
@@ -139,11 +139,14 @@ public sealed class InspectionSnapshotPublisherTests
 
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
             () => publisher.PublishAsync(
-                new InspectionSnapshot(CreateReport()),
+                CreateSnapshot(CreateReport()),
                 sink,
                 new InspectionPersistenceOptions { Timeout = TimeSpan.Zero },
                 TestContext.Current.CancellationToken));
     }
+
+    private static InspectionSnapshot CreateSnapshot(InspectionReport report) =>
+        new InspectionSnapshotFactory().Create(report, "1.0.0");
 
     private static InspectionReport CreateReport() =>
         InspectionReport.Create(
