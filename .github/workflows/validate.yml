@@ -213,13 +213,14 @@ jobs:
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_QUALITY_GATE_WAIT: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
         run: >-
           dotnet sonarscanner begin
           /k:"rodri-oliveira-dev_DotNetRepoInspector"
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
           /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"
-          /d:sonar.qualitygate.wait=true
+          /d:sonar.qualitygate.wait="${SONAR_QUALITY_GATE_WAIT}"
           /d:sonar.qualitygate.timeout=300
 
       - name: Build for Sonar
