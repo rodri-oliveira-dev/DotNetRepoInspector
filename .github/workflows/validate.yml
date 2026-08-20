@@ -41,7 +41,7 @@ jobs:
           archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
           url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}"
 
-          curl --fail --silent --show-error --location "$url" --output "$archive"
+          curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" "$url" --output "$archive"
           echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check -
           tar -xzf "$archive" actionlint
           ./actionlint -version

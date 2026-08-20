@@ -19,6 +19,8 @@ PRODUCT_ASSEMBLIES = (
     "DotNetRepoInspector.Persistence.Http",
 )
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -27,19 +29,39 @@ def parse_args():
     parser.add_argument(
         "--reports",
         default="artifacts/test-results/**/coverage.cobertura.xml",
-        help="Glob used to find Cobertura reports.",
+        help="Repository-relative glob used to find Cobertura reports.",
     )
     parser.add_argument(
         "--output-dir",
         default="artifacts/coverage",
-        help="Directory for consolidated coverage outputs.",
+        help="Repository-relative directory for consolidated coverage outputs.",
     )
     parser.add_argument(
         "--baseline",
         default=None,
-        help="Optional JSON baseline. When supplied, coverage thresholds are enforced.",
+        help="Optional repository-relative JSON baseline. When supplied, coverage thresholds are enforced.",
     )
     return parser.parse_args()
+
+
+def resolve_repository_path(value, *, purpose, must_exist=False):
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = REPOSITORY_ROOT / candidate
+
+    resolved = candidate.resolve(strict=must_exist)
+    if not resolved.is_relative_to(REPOSITORY_ROOT):
+        raise SystemExit(f"{purpose} must stay within the repository root.")
+
+    return resolved
+
+
+def validate_repository_glob(pattern):
+    pattern_path = Path(pattern)
+    if pattern_path.is_absolute() or ".." in pattern_path.parts:
+        raise SystemExit("Coverage report glob must stay within the repository root.")
+
+    return str(REPOSITORY_ROOT / pattern)
 
 
 def normalize_filename(value):
@@ -111,7 +133,7 @@ def coverage_entry(covered, total):
 
 
 def enforce_baseline(summary, baseline_path):
-    with open(baseline_path, encoding="utf-8") as baseline_file:
+    with baseline_path.open(encoding="utf-8") as baseline_file:
         baseline = json.load(baseline_file)
 
     if baseline.get("schemaVersion") != 1:
@@ -176,7 +198,12 @@ def render_markdown(summary):
 
 def main():
     args = parse_args()
-    reports = sorted(glob.glob(args.reports, recursive=True))
+    report_glob = validate_repository_glob(args.reports)
+    report_matches = sorted(glob.glob(report_glob, recursive=True))
+    reports = [
+        resolve_repository_path(report, purpose="Coverage report", must_exist=True)
+        for report in report_matches
+    ]
     if not reports:
         raise SystemExit("No Cobertura coverage reports were generated.")
 
@@ -185,16 +212,25 @@ def main():
 
     failure = None
     if args.baseline:
+        baseline_path = resolve_repository_path(
+            args.baseline, purpose="Coverage baseline", must_exist=True
+        )
         try:
-            enforce_baseline(summary, args.baseline)
+            enforce_baseline(summary, baseline_path)
         except SystemExit as error:
             failure = error
 
-    output_dir = Path(args.output_dir)
+    output_dir = resolve_repository_path(
+        args.output_dir, purpose="Coverage output directory"
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    json_path = output_dir / "coverage-summary.json"
-    markdown_path = output_dir / "coverage-summary.md"
+    json_path = resolve_repository_path(
+        output_dir / "coverage-summary.json", purpose="Coverage JSON output"
+    )
+    markdown_path = resolve_repository_path(
+        output_dir / "coverage-summary.md", purpose="Coverage Markdown output"
+    )
     json_path.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     markdown = render_markdown(summary)
     markdown_path.write_text(markdown, encoding="utf-8")
