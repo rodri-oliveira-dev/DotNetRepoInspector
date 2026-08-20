@@ -4,6 +4,10 @@ public sealed record CliOptions(
     string RepositoryPath,
     string? OutputPath,
     CliVerbosity Verbosity,
+    string? ConfigurationPath,
+    bool DisableConfigurationFile,
+    IReadOnlyList<string> ExcludedPaths,
+    IReadOnlyDictionary<string, string> ClassificationOverrides,
     bool ShowHelp,
     bool ShowVersion);
 
