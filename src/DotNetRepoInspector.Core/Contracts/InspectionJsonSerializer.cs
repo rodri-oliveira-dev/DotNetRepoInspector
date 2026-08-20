@@ -5,6 +5,25 @@ namespace DotNetRepoInspector.Core.Contracts;
 
 public static class InspectionJsonSerializer
 {
+    private const string RedactedValue = "<redacted>";
+
+    private static readonly string[] SensitiveContextKeyFragments =
+    [
+        "authorization",
+        "connectionstring",
+        "connection_string",
+        "credential",
+        "password",
+        "privatekey",
+        "private_key",
+        "secret",
+        "token",
+        "apikey",
+        "api_key",
+        "accesskey",
+        "access_key"
+    ];
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -117,7 +136,9 @@ public static class InspectionJsonSerializer
                         "A diagnostic context contains an invalid key or value.");
                 }
 
-                context[pair.Key] = pair.Value;
+                context[pair.Key] = IsSensitiveContextKey(pair.Key)
+                    ? RedactedValue
+                    : pair.Value;
             }
 
             normalizedContext = context;
@@ -129,6 +150,10 @@ public static class InspectionJsonSerializer
             Context = normalizedContext
         };
     }
+
+    private static bool IsSensitiveContextKey(string key) =>
+        SensitiveContextKeyFragments.Any(fragment =>
+            key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
     private static string DiagnosticContextSortKey(
         IReadOnlyDictionary<string, string>? context) =>
