@@ -2,7 +2,10 @@ namespace DotNetRepoInspector.Persistence;
 
 public interface IInspectionSnapshotSink
 {
-    string Name { get; }
+    string Name
+    {
+        get;
+    }
 
     Task<InspectionSinkWriteResult> WriteAsync(
         InspectionSnapshot snapshot,
