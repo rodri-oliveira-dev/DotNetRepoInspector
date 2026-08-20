@@ -1,0 +1,54 @@
+name: DotNetRepoInspector
+description: Inspect and classify .NET projects using evaluated MSBuild metadata.
+author: Rodrigo de Oliveira
+
+inputs:
+  path:
+    description: Repository path to inspect, relative to the workspace when not absolute.
+    required: false
+    default: "."
+  output:
+    description: Destination path for the inspection JSON. Defaults to an Action-owned temporary file.
+    required: false
+    default: ""
+  verbosity:
+    description: Operational logging level. Supported values are normal, verbose, and debug.
+    required: false
+    default: normal
+
+outputs:
+  report-path:
+    description: Absolute path to the generated inspection JSON when a report exists.
+    value: "${{ steps.inspect.outputs.report-path }}"
+  schema-version:
+    description: Inspection schema version read from the generated report when available.
+    value: "${{ steps.inspect.outputs.schema-version }}"
+  inspector-version:
+    description: Exact DotNetRepoInspector .NET Tool version pinned by this Action revision.
+    value: "${{ steps.inspect.outputs.inspector-version }}"
+  exit-code:
+    description: Exit code returned by the DotNetRepoInspector CLI.
+    value: "${{ steps.inspect.outputs.exit-code }}"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Inspector .NET SDK
+      uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Inspect repository
+      id: inspect
+      shell: pwsh
+      env:
+        DRI_ACTION_PATH: "${{ github.action_path }}"
+        DRI_INPUT_PATH: "${{ inputs.path }}"
+        DRI_INPUT_OUTPUT: "${{ inputs.output }}"
+        DRI_INPUT_VERBOSITY: "${{ inputs.verbosity }}"
+        DRI_TOOL_VERSION: "1.0.0"
+      run: '& (Join-Path $env:DRI_ACTION_PATH ".github/action/invoke.ps1")'
+
+branding:
+  icon: search
+  color: purple
