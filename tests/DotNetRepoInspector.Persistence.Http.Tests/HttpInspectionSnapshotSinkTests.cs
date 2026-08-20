@@ -18,7 +18,7 @@ public sealed class HttpInspectionSnapshotSinkTests
         string? capturedIdempotencyKey = null;
         string? capturedAuthorizationScheme = null;
         string? capturedAuthorizationParameter = null;
-        var handler = new StubHttpMessageHandler(async (request, _, cancellationToken) =>
+        using var handler = new StubHttpMessageHandler(async (request, _, cancellationToken) =>
         {
             capturedBody = await request.Content!.ReadAsStringAsync(cancellationToken);
             capturedIdempotencyKey = request.Headers.GetValues("Idempotency-Key").Single();
@@ -26,7 +26,7 @@ public sealed class HttpInspectionSnapshotSinkTests
             capturedAuthorizationParameter = request.Headers.Authorization?.Parameter;
             return new HttpResponseMessage(HttpStatusCode.Accepted);
         });
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler, disposeHandler: false);
         var snapshot = CreateSnapshot();
         var sink = new HttpInspectionSnapshotSink(
             client,
@@ -60,12 +60,12 @@ public sealed class HttpInspectionSnapshotSinkTests
     [Fact]
     public async Task WriteAsync_RetriesTransientResponsesWithinConfiguredBound()
     {
-        var handler = new StubHttpMessageHandler((_, attempt, _) =>
+        using var handler = new StubHttpMessageHandler((_, attempt, _) =>
             Task.FromResult(new HttpResponseMessage(
                 attempt < 3
                     ? HttpStatusCode.ServiceUnavailable
                     : HttpStatusCode.NoContent)));
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler, disposeHandler: false);
         var sink = new HttpInspectionSnapshotSink(
             client,
             new HttpInspectionSnapshotSinkOptions(new Uri("https://example.invalid/evidence"))
@@ -86,12 +86,12 @@ public sealed class HttpInspectionSnapshotSinkTests
     public async Task WriteAsync_DoesNotRetryAuthenticationFailureOrExposeResponseBody()
     {
         const string responseSecret = "remote-secret-must-not-leak";
-        var handler = new StubHttpMessageHandler((_, _, _) =>
+        using var handler = new StubHttpMessageHandler((_, _, _) =>
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized)
             {
                 Content = new StringContent(responseSecret)
             }));
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler, disposeHandler: false);
         var sink = new HttpInspectionSnapshotSink(
             client,
             new HttpInspectionSnapshotSinkOptions(new Uri("https://example.invalid/evidence"))
@@ -115,9 +115,9 @@ public sealed class HttpInspectionSnapshotSinkTests
     [Fact]
     public async Task WriteAsync_RetriesTransportFailureAndReturnsTransientFailure()
     {
-        var handler = new StubHttpMessageHandler(
+        using var handler = new StubHttpMessageHandler(
             (_, _, _) => Task.FromException<HttpResponseMessage>(new HttpRequestException()));
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler, disposeHandler: false);
         var sink = new HttpInspectionSnapshotSink(
             client,
             new HttpInspectionSnapshotSinkOptions(new Uri("https://example.invalid/evidence"))
@@ -140,9 +140,9 @@ public sealed class HttpInspectionSnapshotSinkTests
     [Fact]
     public async Task WriteAsync_PropagatesCallerCancellation()
     {
-        var handler = new StubHttpMessageHandler(
+        using var handler = new StubHttpMessageHandler(
             (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
-        using var client = new HttpClient(handler);
+        using var client = new HttpClient(handler, disposeHandler: false);
         var sink = new HttpInspectionSnapshotSink(
             client,
             new HttpInspectionSnapshotSinkOptions(new Uri("https://example.invalid/evidence")));
@@ -158,8 +158,9 @@ public sealed class HttpInspectionSnapshotSinkTests
     [Fact]
     public void Constructor_RejectsNonHttpEndpoint()
     {
-        using var client = new HttpClient(new StubHttpMessageHandler(
-            (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent))));
+        using var handler = new StubHttpMessageHandler(
+            (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+        using var client = new HttpClient(handler, disposeHandler: false);
 
         Assert.Throws<ArgumentException>(() =>
             new HttpInspectionSnapshotSink(
@@ -170,8 +171,9 @@ public sealed class HttpInspectionSnapshotSinkTests
     [Fact]
     public void Constructor_RejectsEndpointWithEmbeddedCredentials()
     {
-        using var client = new HttpClient(new StubHttpMessageHandler(
-            (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent))));
+        using var handler = new StubHttpMessageHandler(
+            (_, _, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent)));
+        using var client = new HttpClient(handler, disposeHandler: false);
 
         Assert.Throws<ArgumentException>(() =>
             new HttpInspectionSnapshotSink(
