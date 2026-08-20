@@ -164,15 +164,25 @@ dotnet-repo-inspect .
 
 ### GitHub Actions
 
+O repositório inclui uma Composite Action reutilizável que executa a mesma .NET Tool e a mesma engine da CLI:
+
 ```yaml
-- name: Inspect .NET repository
+- name: Checkout
+  uses: actions/checkout@v7
+
+- name: Inspecionar repositório .NET
   id: inspect
   uses: rodri-oliveira-dev/DotNetRepoInspector@v1
   with:
     path: .
+    output: artifacts/inspection.json
 ```
 
-A integração com GitHub Actions está planejada; este exemplo documenta a experiência pretendida para o consumidor, e não uma release já publicada.
+Os principais outputs são `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action preserva a semântica de códigos de saída da CLI e não exige token do GitHub nem permissão de escrita para inspecionar um checkout existente.
+
+> A implementação da Action é validada no CI, mas a tag pública `v1` e o pacote NuGet correspondente ainda não foram publicados. A publicação fica deliberadamente para o trabalho de automação de releases.
+
+Consulte [a documentação da GitHub Action](docs/pt-BR/github-action.md) para inputs, outputs, requisitos de SDK, isolamento de package source, tratamento de falhas e exemplos de consumo posterior.
 
 ## Documentação
 
@@ -187,27 +197,29 @@ A documentação é organizada por idioma, e cada árvore de idioma aponta apena
 Repository
     |
     v
-DotNetRepoInspector.MSBuild
+Inspection Engine
+    |
+    +-------------------+
+    |                   |
+    v                   v
+CLI / .NET Tool    GitHub Action
     |
     v
-DotNetRepoInspector.Core
-    |
-    +------------------+
-    |                  |
-    v                  v
-CLI / JSON        Future integrations
-                  (GitHub Action, sinks,
-                   policy/reporting)
+JSON contract
+
+Adapters futuros: sinks, policy/reporting
 ```
 
-O Core contém os modelos normalizados de inspeção e as regras de classificação. A descoberta e a avaliação específicas de MSBuild permanecem atrás de um adapter. Consumidores como a CLI, GitHub Action e futuros sinks de persistência devem depender do modelo normalizado, em vez de duplicar a lógica de detecção do repositório.
+O Core contém os modelos normalizados de inspeção e as regras de classificação. A descoberta e a avaliação específicas de MSBuild permanecem atrás de um adapter. Consumidores como a CLI, GitHub Action e futuros sinks de persistência dependem do modelo normalizado, em vez de duplicar a lógica de detecção do repositório.
 
 ## Estrutura do repositório
 
 ```text
 .
 ├── .agents/skills/                    # Orientações específicas para agentes
+├── .github/action/                    # Glue de bootstrap/invocação da GitHub Action
 ├── .vscode/                           # Recomendações/configurações portáveis do VS Code
+├── action.yml                         # Composite GitHub Action reutilizável
 ├── docs/
 │   ├── en/                            # Documentação em inglês
 │   │   ├── architecture/              # Documentação de arquitetura
@@ -219,10 +231,14 @@ O Core contém os modelos normalizados de inspeção e as regras de classificaç
 │       └── schema/
 ├── src/
 │   ├── DotNetRepoInspector.Core/      # Modelo de domínio, normalização e classificação
+│   ├── DotNetRepoInspector.Engine/    # Orquestração ponta a ponta da inspeção
+│   ├── DotNetRepoInspector.Git/       # Adapter de metadados Git do repositório
 │   ├── DotNetRepoInspector.MSBuild/   # Descoberta de projetos e avaliação MSBuild
 │   └── DotNetRepoInspector.Cli/       # CLI e fronteira de serialização
 ├── tests/
 │   ├── DotNetRepoInspector.Core.Tests/
+│   ├── DotNetRepoInspector.Engine.Tests/
+│   ├── DotNetRepoInspector.Git.Tests/
 │   ├── DotNetRepoInspector.MSBuild.Tests/
 │   ├── DotNetRepoInspector.Cli.Tests/
 │   └── Fixtures/                      # Fixtures sintéticas de repositórios/projetos .NET
@@ -266,7 +282,7 @@ Um snapshot armazenado deve poder ser associado ao estado inspecionado do reposi
 - [ ] Definir e versionar o contrato JSON
 - [ ] Adicionar testes baseados em fixtures
 - [x] Empacotar a CLI como uma .NET tool
-- [ ] Publicar uma GitHub Action reutilizável
+- [x] Implementar uma GitHub Action reutilizável; release/tag pública ainda pendente
 - [ ] Adicionar sinks opcionais para snapshots
 - [ ] Explorar verificações de políticas/compliance sobre resultados normalizados da inspeção
 
