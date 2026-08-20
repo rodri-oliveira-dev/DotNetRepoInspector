@@ -7,192 +7,147 @@
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Inspect and classify .NET projects, extracting architecture metadata for CI/CD, automation, and technical governance.**
+**Inspect and classify .NET projects using evaluated MSBuild metadata for CI/CD, automation, architecture governance, and optional historical evidence.**
 
-> Status: early development. The repository is being bootstrapped and the public contracts described below are still subject to change.
+> Status: **v1.0.0 release candidate**. The public v1 contract is defined and validated in CI, but the `DotNetRepoInspector` package, GitHub Release, and `v1` Action tag are not considered published until the protected Release workflow completes successfully.
 
-## Why DotNetRepoInspector?
+## What v1 does
 
-.NET repositories often contain a mix of Web applications, Workers, console applications, libraries, tests, multiple target frameworks, SDK constraints, and repository-level MSBuild configuration.
+DotNetRepoInspector produces one deterministic, machine-readable view of a .NET repository without requiring source-code analysis or an external database.
 
-CI/CD platforms and engineering teams repeatedly need to rediscover that information with ad-hoc scripts. DotNetRepoInspector aims to provide one normalized, automation-friendly view of a repository based on evaluated .NET/MSBuild metadata.
+The v1 surface includes:
 
-The long-term goal is to support three related use cases:
+- discovery of SDK-style .NET projects;
+- evaluated MSBuild facts such as SDKs, target frameworks, output type, test metadata, packability, runtime identifiers, and `ProjectReference` edges;
+- `global.json` and resolved SDK metadata;
+- Git repository, commit, branch, remote, and dirty-state metadata when available;
+- deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
+- versioned inspection JSON (`schemaVersion 1.3` for v1.0.0);
+- optional repository configuration for exclusions and explicit classification overrides;
+- CLI/.NET Tool and reusable Composite GitHub Action;
+- optional HTTP/webhook snapshot persistence with provenance and idempotency;
+- structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
 
-1. **Inspect** — discover .NET projects and effective build metadata.
-2. **Classify** — identify project roles such as Web, Worker, Console, Library, Test, and Unknown.
-3. **Track** — optionally persist versioned inspection snapshots so teams can build technical evidence and historical views.
+Application subtypes and the optional policy engine are post-v1 work and are not part of the v1.0.0 compatibility promise.
 
 ## Design principles
 
-- **MSBuild is the source of truth.** Prefer evaluated project properties over raw `.csproj` XML parsing.
-- **Zero configuration by default.** A useful inspection should require only a repository path.
-- **Automation first.** Output must be deterministic, machine-readable, and suitable for CI/CD.
-- **No source-code collection.** Inspection is focused on project/repository metadata, not application source code.
-- **Storage is optional.** The inspector must work without a database or external service.
-- **Provider agnostic.** GitHub Actions is one integration, not the core architecture.
-- **Versioned contracts.** Machine-readable output should carry a schema version as the project evolves.
+- **MSBuild is the source of truth.** Effective evaluated properties take precedence over raw project XML heuristics.
+- **Zero configuration by default.** A useful inspection requires only a repository path.
+- **Automation first.** Output is deterministic, machine-readable, and suitable for CI/CD.
+- **No source-code collection.** The Inspector focuses on project/repository metadata.
+- **Persistence is optional.** Inspection works without a database, HTTP endpoint, or cloud account.
+- **Provider agnostic.** GitHub Actions is a delivery integration, not the core architecture.
+- **Versioned public contracts.** Product, Action, CLI, and JSON compatibility rules are documented and release-gated.
 
-## Initial scope
+## JSON contract
 
-The first usable version is expected to discover and expose:
-
-- project path and name;
-- project SDK;
-- project type/classification;
-- `TargetFramework` / `TargetFrameworks`;
-- `OutputType`;
-- test-project metadata;
-- packability metadata;
-- runtime identifiers when configured;
-- `global.json` SDK configuration;
-- resolved .NET SDK version;
-- project-to-project references;
-- repository and commit metadata when available.
-
-Initial classifications:
-
-- Web
-- Worker
-- Console
-- Library
-- Test
-- Unknown
-
-Additional subtypes such as Web API, Razor Pages, Blazor, Azure Functions, and other workloads may be added when they can be identified reliably without fragile filename conventions.
-
-## Example output
-
-The exact schema is not final yet, but the intended shape is similar to:
+The v1.0.0 release baseline uses inspection schema **1.3**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.3",
   "repository": {
-    "name": "example/repository",
-    "commit": "61f842a"
+    "name": "sample-service",
+    "commitSha": "0123456789abcdef0123456789abcdef01234567",
+    "branch": "main",
+    "remoteUrl": "https://github.com/example/sample-service.git",
+    "isDirty": false
   },
-  "dotnet": {
-    "configuredSdk": "10.0.100",
-    "resolvedSdk": "10.0.4xx"
+  "dotNetSdk": {
+    "globalJsonPath": "global.json",
+    "configured": {
+      "version": "10.0.100",
+      "rollForward": "latestFeature",
+      "allowPrerelease": false
+    },
+    "resolvedVersion": "10.0.100"
   },
   "projects": [
     {
-      "name": "Orders.Api",
-      "path": "src/Orders.Api/Orders.Api.csproj",
-      "type": "web",
-      "sdk": "Microsoft.NET.Sdk.Web",
+      "path": "src/App/App.csproj",
+      "name": "App",
+      "resolvedSdkVersion": "10.0.100",
+      "sdks": [
+        { "name": "Microsoft.NET.Sdk.Web" }
+      ],
       "targetFrameworks": ["net10.0"],
+      "outputType": "Exe",
       "isTestProject": false,
-      "isPackable": false
+      "isPackable": false,
+      "runtimeIdentifiers": [],
+      "classification": {
+        "kind": "web",
+        "confidence": "high",
+        "signals": ["sdk:Microsoft.NET.Sdk.Web"]
+      },
+      "references": [],
+      "diagnostics": []
     }
-  ]
+  ],
+  "diagnostics": []
 }
 ```
 
+The canonical example and full contract are maintained in [`docs/en/schema/`](docs/en/schema/). Additive schema changes remain inside major `1`; a breaking schema change requires a new schema and product major and must not move the `v1` Action alias.
+
 ## Install as a .NET Tool
 
-The CLI is packaged with NuGet package ID `DotNetRepoInspector` and tool command `dotnet-repo-inspect`. Tools whose command starts with `dotnet-` can be invoked through the .NET CLI without the prefix, so the public command is:
+Package ID: `DotNetRepoInspector`  
+Tool command: `dotnet-repo-inspect`  
+Supported public invocation: `dotnet repo-inspect`
+
+The package targets .NET 10 and requires a compatible .NET runtime/SDK to execute.
+
+> The package is fully packed and installation-smoke-tested in CI. Until the first protected publication succeeds, commands that resolve from NuGet.org may not be available publicly.
+
+After publication:
 
 ```bash
+dotnet tool install --global DotNetRepoInspector --version 1.0.0
+dotnet repo-inspect --version
 dotnet repo-inspect .
 ```
 
-The package targets .NET 10. A compatible .NET runtime/SDK is required on the machine running the tool.
-
-> Packaging and installation are validated in CI, but the package has not been published to NuGet.org yet. The commands below using the public feed apply once a release is published.
-
-### Global installation
-
-```bash
-dotnet tool install --global DotNetRepoInspector
-dotnet repo-inspect --help
-```
-
-Update later with:
-
-```bash
-dotnet tool update --global DotNetRepoInspector
-```
-
-### Local tool manifest
+A repository can also pin the tool in a local tool manifest:
 
 ```bash
 dotnet new tool-manifest
-dotnet tool install DotNetRepoInspector
+dotnet tool install DotNetRepoInspector --version 1.0.0
 dotnet repo-inspect .
 ```
 
-If the repository already has a tool manifest, skip `dotnet new tool-manifest`. Restore pinned tools with `dotnet tool restore` and update this tool with `dotnet tool update DotNetRepoInspector`.
+Contributors can build and install an unpublished local package. See [`docs/en/cli.md`](docs/en/cli.md).
 
-### Build and install a local package
+## CLI usage
 
-Contributors can validate the distributable package without publishing anything:
-
-```bash
-dotnet pack ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj \
-  --configuration Release \
-  --output ./artifacts/packages \
-  -p:Version=0.0.0-local
-dotnet tool install --global DotNetRepoInspector \
-  --version 0.0.0-local \
-  --add-source ./artifacts/packages
-dotnet repo-inspect --version
-```
-
-The version can therefore be supplied by CI/release automation through `-p:Version=...` without editing the project file. See [the CLI documentation](docs/en/cli.md) for local-tool installation, update/uninstall commands, output behavior, and exit codes.
-
-## Usage
-
-Inspect the current repository and write JSON to stdout:
+Inspect the current repository and emit JSON to stdout:
 
 ```bash
 dotnet repo-inspect .
 ```
 
-Save the inspection to a file:
+Write the report to a file:
 
 ```bash
-dotnet repo-inspect . --output inspection.json
+dotnet repo-inspect . --output artifacts/inspection.json
 ```
 
-The direct executable name also works for a globally installed tool:
-
-```bash
-dotnet-repo-inspect .
-```
-
-### Optional HTTP snapshot persistence
-
-Snapshot persistence is opt-in. Without `--sink`, the Inspector does not contact a persistence endpoint.
-
-Send the canonical inspection snapshot to a consumer-owned HTTP/HTTPS endpoint:
+Use optional exclusions/classification overrides:
 
 ```bash
 dotnet repo-inspect . \
-  --sink http \
-  --sink-url https://evidence.example/api/snapshots
+  --exclude generated \
+  --classify src/App/App.csproj=web
 ```
 
-The HTTP sink sends a `POST` with the canonical `InspectionSnapshot` JSON and the snapshot key in the `Idempotency-Key` header. Retry is limited to transient transport/timeouts and HTTP `408`, `429`, `500`, `502`, `503`, and `504` responses.
+The default `.dotnetrepoinspector.json` file is optional. See [`docs/en/configuration.md`](docs/en/configuration.md) for its versioned format and precedence rules.
 
-Bearer authentication is intentionally supplied only through the process environment, never through a CLI argument:
+The CLI keeps machine data on stdout/output files and operational logs on stderr. Documented exit codes distinguish report errors, invalid arguments, fatal inspection, output failure, fatal persistence failure, and cancellation. See [`docs/en/cli.md`](docs/en/cli.md).
 
-```bash
-export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
-dotnet repo-inspect . \
-  --sink http \
-  --sink-url https://evidence.example/api/snapshots \
-  --sink-failure-mode fatal
-```
+## GitHub Action
 
-`--sink-failure-mode non-fatal` is the default. Use `fatal` when delivery of the evidence is required for the pipeline; a persistence failure then returns exit code `5` after the inspection report has already been produced.
-
-Never put sink tokens in `.dotnetrepoinspector.json`, the endpoint URL, committed scripts, or inspection JSON. See [the persistence documentation](docs/en/persistence.md) for timeout, cancellation, retry, idempotency, and secret-handling details.
-
-### GitHub Actions
-
-The repository includes a reusable composite Action that executes the same .NET Tool and engine as the CLI:
+The repository contains a reusable Composite Action that runs the exact .NET Tool version pinned by the Action revision:
 
 ```yaml
 - name: Checkout
@@ -206,31 +161,55 @@ The repository includes a reusable composite Action that executes the same .NET 
     output: artifacts/inspection.json
 ```
 
-Useful outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action preserves the CLI exit semantics and does not require a GitHub token or write permission for inspection of an existing checkout.
+Outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action does not require write permissions or a GitHub token for inspection of an already checked-out repository.
 
-Optional HTTP persistence can be enabled with Action inputs. Secrets stay out of the CLI argument list:
+The public `@v1` alias becomes usable only after the first protected release moves it to the immutable `v1.0.0` release commit. See [`docs/en/github-action.md`](docs/en/github-action.md).
 
-```yaml
-- name: Inspect and persist evidence
-  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
-  with:
-    path: .
-    output: artifacts/inspection.json
-    sink-url: https://evidence.example/api/snapshots
-    sink-token: ${{ secrets.INSPECTOR_EVIDENCE_TOKEN }}
-    sink-failure-mode: fatal
+## Optional HTTP snapshot persistence
+
+Persistence is disabled unless a sink is selected. The built-in HTTP/webhook sink sends the canonical `InspectionSnapshot` to a consumer-owned endpoint and includes the snapshot idempotency key in the `Idempotency-Key` header.
+
+```bash
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
 ```
 
-> The Action implementation is validated in CI, but the public `v1` tag and matching NuGet package are not published yet. Publication is intentionally deferred to the release automation work.
+Bearer credentials are supplied only through the environment, not a CLI argument:
 
-See [the GitHub Action documentation](docs/en/github-action.md) for inputs, outputs, SDK requirements, persistence, package-source isolation, failure handling, and downstream consumption examples.
+```bash
+export DOTNET_REPO_INSPECTOR_HTTP_TOKEN="<secret>"
+dotnet repo-inspect . \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots \
+  --sink-failure-mode fatal
+```
+
+Persistence is `non-fatal` by default. In `fatal` mode, a delivery failure returns exit code `5` after the inspection report has already been produced. See [`docs/en/persistence.md`](docs/en/persistence.md).
+
+## Compatibility and trust boundary
+
+The Inspector itself targets .NET 10. CI validates target repositories using .NET 8 and .NET 10 SDKs side-by-side on Ubuntu, Windows, and macOS.
+
+MSBuild evaluation is **not a sandbox**. Untrusted repositories should be inspected only in isolated, ephemeral, non-privileged environments without credentials or sensitive data. See [`SECURITY.md`](SECURITY.md) and [`docs/en/security.md`](docs/en/security.md).
+
+## Release readiness
+
+The v1.0.0 baseline is machine-readable in [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) and enforced by repository tests. It locks together the product version, schema version, Action major alias, NuGet/.NET Tool metadata, canonical schema example, and required governance/security files.
+
+The first-publication checklist, external GitHub/NuGet prerequisites, safe dry-run procedure, and post-publication verification are documented in [`docs/en/v1-release-readiness.md`](docs/en/v1-release-readiness.md). General SemVer, release artifacts, tags, provenance, and recovery rules are in [`docs/en/releases.md`](docs/en/releases.md).
+
+This PR/repository preparation does not itself publish a package, tag, or GitHub Release. Official publication is an explicit protected workflow action.
 
 ## Documentation
 
-The documentation is organized by language and each language tree links only to files in the same language:
-
 - [English documentation](docs/en/README.md)
 - [Documentação em Português (Brasil)](docs/pt-BR/README.md)
+- [Inspection schema v1](docs/en/schema/inspection-v1.md)
+- [CLI / .NET Tool](docs/en/cli.md)
+- [GitHub Action](docs/en/github-action.md)
+- [Release/versioning](docs/en/releases.md)
+- [v1.0.0 release readiness](docs/en/v1-release-readiness.md)
 
 ## Architecture
 
@@ -248,95 +227,23 @@ Inspection Engine ----> InspectionReport ----> JSON output
                     HTTP/webhook
 
 Delivery hosts: CLI / .NET Tool and GitHub Action
-Future adapters: additional sinks, policy/reporting
+Post-v1 adapters: additional sinks, policy/reporting, richer subtypes
 ```
 
-The Core owns normalized inspection models and classification rules. MSBuild-specific discovery/evaluation remains behind an adapter. `DotNetRepoInspector.Persistence` owns provider-independent snapshot/provenance contracts, while `DotNetRepoInspector.Persistence.Http` is the first concrete delivery adapter. Core and Engine remain independent from HTTP, database providers, and sink credentials.
+`DotNetRepoInspector.Core` owns normalized contracts/classification. MSBuild and Git collection remain adapters. `DotNetRepoInspector.Persistence` owns provider-neutral snapshot/provenance contracts, and `DotNetRepoInspector.Persistence.Http` is the first concrete sink. Core and Engine remain independent from HTTP/database providers and credentials.
 
-## Repository structure
+## Contributing
 
-```text
-.
-├── .agents/skills/                    # Task-specific agent guidance
-├── .github/action/                    # GitHub Action bootstrap/invocation glue
-├── .vscode/                           # Portable VS Code recommendations/settings
-├── action.yml                         # Reusable composite GitHub Action
-├── docs/
-│   ├── en/                            # English documentation
-│   │   ├── architecture/              # Architecture documentation
-│   │   ├── decisions/                 # Architectural decision records
-│   │   └── schema/                    # JSON contract documentation and examples
-│   └── pt-BR/                         # Portuguese (Brazil) documentation
-│       ├── architecture/
-│       ├── decisions/
-│       └── schema/
-├── src/
-│   ├── DotNetRepoInspector.Core/              # Domain model, normalization, classification
-│   ├── DotNetRepoInspector.Engine/            # End-to-end inspection orchestration
-│   ├── DotNetRepoInspector.Git/               # Git repository metadata adapter
-│   ├── DotNetRepoInspector.MSBuild/           # Project discovery and MSBuild evaluation
-│   ├── DotNetRepoInspector.Persistence/       # Snapshot, provenance, sink abstractions
-│   ├── DotNetRepoInspector.Persistence.Http/  # Built-in HTTP/webhook sink
-│   └── DotNetRepoInspector.Cli/               # CLI, serialization, and delivery composition
-├── tests/
-│   ├── DotNetRepoInspector.Core.Tests/
-│   ├── DotNetRepoInspector.Engine.Tests/
-│   ├── DotNetRepoInspector.Git.Tests/
-│   ├── DotNetRepoInspector.MSBuild.Tests/
-│   ├── DotNetRepoInspector.Persistence.Tests/
-│   ├── DotNetRepoInspector.Persistence.Http.Tests/
-│   ├── DotNetRepoInspector.Cli.Tests/
-│   └── Fixtures/                              # Synthetic .NET repository/project fixtures
-├── AGENTS.md
-├── LICENSE
-├── README.md
-├── README.pt-BR.md
-├── Directory.Build.props
-├── Directory.Packages.props
-└── global.json
-```
+External contributions are supported. Start with [`CONTRIBUTING.md`](CONTRIBUTING.md), follow the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), and use [`SECURITY.md`](SECURITY.md) for vulnerability reporting rather than public issues.
 
-## Testing strategy
+Classification changes require reproducible synthetic fixtures and evaluated evidence; public repositories may reveal a bug but do not replace a permanent local regression fixture.
 
-The inspection engine should be validated primarily with synthetic fixture repositories covering combinations such as:
+## Roadmap after v1.0.0
 
-- `Microsoft.NET.Sdk.Web`;
-- `Microsoft.NET.Sdk.Worker`;
-- executable and library output types;
-- test projects;
-- `Directory.Build.props` inheritance;
-- multi-targeted projects;
-- conditional MSBuild properties;
-- project references;
-- repositories with and without `global.json`.
+The v1 foundation is complete in code and release automation. Publication itself remains an explicit protected operation. Post-v1 work includes richer application subtypes, additional persistence adapters when justified, and an optional policy layer over the normalized contract.
 
-Tests should verify **evaluated behavior**, not assumptions based only on filenames or raw XML layout. Persistence adapter tests use in-memory `HttpMessageHandler` implementations and do not depend on public infrastructure.
-
-## Persistence and evidence
-
-Persistence is optional and happens only after a usable `InspectionReport` exists. `InspectionSnapshotFactory` creates an attributable envelope containing repository/commit identity when available, UTC observation time, schema and Inspector version, a report digest, and a versioned idempotency key.
-
-The generic publisher applies timeout/failure policy but does not know about HTTP or databases. The built-in HTTP adapter is selected explicitly by the delivery host and can send that snapshot to a consumer-owned endpoint without coupling Core or Engine to an infrastructure provider.
-
-A persistence failure does not become an inspection diagnostic. Consumers can choose `non-fatal` delivery, which preserves normal inspection exit semantics, or `fatal`, which returns exit code `5` while leaving the already-produced report unchanged.
-
-## Roadmap
-
-- [ ] Bootstrap solution and projects
-- [ ] Discover supported .NET project files
-- [ ] Evaluate effective MSBuild properties
-- [ ] Implement deterministic project classification
-- [ ] Define and version the JSON contract
-- [ ] Add fixture-based tests
-- [x] Package the CLI as a .NET tool
-- [x] Implement a reusable GitHub Action; public release/tagging remains pending
-- [x] Add the first optional snapshot sink (HTTP/webhook)
-- [ ] Explore policy/compliance checks over normalized inspection results
+See tracking issue #30 for the first-public-release roadmap and the dedicated post-MVP issues for further evolution.
 
 ## License
 
 DotNetRepoInspector is licensed under the [MIT License](LICENSE).
-
-## Contributing
-
-Contributions, bug reports, and design discussions are welcome while the project takes shape. Until contribution guidelines are formalized, prefer small, focused changes with tests that demonstrate the inspected repository behavior.
