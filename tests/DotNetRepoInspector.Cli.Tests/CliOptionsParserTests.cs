@@ -14,6 +14,10 @@ public sealed class CliOptionsParserTests
         Assert.Equal(".", result.Options.RepositoryPath);
         Assert.Null(result.Options.OutputPath);
         Assert.Equal(CliVerbosity.Normal, result.Options.Verbosity);
+        Assert.Null(result.Options.ConfigurationPath);
+        Assert.False(result.Options.DisableConfigurationFile);
+        Assert.Empty(result.Options.ExcludedPaths);
+        Assert.Empty(result.Options.ClassificationOverrides);
     }
 
     [Fact]
@@ -36,6 +40,64 @@ public sealed class CliOptionsParserTests
 
         Assert.True(result.Succeeded);
         Assert.Equal("inspection.json", result.Options?.OutputPath);
+    }
+
+    [Fact]
+    public void Parse_ReadsConfigurationExclusionsAndClassificationOverrides()
+    {
+        var result = CliOptionsParser.Parse(
+            [
+                ".",
+                "--config",
+                "config/inspector.json",
+                "--exclude",
+                "generated",
+                "--exclude=samples/Legacy.csproj",
+                "--classify",
+                "src/App/App.csproj=WEB",
+                "--classify=src/Worker/Worker.csproj=worker"
+            ]);
+
+        Assert.True(result.Succeeded);
+        Assert.NotNull(result.Options);
+        Assert.Equal("config/inspector.json", result.Options.ConfigurationPath);
+        Assert.Equal(
+            ["generated", "samples/Legacy.csproj"],
+            result.Options.ExcludedPaths);
+        Assert.Equal("web", result.Options.ClassificationOverrides["src/App/App.csproj"]);
+        Assert.Equal("worker", result.Options.ClassificationOverrides["src/Worker/Worker.csproj"]);
+    }
+
+    [Fact]
+    public void Parse_NoConfigDisablesRepositoryConfiguration()
+    {
+        var result = CliOptionsParser.Parse(["--no-config"]);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.Options?.DisableConfigurationFile);
+    }
+
+    [Fact]
+    public void Parse_RejectsConfigAndNoConfigTogether()
+    {
+        var result = CliOptionsParser.Parse(["--config", "settings.json", "--no-config"]);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains(
+            "cannot be used together",
+            result.Error ?? string.Empty,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_RejectsInvalidClassificationOverride()
+    {
+        var result = CliOptionsParser.Parse(["--classify", "src/App/App.csproj=invalid-kind"]);
+
+        Assert.False(result.Succeeded);
+        Assert.Equal(
+            "The --classify option requires a unique '<project-path>=<kind>' value using a supported kind.",
+            result.Error);
     }
 
     [Fact]
