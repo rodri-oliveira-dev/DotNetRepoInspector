@@ -15,6 +15,7 @@ PRODUCT_ASSEMBLIES = (
     "DotNetRepoInspector.Engine",
     "DotNetRepoInspector.Git",
     "DotNetRepoInspector.MSBuild",
+    "DotNetRepoInspector.Persistence",
 )
 
 

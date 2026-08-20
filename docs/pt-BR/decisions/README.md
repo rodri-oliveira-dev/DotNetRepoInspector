@@ -16,5 +16,6 @@ Um ADR deve registrar:
 
 - [ADR 0001: Avaliar projetos por meio de `dotnet msbuild`](0001-msbuild-evaluation-strategy.md) — Aceito.
 - [ADR 0002: Distribuir a GitHub Action como Composite Action sobre a .NET Tool](0002-github-action-distribution-strategy.md) — Aceito.
+- [ADR 0003: Manter persistência de snapshots opcional atrás de adapters de sink](0003-persistence-sink-architecture.md) — Aceito.
 
-Decisões futuras prováveis incluem precedência de classificação, compatibilidade do schema JSON e abstrações de persistência/sinks.
+Decisões futuras prováveis incluem precedência de classificação e identidade/idempotência das evidências.

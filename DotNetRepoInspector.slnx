@@ -4,6 +4,7 @@
     <Project Path="src/DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
     <Project Path="src/DotNetRepoInspector.Git/DotNetRepoInspector.Git.csproj" />
     <Project Path="src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
+    <Project Path="src/DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
     <Project Path="src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -11,6 +12,7 @@
     <Project Path="tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj" />
+    <Project Path="tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
