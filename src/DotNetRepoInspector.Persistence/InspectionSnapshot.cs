@@ -10,5 +10,8 @@ public sealed record InspectionSnapshot
         Report = report;
     }
 
-    public InspectionReport Report { get; }
+    public InspectionReport Report
+    {
+        get;
+    }
 }
