@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a focused capability or improvement for DotNetRepoInspector.
+title: "feature: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem or automation need first. Focused use cases are easier to evaluate than broad solution proposals.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What repository-inspection, automation, CI/CD, governance, or persistence problem should this solve?
+      placeholder: Teams need to ... because ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest useful behavior or contract you would like DotNetRepoInspector to provide.
+      placeholder: The Inspector should ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or examples
+      description: Optional. Include representative MSBuild metadata, repository shapes, or automation examples that help demonstrate the need. Do not include private data or credentials.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Mention workarounds or simpler approaches you already considered.
