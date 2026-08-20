@@ -68,6 +68,17 @@ As opções genéricas de persistência são independentes das credenciais espec
 
 Falhas de persistência não são diagnósticos `DRI`, porque descrevem o envio de um relatório já produzido, e não a inspeção do repositório.
 
+## Proveniência e idempotência do snapshot
+
+Antes da publicação, o host cria um `InspectionSnapshot` por meio de `InspectionSnapshotFactory`. O envelope contém versão do Inspector, identidade canônica do repositório, commit/ref, instante UTC da observação, metadados genéricos opcionais da execução, digest normalizado do relatório e chave de idempotência versionada.
+
+Dois escopos ficam explícitos:
+
+- `RepositoryState` para commits limpos com identidade canônica de remote, permitindo que reexecuções equivalentes compartilhem a chave;
+- `Observation` para estados sujos ou ambíguos, evitando deduplicação acidental.
+
+Consulte [`snapshot-provenance.md`](snapshot-provenance.md) e a ADR 0004 para o contrato completo.
+
 ## Retry e idempotência
 
 O publisher genérico não faz retry. Uma política genérica não consegue saber se uma falha do destino é transitória ou se repetir a requisição é seguro.
@@ -77,9 +88,9 @@ Sinks concretos podem fazer retry somente quando todas as condições abaixo for
 1. o adapter consegue classificar a falha como transitória;
 2. quantidade de tentativas e backoff são limitados;
 3. timeout total e cancelamento do chamador são respeitados;
-4. replay é seguro segundo o modelo de idempotência definido pela issue #21.
+4. replay utiliza a chave de idempotência do snapshot e é seguro para a semântica do destino.
 
-A issue #21 define identidade, proveniência e idempotência do snapshot antes da implementação de um sink de rede concreto.
+O primeiro sink HTTP da issue #22 consumirá esse contrato em vez de inventar identidade específica do destino.
 
 ## Configuração e secrets
 
@@ -93,10 +104,12 @@ Consulte [`security.md`](security.md) para as regras gerais de tratamento de sec
 
 A ADR 0003 seleciona um adapter HTTP/webhook como primeiro sink built-in porque ele mantém o Inspector independente de bancos e cloud providers e funciona naturalmente em automações locais e CI/CD.
 
-O adapter HTTP não é implementado aqui de propósito. A issue #22 é responsável por essa implementação depois que a issue #21 definir o contrato de identidade/idempotência das evidências.
+O adapter HTTP não é implementado aqui de propósito. A issue #22 é responsável por essa implementação e utilizará o contrato de identidade/idempotência definido pela ADR 0004.
 
 ## Decisões relacionadas
 
 - [ADR 0003: Manter persistência opcional atrás de adapters de sink](decisions/0003-persistence-sink-architecture.md)
+- [ADR 0004: Definir proveniência e idempotência de snapshots a partir da evidência canônica](decisions/0004-snapshot-provenance-idempotency.md)
+- [Proveniência e idempotência de snapshots](snapshot-provenance.md)
 - [Schema de inspeção](schema/inspection-v1.md)
 - [Segurança e privacidade](security.md)
