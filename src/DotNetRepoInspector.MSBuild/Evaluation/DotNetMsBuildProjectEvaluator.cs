@@ -198,8 +198,7 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
             CreateNoWindow = true
         };
 
-        startInfo.Environment["DOTNET_NOLOGO"] = "true";
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "true";
+        SecureProcessEnvironment.HardenDotNetProcess(startInfo);
 
         foreach (var argument in arguments)
         {
