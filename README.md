@@ -9,7 +9,7 @@
 
 **Inspect and classify .NET projects using evaluated MSBuild metadata for CI/CD, automation, architecture governance, and optional historical evidence.**
 
-> Status: **v1.0.0 release candidate**. The public v1 contract is defined and validated in CI, but the `DotNetRepoInspector` package, GitHub Release, and `v1` Action tag are not considered published until the protected Release workflow completes successfully.
+> Status: **v1.0.0 stable baseline**. The public v1 contract is defined and validated in CI. Official artifacts are published only through the protected Release workflow.
 
 ## What v1 does
 
