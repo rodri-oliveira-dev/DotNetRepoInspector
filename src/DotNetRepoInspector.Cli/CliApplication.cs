@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 
@@ -194,6 +195,18 @@ public sealed class CliApplication
 
     private static string GetProductVersion()
     {
+        var informationalVersion = typeof(CliApplication).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informationalVersion))
+        {
+            var metadataSeparatorIndex = informationalVersion.IndexOf('+');
+            return metadataSeparatorIndex >= 0
+                ? informationalVersion[..metadataSeparatorIndex]
+                : informationalVersion;
+        }
+
         var version = typeof(CliApplication).Assembly.GetName().Version;
         return version is null
             ? "0.0.0"
