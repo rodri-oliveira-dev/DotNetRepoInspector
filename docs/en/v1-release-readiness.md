@@ -102,7 +102,7 @@ After this readiness work is merged and the administrative prerequisites above a
 1. open **Actions → Release → Run workflow** on `main`;
 2. enter version `1.0.0`;
 3. set `publish=true`;
-4. enter confirmation `release-v1.0.0`;
+4. enter confirmation `v1.0.0`;
 5. approve the protected `release` environment;
 6. allow the workflow to publish the exact candidate built in the same run.
 

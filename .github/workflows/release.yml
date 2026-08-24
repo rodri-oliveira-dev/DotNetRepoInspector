@@ -33,7 +33,7 @@ on:
         default: false
         type: boolean
       confirmation:
-        description: When publish=true, enter release-vVERSION (for example release-v1.0.0).
+        description: When publish=true, enter vVERSION (for example v1.0.0).
         required: false
         default: ""
         type: string
@@ -184,7 +184,7 @@ jobs:
             exit 2
           fi
 
-          expected="release-v${RELEASE_VERSION}"
+          expected="v${RELEASE_VERSION}"
           if [[ "${RELEASE_CONFIRMATION}" != "${expected}" ]]; then
             echo "Publication confirmation must be exactly '${expected}'." >&2
             exit 2

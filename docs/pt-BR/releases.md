@@ -89,7 +89,7 @@ Publicar é intencionalmente uma ação de mantenedor, não um efeito colateral 
 4. Abra **Actions → Release → Run workflow** na `main`.
 5. Informe exatamente a versão já fixada em `action.yml`.
 6. Defina `publish` como `true`.
-7. Digite exatamente `release-v<version>`, por exemplo `release-v1.4.2`, no campo de confirmação.
+7. Digite exatamente `v<version>`, por exemplo `v1.4.2`, no campo de confirmação.
 8. Aprove o environment protegido `release` quando solicitado.
 
 Um workflow dispatch com `publish=false` é um dry-run manual seguro e nunca entra no job de publicação.
