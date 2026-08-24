@@ -60,7 +60,7 @@ outputs:
     description: Inspection schema version read from the generated report when available.
     value: "${{ steps.inspect.outputs.schema-version }}"
   inspector-version:
-    description: Exact DotNetRepoInspector .NET Tool version pinned by this Action revision.
+    description: DotNetRepoInspector .NET Tool version resolved and executed by this Action.
     value: "${{ steps.inspect.outputs.inspector-version }}"
   exit-code:
     description: Exit code returned by the DotNetRepoInspector CLI.
@@ -90,8 +90,7 @@ runs:
         DRI_INPUT_SINK_TIMEOUT_SECONDS: "${{ inputs['sink-timeout-seconds'] }}"
         DRI_INPUT_SINK_FAILURE_MODE: "${{ inputs['sink-failure-mode'] }}"
         DRI_INPUT_SINK_MAX_ATTEMPTS: "${{ inputs['sink-max-attempts'] }}"
-        # Public v1 contract is checked against .github/release-readiness-v1.json.
-        DRI_TOOL_VERSION: "1.0.0"
+        DOTNET_REPO_INSPECTOR_ACTION_REF: "${{ github.action_ref }}"
         DOTNET_REPO_INSPECTOR_HTTP_TOKEN: "${{ inputs['sink-token'] }}"
         DOTNET_REPO_INSPECTOR_EXECUTION_ID: "${{ github.run_id }}:${{ github.run_attempt }}"
         DOTNET_REPO_INSPECTOR_EXECUTION_PROVIDER: github-actions
