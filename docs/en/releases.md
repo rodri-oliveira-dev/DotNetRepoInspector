@@ -14,7 +14,7 @@ Product releases follow [Semantic Versioning 2.0.0](https://semver.org/):
 
 Prerelease identifiers such as `1.1.0-rc.1` are supported. Build metadata (`+...`) is intentionally not accepted for official product releases so the NuGet version, Git tag, release title, and Action version remain identical and unambiguous.
 
-The exact product version prepared by a commit is the value pinned as `DRI_TOOL_VERSION` in the root `action.yml`. The release workflow refuses a requested version that differs from this pin. This makes a released Action revision and its installed `DotNetRepoInspector` package version inseparable.
+The exact product version entered in the protected Release workflow is authoritative for the NuGet package, manifest, GitHub Release, and immutable tag. The workflow validates it as Semantic Versioning and derives the tag by prefixing the version with `v`. The reusable Action resolves the Tool version from the Action ref: a full immutable ref such as `v1.4.2` selects that exact package, while moving aliases such as `v1` and `v1.4` select the corresponding compatible line.
 
 ## Product version versus `schemaVersion`
 
@@ -84,12 +84,11 @@ No long-lived NuGet API key belongs in GitHub Secrets. The publication job reque
 Publication is intentionally a maintainer action, not a side effect of merging a PR.
 
 1. Choose the next Semantic Version according to the compatibility rules above.
-2. Update the exact `DRI_TOOL_VERSION` pin in `action.yml` in a reviewed PR. The existing Action smoke test must remain aligned with that version.
-3. Merge only after the normal CI and release dry-run are green.
-4. Open **Actions → Release → Run workflow** on `main`.
-5. Enter the exact version already pinned by `action.yml`.
-6. Set `publish` to `true`.
-7. Approve the protected `release` environment when prompted.
+2. Merge only after the normal CI and release dry-run are green.
+3. Open **Actions → Release → Run workflow** on `main`.
+4. Enter the exact version to publish.
+5. Set `publish` to `true`.
+6. Approve the protected `release` environment when prompted.
 
 The workflow derives the immutable release tag automatically by prefixing the validated version with `v` (for example, version `1.4.2` produces tag `v1.4.2`). A workflow dispatch with `publish=false` is a safe manual dry-run and never enters the publication job.
 
