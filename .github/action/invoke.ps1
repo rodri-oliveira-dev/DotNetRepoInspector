@@ -67,6 +67,51 @@ function Get-InputLines {
     )
 }
 
+function Resolve-ToolVersionFromCommit {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Commit,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Repository
+    )
+
+    if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+        throw "Cannot resolve the Tool version for Action repository '$Repository'."
+    }
+
+    $remoteUrl = "https://github.com/$Repository.git"
+    $remoteTags = @(& git ls-remote --tags $remoteUrl)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read release tags for Action repository '$Repository'."
+    }
+
+    $normalizedCommit = $Commit.ToLowerInvariant()
+    $versions = @(
+        foreach ($line in $remoteTags) {
+            $parts = $line -split '\s+', 2
+            if ($parts.Count -ne 2 -or $parts[0].ToLowerInvariant() -ne $normalizedCommit) {
+                continue
+            }
+
+            if ($parts[1] -match '^refs/tags/v(?<version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)(?:\^\{\})?$') {
+                $Matches.version
+            }
+        }
+    )
+
+    $uniqueVersions = @($versions | Sort-Object -Unique)
+    if ($uniqueVersions.Count -eq 0) {
+        throw "Action commit '$Commit' does not have an immutable Semantic Version tag."
+    }
+
+    if ($uniqueVersions.Count -ne 1) {
+        throw "Action commit '$Commit' maps to multiple immutable versions: $($uniqueVersions -join ', ')."
+    }
+
+    return $uniqueVersions[0]
+}
+
 function Resolve-ToolVersionSpec {
     $selfTestVersion = $env:DOTNET_REPO_INSPECTOR_SELF_TEST_TOOL_VERSION
     if (-not [string]::IsNullOrWhiteSpace($selfTestVersion)) {
@@ -81,6 +126,12 @@ function Resolve-ToolVersionSpec {
     $normalizedRef = $actionRef.Trim()
     if ($normalizedRef -match '^v(?<version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$') {
         return $Matches.version
+    }
+
+    if ($normalizedRef -match '^[0-9a-fA-F]{40}$') {
+        return Resolve-ToolVersionFromCommit `
+            -Commit $normalizedRef `
+            -Repository $env:DOTNET_REPO_INSPECTOR_ACTION_REPOSITORY
     }
 
     if ($normalizedRef -match '^v(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)$') {
