@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Exact Semantic Version already pinned by action.yml (for example 1.0.0).
+        description: Exact Semantic Version to publish (for example 1.0.1).
         required: true
         type: string
       publish:
@@ -70,10 +70,9 @@ jobs:
       - name: Resolve release metadata
         id: release-metadata
         env:
-          REQUESTED_VERSION: "${{ inputs.version }}"
+          REQUESTED_VERSION: "${{ inputs.version || format('0.0.0-ci.{0}', github.run_number) }}"
         run: >-
           python ./.github/scripts/release_metadata.py resolve
-          --action-metadata ./action.yml
           --requested-version "${REQUESTED_VERSION}"
           --github-output "${GITHUB_OUTPUT}"
 
