@@ -14,7 +14,7 @@ Product releases follow [Semantic Versioning 2.0.0](https://semver.org/):
 
 Prerelease identifiers such as `1.1.0-rc.1` are supported. Build metadata (`+...`) is intentionally not accepted for official product releases so the NuGet version, Git tag, release title, and Action version remain identical and unambiguous.
 
-The exact product version entered in the protected Release workflow is authoritative for the NuGet package, manifest, GitHub Release, and immutable tag. The workflow validates it as Semantic Versioning and derives the tag by prefixing the version with `v`. The reusable Action resolves the Tool version from the Action ref: a full immutable ref such as `v1.4.2` selects that exact package, while moving aliases such as `v1` and `v1.4` select the corresponding compatible line.
+The exact product version entered in the protected Release workflow is authoritative for the NuGet package, manifest, GitHub Release, and immutable tag. The workflow validates it as Semantic Versioning and derives the tag by prefixing the version with `v`. A full immutable Action ref such as `v1.4.2` selects that exact package directly. For moving aliases such as `v1` or `v1.4`, and for full commit SHAs, the Action resolves the ref to its release commit, requires exactly one immutable full Semantic Version tag on that commit, and installs that exact package. Unreleased or ambiguous refs are rejected instead of falling back to a wildcard or latest version.
 
 ## Product version versus `schemaVersion`
 
