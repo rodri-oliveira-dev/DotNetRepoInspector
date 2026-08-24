@@ -102,7 +102,7 @@ Depois que este trabalho de readiness for mergeado e os pré-requisitos administ
 1. abra **Actions → Release → Run workflow** na `main`;
 2. informe a versão `1.0.0`;
 3. defina `publish=true`;
-4. informe a confirmação `release-v1.0.0`;
+4. informe a confirmação `v1.0.0`;
 5. aprove o GitHub Environment `release` protegido;
 6. deixe o workflow publicar exatamente o candidate construído na mesma execução.
 
