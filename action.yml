@@ -91,6 +91,7 @@ runs:
         DRI_INPUT_SINK_FAILURE_MODE: "${{ inputs['sink-failure-mode'] }}"
         DRI_INPUT_SINK_MAX_ATTEMPTS: "${{ inputs['sink-max-attempts'] }}"
         DOTNET_REPO_INSPECTOR_ACTION_REF: "${{ github.action_ref }}"
+        DOTNET_REPO_INSPECTOR_ACTION_REPOSITORY: "${{ github.action_repository }}"
         DOTNET_REPO_INSPECTOR_HTTP_TOKEN: "${{ inputs['sink-token'] }}"
         DOTNET_REPO_INSPECTOR_EXECUTION_ID: "${{ github.run_id }}:${{ github.run_attempt }}"
         DOTNET_REPO_INSPECTOR_EXECUTION_PROVIDER: github-actions
