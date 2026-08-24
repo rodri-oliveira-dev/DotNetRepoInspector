@@ -89,10 +89,9 @@ Publication is intentionally a maintainer action, not a side effect of merging a
 4. Open **Actions → Release → Run workflow** on `main`.
 5. Enter the exact version already pinned by `action.yml`.
 6. Set `publish` to `true`.
-7. Enter confirmation `v<version>` exactly, for example `v1.4.2`.
-8. Approve the protected `release` environment when prompted.
+7. Approve the protected `release` environment when prompted.
 
-A workflow dispatch with `publish=false` is a safe manual dry-run and never enters the publication job.
+The workflow derives the immutable release tag automatically by prefixing the validated version with `v` (for example, version `1.4.2` produces tag `v1.4.2`). A workflow dispatch with `publish=false` is a safe manual dry-run and never enters the publication job.
 
 ## Publication sequence
 

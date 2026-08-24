@@ -102,11 +102,10 @@ Depois que este trabalho de readiness for mergeado e os pré-requisitos administ
 1. abra **Actions → Release → Run workflow** na `main`;
 2. informe a versão `1.0.0`;
 3. defina `publish=true`;
-4. informe a confirmação `v1.0.0`;
-5. aprove o GitHub Environment `release` protegido;
-6. deixe o workflow publicar exatamente o candidate construído na mesma execução.
+4. aprove o GitHub Environment `release` protegido;
+5. deixe o workflow publicar exatamente o candidate construído na mesma execução.
 
-O workflow protegido é responsável por criar a release/tag imutável `v1.0.0`, publicar o pacote NuGet, publicar a GitHub Release, gerar attestations e somente então mover os aliases estáveis da Action `v1` e `v1.0`.
+O workflow deriva automaticamente a tag `v1.0.0` da versão `1.0.0`. O workflow protegido é responsável por criar a release/tag imutável `v1.0.0`, publicar o pacote NuGet, publicar a GitHub Release, gerar attestations e somente então mover os aliases estáveis da Action `v1` e `v1.0`.
 
 ## Verificação pós-publicação
 

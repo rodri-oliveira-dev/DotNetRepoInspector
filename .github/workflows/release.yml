@@ -32,11 +32,6 @@ on:
         required: true
         default: false
         type: boolean
-      confirmation:
-        description: When publish=true, enter vVERSION (for example v1.0.0).
-        required: false
-        default: ""
-        type: string
 
 permissions:
   contents: read
@@ -175,7 +170,7 @@ jobs:
       - name: Validate protected publication request
         env:
           RELEASE_VERSION: "${{ needs.build.outputs.version }}"
-          RELEASE_CONFIRMATION: "${{ inputs.confirmation }}"
+          RELEASE_TAG: "${{ needs.build.outputs.tag }}"
         run: |
           set -euo pipefail
 
@@ -184,9 +179,9 @@ jobs:
             exit 2
           fi
 
-          expected="v${RELEASE_VERSION}"
-          if [[ "${RELEASE_CONFIRMATION}" != "${expected}" ]]; then
-            echo "Publication confirmation must be exactly '${expected}'." >&2
+          expected_tag="v${RELEASE_VERSION}"
+          if [[ "${RELEASE_TAG}" != "${expected_tag}" ]]; then
+            echo "Resolved release tag must be exactly '${expected_tag}'." >&2
             exit 2
           fi
 

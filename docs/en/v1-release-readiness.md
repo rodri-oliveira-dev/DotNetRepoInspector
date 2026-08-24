@@ -102,11 +102,10 @@ After this readiness work is merged and the administrative prerequisites above a
 1. open **Actions → Release → Run workflow** on `main`;
 2. enter version `1.0.0`;
 3. set `publish=true`;
-4. enter confirmation `v1.0.0`;
-5. approve the protected `release` environment;
-6. allow the workflow to publish the exact candidate built in the same run.
+4. approve the protected `release` environment;
+5. allow the workflow to publish the exact candidate built in the same run.
 
-The protected workflow is responsible for creating the immutable `v1.0.0` release/tag, publishing the NuGet package, publishing the GitHub Release, generating attestations, and only then moving the stable Action aliases `v1` and `v1.0`.
+The workflow derives tag `v1.0.0` automatically from version `1.0.0`. The protected workflow is responsible for creating the immutable `v1.0.0` release/tag, publishing the NuGet package, publishing the GitHub Release, generating attestations, and only then moving the stable Action aliases `v1` and `v1.0`.
 
 ## Post-publication verification
 
