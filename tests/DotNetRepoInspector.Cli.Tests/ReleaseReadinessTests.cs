@@ -10,7 +10,7 @@ namespace DotNetRepoInspector.Cli.Tests;
 public sealed class ReleaseReadinessTests
 {
     [Fact]
-    public void V1Baseline_MatchesProductActionAndSchemaContracts()
+    public void V1Baseline_MatchesProductAndSchemaContracts()
     {
         JsonElement baseline = LoadBaseline();
         string productVersion = RequiredString(baseline, "productVersion");
@@ -21,9 +21,10 @@ public sealed class ReleaseReadinessTests
         Assert.NotNull(parsedProductVersion);
         Assert.Equal("1.0.0", productVersion);
 
-        string actionVersion = ReadActionToolVersion();
-        Assert.Equal(productVersion, actionVersion);
         Assert.Equal($"v{parsedProductVersion.Major}", actionMajorAlias);
+
+        string actionMetadata = File.ReadAllText(Path.Combine(RepositoryRoot, "action.yml"));
+        Assert.DoesNotContain("DRI_TOOL_VERSION", actionMetadata, StringComparison.Ordinal);
 
         Assert.Equal(InspectionSchema.CurrentVersion, schemaVersion);
         Assert.True(Version.TryParse(schemaVersion, out Version? parsedSchemaVersion));
@@ -139,20 +140,6 @@ public sealed class ReleaseReadinessTests
         string path = Path.Combine(RepositoryRoot, ".github", "release-readiness-v1.json");
         using JsonDocument document = JsonDocument.Parse(File.ReadAllText(path));
         return document.RootElement.Clone();
-    }
-
-    private static string ReadActionToolVersion()
-    {
-        string[] matches = File
-            .ReadLines(Path.Combine(RepositoryRoot, "action.yml"))
-            .Select(line => line.Trim())
-            .Where(line => line.StartsWith("DRI_TOOL_VERSION:", StringComparison.Ordinal))
-            .ToArray();
-
-        Assert.Single(matches);
-
-        string value = matches[0]["DRI_TOOL_VERSION:".Length..].Trim();
-        return value.Trim('"', '\'');
     }
 
     private static string ProjectProperty(XDocument document, string name)

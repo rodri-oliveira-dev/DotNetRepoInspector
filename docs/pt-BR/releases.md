@@ -14,7 +14,7 @@ As releases do produto seguem [Semantic Versioning 2.0.0](https://semver.org/):
 
 Identificadores de prerelease como `1.1.0-rc.1` são suportados. Build metadata (`+...`) não é aceito em releases oficiais para que versão NuGet, tag Git, título da release e versão da Action permaneçam idênticos e sem ambiguidade.
 
-A versão exata preparada por um commit é o valor fixado em `DRI_TOOL_VERSION` no `action.yml` da raiz. O workflow de release rejeita uma versão solicitada diferente desse pin. Assim, uma revisão publicada da Action e a versão do pacote `DotNetRepoInspector` que ela instala permanecem inseparáveis.
+A versão exata informada no workflow protegido de Release é a fonte de verdade para o pacote NuGet, manifest, GitHub Release e tag imutável. O workflow valida o valor como Semantic Versioning e deriva a tag prefixando a versão com `v`. Um ref imutável completo da Action, como `v1.4.2`, seleciona diretamente esse pacote exato. Para aliases móveis como `v1` ou `v1.4`, e para SHAs completos de commit, a Action resolve o ref para o commit da release, exige exatamente uma tag SemVer completa e imutável nesse commit e instala o pacote exato. Refs não publicados ou ambíguos são rejeitados em vez de usar wildcard ou a versão mais recente.
 
 ## Versão do produto versus `schemaVersion`
 
@@ -84,12 +84,11 @@ Nenhuma API key de longa duração do NuGet pertence a GitHub Secrets. O job de 
 Publicar é intencionalmente uma ação de mantenedor, não um efeito colateral de fazer merge de um PR.
 
 1. Escolha a próxima Semantic Version pelas regras de compatibilidade acima.
-2. Atualize o pin exato `DRI_TOOL_VERSION` em `action.yml` em um PR revisado. O smoke existente da Action deve continuar alinhado com essa versão.
-3. Faça merge somente quando o CI normal e o dry-run de release estiverem verdes.
-4. Abra **Actions → Release → Run workflow** na `main`.
-5. Informe exatamente a versão já fixada em `action.yml`.
-6. Defina `publish` como `true`.
-7. Aprove o environment protegido `release` quando solicitado.
+2. Faça merge somente quando o CI normal e o dry-run de release estiverem verdes.
+3. Abra **Actions → Release → Run workflow** na `main`.
+4. Informe exatamente a versão que deseja publicar.
+5. Defina `publish` como `true`.
+6. Aprove o environment protegido `release` quando solicitado.
 
 O workflow deriva automaticamente a tag imutável da release prefixando a versão validada com `v` (por exemplo, a versão `1.4.2` produz a tag `v1.4.2`). Um workflow dispatch com `publish=false` é um dry-run manual seguro e nunca entra no job de publicação.
 

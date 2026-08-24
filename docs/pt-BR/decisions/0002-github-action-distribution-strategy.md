@@ -55,9 +55,9 @@ A Action instalará a ferramenta em um diretório pertencente à invocação atu
 
 Ela não instalará a ferramenta globalmente e não modificará o tool manifest local do repositório inspecionado. Isso evita alterações persistentes de estado do usuário, colisões de comandos e mutações no repositório.
 
-Cada revisão publicada da Action deverá fixar uma versão **exata** do pacote `DotNetRepoInspector`. Wildcards, `latest`, resolução implícita da versão estável e seleção implícita de prerelease não são permitidos.
+Cada ref publicado da Action deverá resolver deterministicamente uma versão **exata** do pacote `DotNetRepoInspector`. Tags completas resolvem diretamente; aliases móveis e SHAs de commit resolvem pela única tag SemVer completa e imutável no mesmo commit da release. Wildcards, `latest`, resolução implícita da versão estável e seleção implícita de prerelease não são permitidos.
 
-A implementação inicial não exporá um input `inspector-version`. Permitir que quem chama substitua a versão fixada da ferramenta faria com que uma mesma ref da Action pudesse produzir schemas e comportamentos diferentes ao longo do tempo, enfraquecendo a reprodutibilidade. Se um override for introduzido no futuro, isso exigirá um design explícito de compatibilidade e supply chain.
+A implementação inicial não exporá um input `inspector-version`. Permitir que quem chama substitua a versão exata resolvida da Tool faria com que uma mesma ref da Action pudesse produzir schemas e comportamentos diferentes ao longo do tempo, enfraquecendo a reprodutibilidade. Se um override for introduzido no futuro, isso exigirá um design explícito de compatibilidade e supply chain.
 
 ## Isolamento da origem do pacote
 
@@ -89,7 +89,7 @@ O contrato esperado para a Action v1 deverá expor outputs pequenos e adequados 
 | --- | --- |
 | `report-path` | Caminho absoluto para o JSON de inspeção gerado quando existir um relatório. |
 | `schema-version` | Versão do schema lida do relatório gerado quando disponível. |
-| `inspector-version` | Versão exata da .NET Tool fixada por esta release da Action. |
+| `inspector-version` | Versão exata da .NET Tool resolvida para este ref de release da Action. |
 | `exit-code` | Código de saída retornado pela CLI. |
 
 O JSON completo da inspeção **não** será duplicado em um output do GitHub Actions. Relatórios podem ser materialmente maiores que outputs normais de steps, e um arquivo já é a fronteira canônica legível por máquina suportada pela CLI. Steps posteriores devem ler `report-path`.
@@ -111,7 +111,7 @@ A GitHub Action e a .NET Tool são publicadas a partir do mesmo repositório e u
 Para uma release completa `v1.2.3`:
 
 - a tag imutável da release completa da Action é `v1.2.3`;
-- a revisão da release fixa exatamente a versão `1.2.3` do pacote `DotNetRepoInspector`;
+- a tag imutável, os aliases móveis e o SHA do commit da release resolvem exatamente para a versão `1.2.3` do pacote `DotNetRepoInspector`;
 - os aliases móveis de compatibilidade `v1` e, quando mantido, `v1.2` apontam para a release completa compatível mais recente;
 - a automação de release não deve mover um alias de compatibilidade antes que o pacote exato correspondente tenha sido publicado e validado.
 
@@ -143,7 +143,7 @@ A própria Action de inspeção não exige chamada à API do GitHub nem token do
 As revisões publicadas da Action deverão seguir estas regras de supply chain:
 
 - fixar actions aninhadas, sejam first-party ou third-party, por SHA completo de commit;
-- fixar o pacote do Inspector em uma versão exata;
+- resolver o pacote do Inspector para uma versão exata e imutável da release;
 - isolar a origem do pacote do Inspector de configurações NuGet controladas pelo repositório;
 - não executar versões de pacote selecionadas por ranges flutuantes;
 - publicar uma release da Action somente depois que o pacote correspondente tiver passado build, testes, empacotamento e validação de instalação;

@@ -359,6 +359,7 @@ jobs:
         run: |
           $source = (Resolve-Path -LiteralPath "./artifacts/action-smoke/packages").Path
           "DOTNET_REPO_INSPECTOR_SELF_TEST_PACKAGE_SOURCE=$source" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          "DOTNET_REPO_INSPECTOR_SELF_TEST_TOOL_VERSION=$env:ACTION_TEST_TOOL_VERSION" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
 
       - name: Run reusable Action
         id: inspect

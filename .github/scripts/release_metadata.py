@@ -15,9 +15,6 @@ _SEMVER_PATTERN = re.compile(
     r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)"
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
-_ACTION_VERSION_PATTERN = re.compile(
-    r"^\s*DRI_TOOL_VERSION:\s*[\"']?([^\"'#\s]+)[\"']?\s*(?:#.*)?$"
-)
 _COMMIT_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
 
 
@@ -71,21 +68,6 @@ class ProductVersion:
         )
 
 
-def _read_action_version(path: Path) -> ProductVersion:
-    matches: list[str] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = _ACTION_VERSION_PATTERN.fullmatch(line)
-        if match is not None:
-            matches.append(match.group(1))
-
-    if len(matches) != 1:
-        raise ValueError(
-            f"Expected exactly one DRI_TOOL_VERSION pin in '{path}', found {len(matches)}."
-        )
-
-    return ProductVersion.parse(matches[0])
-
-
 def _write_key_values(path: Path | None, values: dict[str, str]) -> None:
     if path is None:
         return
@@ -99,25 +81,17 @@ def _write_key_values(path: Path | None, values: dict[str, str]) -> None:
 
 
 def _resolve(args: argparse.Namespace) -> int:
-    pinned = _read_action_version(args.action_metadata)
-    requested_text = args.requested_version.strip()
-    requested = ProductVersion.parse(requested_text) if requested_text else pinned
-
-    if requested.text != pinned.text:
-        raise ValueError(
-            f"Requested release version '{requested.text}' does not match the Action pin "
-            f"'{pinned.text}' in '{args.action_metadata}'."
-        )
+    requested = ProductVersion.parse(args.requested_version)
 
     values = {
-        "version": pinned.text,
-        "tag": pinned.tag,
-        "major": str(pinned.major),
-        "minor": str(pinned.minor),
-        "patch": str(pinned.patch),
-        "is_prerelease": str(pinned.is_prerelease).lower(),
-        "major_alias": f"v{pinned.major}",
-        "minor_alias": f"v{pinned.major}.{pinned.minor}",
+        "version": requested.text,
+        "tag": requested.tag,
+        "major": str(requested.major),
+        "minor": str(requested.minor),
+        "patch": str(requested.patch),
+        "is_prerelease": str(requested.is_prerelease).lower(),
+        "major_alias": f"v{requested.major}",
+        "minor_alias": f"v{requested.major}.{requested.minor}",
     }
     _write_key_values(args.github_output, values)
     print(json.dumps(values, indent=2, sort_keys=True))
@@ -244,10 +218,9 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     resolve = subparsers.add_parser(
-        "resolve", description="Resolve the release version from the Action's exact Tool pin."
+        "resolve", description="Resolve release metadata from the requested Semantic Version."
     )
-    resolve.add_argument("--action-metadata", type=Path, required=True)
-    resolve.add_argument("--requested-version", default="")
+    resolve.add_argument("--requested-version", required=True)
     resolve.add_argument("--github-output", type=Path)
     resolve.set_defaults(handler=_resolve)
 

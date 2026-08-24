@@ -55,9 +55,9 @@ The Action will install the tool into a directory owned by the current Action in
 
 It will not install the tool globally and will not modify the inspected repository's local tool manifest. This avoids persistent user-state changes, command collisions, and repository mutations.
 
-Each released Action revision must pin an **exact** `DotNetRepoInspector` package version. Wildcards, `latest`, implicit stable-version resolution, and implicit prerelease selection are not allowed.
+Each released Action ref must deterministically resolve an **exact** `DotNetRepoInspector` package version. Full version tags resolve directly; moving aliases and commit SHAs resolve through the unique immutable full Semantic Version tag on the same release commit. Wildcards, `latest`, implicit stable-version resolution, and implicit prerelease selection are not allowed.
 
-The initial implementation will not expose an `inspector-version` input. Allowing callers to replace the pinned tool version would make a given Action ref capable of producing different schemas and behavior over time, weakening reproducibility. If an override is introduced later, it requires an explicit compatibility and supply-chain design.
+The initial implementation will not expose an `inspector-version` input. Allowing callers to replace the resolved exact Tool version would make a given Action ref capable of producing different schemas and behavior over time, weakening reproducibility. If an override is introduced later, it requires an explicit compatibility and supply-chain design.
 
 ## Package source isolation
 
@@ -89,7 +89,7 @@ The v1 Action contract is expected to expose small outputs suitable for downstre
 | --- | --- |
 | `report-path` | Absolute path to the generated inspection JSON when a report exists. |
 | `schema-version` | Schema version read from the generated report when available. |
-| `inspector-version` | Exact .NET Tool version pinned by this Action release. |
+| `inspector-version` | Exact .NET Tool version resolved for this Action release ref. |
 | `exit-code` | Exit code returned by the CLI. |
 
 The complete inspection JSON will **not** be duplicated into a GitHub Action output. Reports can be materially larger than normal step outputs, and a file is the canonical machine-readable boundary already supported by the CLI. Downstream steps should read `report-path`.
@@ -111,7 +111,7 @@ The GitHub Action and .NET Tool are released from the same repository and will u
 For a full release `v1.2.3`:
 
 - the immutable full Action release tag is `v1.2.3`;
-- the release revision pins `DotNetRepoInspector` package version `1.2.3` exactly;
+- the immutable tag, moving aliases, and release commit SHA all resolve to `DotNetRepoInspector` package version `1.2.3` exactly;
 - the moving compatibility aliases `v1` and, when maintained, `v1.2` point to the latest compatible full release;
 - release automation must not move a compatibility alias until the corresponding exact package has been published and validated.
 
@@ -121,7 +121,7 @@ Consumers that prioritize update convenience can use `@v1`. Consumers that prior
 
 The Action major version is a compatibility boundary for both the Action interface and the public inspection contract consumed through it.
 
-- Action `v1` may only pin Inspector releases whose output remains compatible with schema major version `1`.
+- Action `v1` may only resolve Inspector releases whose output remains compatible with schema major version `1`.
 - Additive/backward-compatible Inspector and schema changes may be released within Action `v1` according to semantic versioning.
 - A breaking Action input/output change requires a new Action major version.
 - A breaking inspection schema change also requires a new Action major version, even if the `action.yml` inputs themselves did not change.
@@ -143,7 +143,7 @@ The inspection Action itself requires no GitHub API call and no GitHub token for
 Released Action revisions must follow these supply-chain rules:
 
 - pin nested third-party/first-party actions to full commit SHAs;
-- pin the Inspector package to an exact version;
+- resolve the Inspector package to an exact immutable release version;
 - isolate the Inspector package source from repository-controlled NuGet configuration;
 - do not execute package versions selected from floating ranges;
 - publish an Action release only after the corresponding package has passed build, test, packaging, and installation validation;

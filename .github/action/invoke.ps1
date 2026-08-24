@@ -67,6 +67,138 @@ function Get-InputLines {
     )
 }
 
+function Get-RemoteActionTags {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Repository
+    )
+
+    if ($Repository -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+        throw "Cannot resolve the Tool version for Action repository '$Repository'."
+    }
+
+    $remoteUrl = "https://github.com/$Repository.git"
+    $remoteTags = @(& git ls-remote --tags $remoteUrl)
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read release tags for Action repository '$Repository'."
+    }
+
+    return $remoteTags
+}
+
+function Resolve-ToolVersionFromRef {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ActionRef,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Repository
+    )
+
+    $normalizedRef = $ActionRef.Trim()
+    if ($normalizedRef -match '^v(?<version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$') {
+        return $Matches.version
+    }
+
+    $isCommit = $normalizedRef -match '^[0-9a-fA-F]{40}$'
+    $isMajorAlias = $normalizedRef -match '^v(?<aliasMajor>0|[1-9]\d*)$'
+    $aliasMajor = if ($isMajorAlias) { $Matches.aliasMajor } else { $null }
+    $isMinorAlias = $normalizedRef -match '^v(?<aliasMajor>0|[1-9]\d*)\.(?<aliasMinor>0|[1-9]\d*)$'
+    $aliasMinor = if ($isMinorAlias) { $Matches.aliasMinor } else { $null }
+    if ($isMinorAlias) {
+        $aliasMajor = $Matches.aliasMajor
+    }
+
+    if (-not $isCommit -and -not $isMajorAlias -and -not $isMinorAlias) {
+        throw "Action ref '$normalizedRef' must be an immutable version tag, a stable major/minor alias, or a full commit SHA."
+    }
+
+    $remoteTags = @(Get-RemoteActionTags -Repository $Repository)
+    $targetCommit = if ($isCommit) {
+        $normalizedRef.ToLowerInvariant()
+    }
+    else {
+        $directRef = "refs/tags/$normalizedRef"
+        $peeledRef = "$directRef^{}"
+        $peeledCommits = @(
+            foreach ($line in $remoteTags) {
+                $parts = $line -split '\s+', 2
+                if ($parts.Count -eq 2 -and $parts[1] -eq $peeledRef) {
+                    $parts[0].ToLowerInvariant()
+                }
+            }
+        )
+        $aliasCommits = if ($peeledCommits.Count -gt 0) {
+            $peeledCommits
+        }
+        else {
+            @(
+                foreach ($line in $remoteTags) {
+                    $parts = $line -split '\s+', 2
+                    if ($parts.Count -eq 2 -and $parts[1] -eq $directRef) {
+                        $parts[0].ToLowerInvariant()
+                    }
+                }
+            )
+        }
+
+        $uniqueAliasCommits = @($aliasCommits | Sort-Object -Unique)
+        if ($uniqueAliasCommits.Count -ne 1) {
+            throw "Action alias '$normalizedRef' did not resolve to exactly one commit."
+        }
+
+        $uniqueAliasCommits[0]
+    }
+
+    $versions = @(
+        foreach ($line in $remoteTags) {
+            $parts = $line -split '\s+', 2
+            if ($parts.Count -ne 2 -or $parts[0].ToLowerInvariant() -ne $targetCommit) {
+                continue
+            }
+
+            if ($parts[1] -match '^refs/tags/v(?<version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)(?:\^\{\})?$') {
+                $Matches.version
+            }
+        }
+    )
+
+    $uniqueVersions = @($versions | Sort-Object -Unique)
+    if ($uniqueVersions.Count -eq 0) {
+        throw "Action ref '$normalizedRef' does not resolve to an immutable Semantic Version tag."
+    }
+
+    if ($uniqueVersions.Count -ne 1) {
+        throw "Action ref '$normalizedRef' maps to multiple immutable versions: $($uniqueVersions -join ', ')."
+    }
+
+    $resolvedVersion = $uniqueVersions[0]
+    if ($isMajorAlias -and -not $resolvedVersion.StartsWith("$aliasMajor.", [StringComparison]::Ordinal)) {
+        throw "Action alias '$normalizedRef' resolved outside its major version line."
+    }
+
+    if ($isMinorAlias -and -not $resolvedVersion.StartsWith("$aliasMajor.$aliasMinor.", [StringComparison]::Ordinal)) {
+        throw "Action alias '$normalizedRef' resolved outside its minor version line."
+    }
+
+    return $resolvedVersion
+}
+
+function Resolve-ToolVersionSpec {
+    $selfTestVersion = $env:DOTNET_REPO_INSPECTOR_SELF_TEST_TOOL_VERSION
+    if (-not [string]::IsNullOrWhiteSpace($selfTestVersion)) {
+        return $selfTestVersion.Trim()
+    }
+
+    $actionRef = $env:DOTNET_REPO_INSPECTOR_ACTION_REF
+    $actionRepository = $env:DOTNET_REPO_INSPECTOR_ACTION_REPOSITORY
+    if ([string]::IsNullOrWhiteSpace($actionRef) -or [string]::IsNullOrWhiteSpace($actionRepository)) {
+        throw "The Action ref and repository are required to resolve an exact DotNetRepoInspector version."
+    }
+
+    return Resolve-ToolVersionFromRef -ActionRef $actionRef -Repository $actionRepository
+}
+
 if ([string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE)) {
     throw "GITHUB_WORKSPACE is not available."
 }
@@ -75,9 +207,7 @@ if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
     throw "RUNNER_TEMP is not available."
 }
 
-if ([string]::IsNullOrWhiteSpace($env:DRI_TOOL_VERSION)) {
-    throw "The Action does not define a pinned DotNetRepoInspector version."
-}
+$toolVersionSpec = Resolve-ToolVersionSpec
 
 $verbosity = if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_VERBOSITY)) {
     "normal"
@@ -144,16 +274,25 @@ $escapedPackageSource = [Security.SecurityElement]::Escape($packageSource)
 </configuration>
 "@ | Set-Content -LiteralPath $nugetConfigPath -Encoding utf8
 
+$installArguments = @(
+    "tool",
+    "install",
+    "DotNetRepoInspector",
+    "--tool-path",
+    $toolPath,
+    "--version",
+    $toolVersionSpec,
+    "--configfile",
+    $nugetConfigPath,
+    "--no-cache"
+)
+
 Push-Location $invocationRoot
 try {
-    & dotnet tool install DotNetRepoInspector `
-        --tool-path $toolPath `
-        --version $env:DRI_TOOL_VERSION `
-        --configfile $nugetConfigPath `
-        --no-cache
+    & dotnet @installArguments
 
     if ($LASTEXITCODE -ne 0) {
-        throw "Failed to install DotNetRepoInspector $($env:DRI_TOOL_VERSION) from the isolated package source."
+        throw "Failed to install DotNetRepoInspector version '$toolVersionSpec' from the isolated package source."
     }
 }
 finally {
@@ -164,6 +303,16 @@ $toolCommandName = if ($IsWindows) { "dotnet-repo-inspect.exe" } else { "dotnet-
 $toolCommand = Join-Path $toolPath $toolCommandName
 if (-not (Test-Path -LiteralPath $toolCommand -PathType Leaf)) {
     throw "The installed tool command '$toolCommand' was not found."
+}
+
+$versionOutput = @(& $toolCommand --version)
+if ($LASTEXITCODE -ne 0) {
+    throw "The installed DotNetRepoInspector version could not be determined."
+}
+
+$installedToolVersion = ($versionOutput -join [Environment]::NewLine).Trim()
+if ([string]::IsNullOrWhiteSpace($installedToolVersion)) {
+    throw "The installed DotNetRepoInspector returned an empty version."
 }
 
 $arguments = @($repositoryPath, "--output", $reportPath)
@@ -207,7 +356,7 @@ else {
 & $toolCommand @arguments
 $exitCode = $LASTEXITCODE
 
-Set-ActionOutput -Name "inspector-version" -Value $env:DRI_TOOL_VERSION
+Set-ActionOutput -Name "inspector-version" -Value $installedToolVersion
 Set-ActionOutput -Name "exit-code" -Value ([string]$exitCode)
 
 if (Test-Path -LiteralPath $reportPath -PathType Leaf) {

@@ -58,7 +58,7 @@ The current canonical JSON example is [`schema/examples/inspection-v1.example.js
 
 The gate verifies:
 
-1. the product version in `.github/release-readiness-v1.json` matches `DRI_TOOL_VERSION` in `action.yml`;
+1. the product version in `.github/release-readiness-v1.json` defines the initial v1 baseline, while official release versions are supplied and validated by the Release workflow;
 2. product major, Action major alias, and inspection schema major are aligned for the v1 baseline;
 3. `InspectionSchema.CurrentVersion` is exactly the baseline schema version;
 4. the CLI project remains a packable .NET Tool with the expected package ID, command, target framework, license, README, and repository URL;
