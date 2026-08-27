@@ -9,15 +9,16 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dotnet-repo-inspect</ToolCommandName>
     <PackageId>DotNetRepoInspector</PackageId>
-    <Title>DotNetRepoInspector</Title>
+    <Title>DotNetRepoInspector - .NET Repository Inspector</Title>
     <Authors>Rodrigo de Oliveira</Authors>
-    <Description>Inspect and classify .NET projects, extracting architecture metadata for CI/CD, automation, and technical governance.</Description>
-    <PackageTags>dotnet;tool;msbuild;repository;inspection;architecture;ci-cd</PackageTags>
+    <Description>CLI and .NET Tool for deterministic inspection and classification of .NET repositories using evaluated MSBuild metadata. Extract project types, target frameworks, SDKs, references, Git metadata, and architecture facts for CI/CD, automation, repository inventory, and technical governance.</Description>
+    <PackageTags>dotnet;tool;dotnet-tool;cli;msbuild;inspection;repository;repository-inspection;project-metadata;project-classification;architecture;architecture-governance;ci-cd;devops;automation;github-actions</PackageTags>
     <PackageProjectUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>nuget-icon.png</PackageIcon>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 
     <!-- DotNetRepoInspector is distributed as one tool package. Include the runtime
@@ -36,6 +37,7 @@
 
   <ItemGroup>
     <None Include="../../README.md" Pack="true" PackagePath="/" Link="README.md" />
+    <None Include="../../resource/nuget-icon.png" Pack="true" PackagePath="/" Link="nuget-icon.png" />
   </ItemGroup>
 
   <Target Name="CopyToolRuntimeDependencies" DependsOnTargets="ResolveReferences">
