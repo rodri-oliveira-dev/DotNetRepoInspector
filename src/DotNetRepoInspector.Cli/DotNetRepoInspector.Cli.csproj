@@ -12,7 +12,7 @@
     <Title>DotNetRepoInspector - .NET Repository Inspector</Title>
     <Authors>Rodrigo de Oliveira</Authors>
     <Description>CLI and .NET Tool for deterministic inspection and classification of .NET repositories using evaluated MSBuild metadata. Extract project types, target frameworks, SDKs, references, Git metadata, and architecture facts for CI/CD, automation, repository inventory, and technical governance.</Description>
-    <PackageTags>dotnet;dotnet-tool;cli;msbuild;repository;repository-inspection;project-metadata;project-classification;architecture;architecture-governance;ci-cd;devops;automation;github-actions</PackageTags>
+    <PackageTags>dotnet;tool;dotnet-tool;cli;msbuild;inspection;repository;repository-inspection;project-metadata;project-classification;architecture;architecture-governance;ci-cd;devops;automation;github-actions</PackageTags>
     <PackageProjectUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</PackageProjectUrl>
     <RepositoryUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
