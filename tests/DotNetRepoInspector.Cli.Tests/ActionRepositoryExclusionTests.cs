@@ -49,6 +49,27 @@ public sealed class ActionRepositoryExclusionTests
     }
 
     [Fact]
+    public async Task RepositoryExclusion_ValidatesEntireListBeforeReturningMatch()
+    {
+        var result = await InvokePowerShellAsync($"""
+            . '{PowerShellLiteral(RepositoryExclusionScriptPath)}'
+            Test-RepositoryExcluded `
+              -Repository 'rodri-oliveira-dev/DotNetRepoInspector' `
+              -ExcludedRepositories "rodri-oliveira-dev/DotNetRepoInspector`npartial-name"
+            """);
+
+        Assert.NotEqual(0, result.ExitCode);
+        Assert.Contains(
+            "Excluded repository 'partial-name'",
+            result.StandardError,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "owner/repository identifier",
+            result.StandardError,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task InvokeScript_SkipsExplicitlyExcludedRepositoryBeforeInspection()
     {
         string temporaryDirectory = Directory.CreateTempSubdirectory("DotNetRepoInspector-Action-").FullName;
