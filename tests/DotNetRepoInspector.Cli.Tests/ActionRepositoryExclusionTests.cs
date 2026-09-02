@@ -32,20 +32,18 @@ public sealed class ActionRepositoryExclusionTests
     {
         var result = await InvokePowerShellAsync($"""
             . '{PowerShellLiteral(RepositoryExclusionScriptPath)}'
-            try {{
-                Test-RepositoryExcluded `
-                  -Repository 'rodri-oliveira-dev/DotNetRepoInspector' `
-                  -ExcludedRepositories 'DotNetRepoInspector'
-            }}
-            catch {{
-                [Console]::Error.WriteLine($_.Exception.Message)
-                exit 1
-            }}
+            Test-RepositoryExcluded `
+              -Repository 'rodri-oliveira-dev/DotNetRepoInspector' `
+              -ExcludedRepositories 'DotNetRepoInspector'
             """);
 
         Assert.NotEqual(0, result.ExitCode);
         Assert.Contains(
-            "must use the full owner/repository identifier",
+            "Excluded repository 'DotNetRepoInspector'",
+            result.StandardError,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "owner/repository identifier",
             result.StandardError,
             StringComparison.Ordinal);
     }
