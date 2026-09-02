@@ -34,6 +34,7 @@ A própria Action não precisa de token do GitHub nem de permissão de escrita p
 | `config` | Não | vazio | Arquivo de configuração relativo ao repositório. Quando omitido, `.dotnetrepoinspector.json` é carregado automaticamente se existir. |
 | `no-config` | Não | `false` | Use `true` para ignorar o arquivo padrão de configuração. Não pode ser combinado com `config`. |
 | `exclude` | Não | vazio | Diretórios ou caminhos exatos de projeto, relativos ao repositório e separados por linhas, a serem excluídos. |
+| `exclude-repositories` | Não | vazio | Identificadores completos `owner/repository`, separados por linhas, a serem pulados antes da inspeção em workflows de inventário de frota. |
 | `classify` | Não | vazio | Overrides explícitos `<project-path>=<kind>` separados por linhas. |
 | `sink-url` | Não | vazio | Endpoint HTTP/HTTPS absoluto. Um valor não vazio habilita o sink HTTP de snapshots built-in. |
 | `sink-token` | Não | vazio | Bearer token opcional para o sink HTTP. Forneça-o por um secret do GitHub Actions. |
@@ -44,6 +45,8 @@ A própria Action não precisa de token do GitHub nem de permissão de escrita p
 Os tipos de classificação suportados são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
 Valores de `exclude` são aditivos às exclusões do arquivo. Uma entrada direta de `classify` vence o override do arquivo para o mesmo projeto. A Action encaminha esses valores para o mesmo contrato de configuração da CLI/Engine; ela não implementa lógica independente de classificação. Consulte [`configuration.md`](configuration.md).
+
+`exclude-repositories` é intencionalmente diferente de `exclude` por caminho de projeto. Ele pertence a workflows de inventário agregado de frota que decidem quais repositórios fazem parte da população antes de invocar a inspeção. Cada valor deve ser o identificador completo do repositório no GitHub, como `rodri-oliveira-dev/DotNetRepoInspector`; nomes parciais, substrings e fragmentos de caminho são rejeitados. Quando o `github.repository` atual corresponde, a Action termina com sucesso usando `repository-excluded=true`, sem caminho de relatório, sem versão de schema e sem invocar o Inspector.
 
 A Action intencionalmente não expõe um input `inspector-version`. Cada revisão publicada da Action fixa uma versão exata da .NET Tool para que uma referência específica continue reproduzível.
 
@@ -64,6 +67,24 @@ A Action intencionalmente não expõe um input `inspector-version`. Cada revisã
 ```
 
 Um override altera somente a interpretação efetiva da classificação. Os fatos do MSBuild permanecem intactos. O schema `1.3` expõe `classification.source` e `classification.automaticKind` quando um override está ativo, permitindo que automações distingam o resultado configurado do automático.
+
+## Exclusões em inventário de frota
+
+Inspeção direta/manual e inventário agregado de frota têm responsabilidades diferentes. Executar `dotnet repo-inspect .` ou usar a Action sem `exclude-repositories` continua inspecionando o repositório em checkout, incluindo o próprio DotNetRepoInspector quando isso for solicitado diretamente.
+
+Workflows centrais de inventário devem excluir repositórios antes de calcular contadores planejados/processados e antes de invocar o Inspector. Para o repositório do próprio Inspector, configure o identificador completo:
+
+```yaml
+- name: Inspecionar repositório .NET
+  id: inspect
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    exclude-repositories: |
+      rodri-oliveira-dev/DotNetRepoInspector
+```
+
+O DotNetRepoInspector contém projetos internos de teste, fixtures sintéticas e repositórios deliberadamente inválidos usados para validar diagnósticos. Esses ativos são úteis para testar o produto, mas não são aplicações ou bibliotecas da frota governada; incluí-los distorceria totais consolidados de projetos e métricas de warnings/errors.
 
 ## Persistência HTTP opcional de snapshots
 
@@ -101,6 +122,7 @@ O sink HTTP faz retry somente para falhas de transporte/timeouts e HTTP `408`, `
 | `schema-version` | `schemaVersion` lido do relatório gerado quando disponível. |
 | `inspector-version` | Versão exata da .NET Tool `DotNetRepoInspector` fixada por esta revisão da Action. |
 | `exit-code` | Código de saída retornado pela CLI. |
+| `repository-excluded` | `true` quando o repositório atual corresponde a `exclude-repositories` e a inspeção foi pulada; caso contrário, `false`. |
 
 O relatório JSON completo permanece intencionalmente em arquivo, em vez de ser copiado para `$GITHUB_OUTPUT`.
 

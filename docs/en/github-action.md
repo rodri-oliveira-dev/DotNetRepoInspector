@@ -34,6 +34,7 @@ The Action itself does not require a GitHub token or write permission to inspect
 | `config` | No | empty | Repository-relative configuration file. When omitted, `.dotnetrepoinspector.json` is loaded automatically if present. |
 | `no-config` | No | `false` | Set to `true` to ignore the default repository configuration file. Cannot be combined with `config`. |
 | `exclude` | No | empty | Newline-separated repository-relative directory or exact project paths to exclude. |
+| `exclude-repositories` | No | empty | Newline-separated full `owner/repository` identifiers to skip before inspection in fleet inventory workflows. |
 | `classify` | No | empty | Newline-separated `<project-path>=<kind>` explicit classification overrides. |
 | `sink-url` | No | empty | Absolute HTTP/HTTPS endpoint. A non-empty value enables the built-in HTTP snapshot sink. |
 | `sink-token` | No | empty | Optional Bearer token for the HTTP sink. Supply it from a GitHub Actions secret. |
@@ -44,6 +45,8 @@ The Action itself does not require a GitHub token or write permission to inspect
 Supported classification kinds are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
 `exclude` values are additive to exclusions from the configuration file. A direct `classify` input wins over a file override for the same project. The Action passes these values to the same CLI/Engine configuration contract; it does not implement independent classification logic. See [`configuration.md`](configuration.md).
+
+`exclude-repositories` is intentionally different from project-path `exclude`. It belongs to aggregated fleet inventory workflows that decide which repositories are part of the population before invoking inspection. Each value must be the complete GitHub repository identifier, such as `rodri-oliveira-dev/DotNetRepoInspector`; partial names, substrings, and path fragments are rejected. When the current `github.repository` matches, the Action exits successfully with `repository-excluded=true`, no report path, no schema version, and no Inspector invocation.
 
 The Action intentionally does not expose an `inspector-version` input. Each released Action revision pins one exact .NET Tool version so a specific Action ref remains reproducible.
 
@@ -64,6 +67,24 @@ The Action intentionally does not expose an `inspector-version` input. Each rele
 ```
 
 A classification override changes only the effective classification interpretation. MSBuild facts remain untouched. Schema `1.3` exposes `classification.source` and `classification.automaticKind` when an override is active so downstream automation can distinguish the configured result from the automatic result.
+
+## Fleet inventory exclusions
+
+Direct/manual inspection and aggregated fleet inventory have different responsibilities. Running `dotnet repo-inspect .` or using the Action without `exclude-repositories` still inspects the checked-out repository, including DotNetRepoInspector itself when requested directly.
+
+Central inventory workflows should exclude repositories before calculating planned/processed counts and before invoking the Inspector. For the Inspector repository itself, configure the full repository identifier:
+
+```yaml
+- name: Inspect .NET repository
+  id: inspect
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    exclude-repositories: |
+      rodri-oliveira-dev/DotNetRepoInspector
+```
+
+DotNetRepoInspector contains internal test projects, synthetic fixtures, and deliberately invalid repositories used to validate diagnostic behavior. Those assets are useful product tests, but they are not applications or libraries in the governed fleet, so including them would distort consolidated project totals and warning/error metrics.
 
 ## Optional HTTP snapshot persistence
 
@@ -101,6 +122,7 @@ The HTTP sink retries only transport/timeouts and HTTP `408`, `429`, `500`, `502
 | `schema-version` | `schemaVersion` read from the generated report when available. |
 | `inspector-version` | Exact `DotNetRepoInspector` .NET Tool version pinned by the Action revision. |
 | `exit-code` | Exit code returned by the CLI. |
+| `repository-excluded` | `true` when the current repository matched `exclude-repositories` and inspection was skipped; otherwise `false`. |
 
 The complete JSON report is intentionally kept in a file instead of being copied into `$GITHUB_OUTPUT`.
 

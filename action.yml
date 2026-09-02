@@ -27,6 +27,10 @@ inputs:
     description: Newline-separated repository-relative directories or project paths to exclude.
     required: false
     default: ""
+  exclude-repositories:
+    description: Newline-separated full owner/repository identifiers to skip before inspection in fleet inventory workflows.
+    required: false
+    default: ""
   classify:
     description: Newline-separated '<project-path>=<kind>' classification overrides.
     required: false
@@ -65,6 +69,9 @@ outputs:
   exit-code:
     description: Exit code returned by the DotNetRepoInspector CLI.
     value: "${{ steps.inspect.outputs.exit-code }}"
+  repository-excluded:
+    description: "true when the current github.repository matched exclude-repositories and inspection was skipped."
+    value: "${{ steps.inspect.outputs.repository-excluded }}"
 
 runs:
   using: composite
@@ -85,6 +92,7 @@ runs:
         DRI_INPUT_CONFIG: "${{ inputs.config }}"
         DRI_INPUT_NO_CONFIG: "${{ inputs['no-config'] }}"
         DRI_INPUT_EXCLUDE: "${{ inputs.exclude }}"
+        DRI_INPUT_EXCLUDE_REPOSITORIES: "${{ inputs['exclude-repositories'] }}"
         DRI_INPUT_CLASSIFY: "${{ inputs.classify }}"
         DRI_INPUT_SINK_URL: "${{ inputs['sink-url'] }}"
         DRI_INPUT_SINK_TIMEOUT_SECONDS: "${{ inputs['sink-timeout-seconds'] }}"
