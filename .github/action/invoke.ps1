@@ -5,6 +5,8 @@ if (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction Sile
     $PSNativeCommandUseErrorActionPreference = $false
 }
 
+. (Join-Path $PSScriptRoot "repository-exclusion.ps1")
+
 function Set-ActionOutput {
     param(
         [Parameter(Mandatory = $true)]
@@ -65,6 +67,14 @@ function Get-InputLines {
             ForEach-Object { $_.Trim() } |
             Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
     )
+}
+
+function Set-SkippedRepositoryOutputs {
+    Set-ActionOutput -Name "repository-excluded" -Value "true"
+    Set-ActionOutput -Name "inspector-version" -Value ""
+    Set-ActionOutput -Name "exit-code" -Value "0"
+    Set-ActionOutput -Name "report-path" -Value ""
+    Set-ActionOutput -Name "schema-version" -Value ""
 }
 
 function Get-RemoteActionTags {
@@ -203,6 +213,12 @@ if ([string]::IsNullOrWhiteSpace($env:GITHUB_WORKSPACE)) {
     throw "GITHUB_WORKSPACE is not available."
 }
 
+if (Test-RepositoryExcluded -Repository $env:GITHUB_REPOSITORY -ExcludedRepositories $env:DRI_INPUT_EXCLUDE_REPOSITORIES) {
+    Write-Host "Repository '$env:GITHUB_REPOSITORY' is explicitly excluded from fleet inventory."
+    Set-SkippedRepositoryOutputs
+    exit 0
+}
+
 if ([string]::IsNullOrWhiteSpace($env:RUNNER_TEMP)) {
     throw "RUNNER_TEMP is not available."
 }
@@ -223,7 +239,12 @@ $verbosityArgument = switch ($verbosity) {
     default { throw "Unsupported verbosity '$($env:DRI_INPUT_VERBOSITY)'. Expected normal, verbose, or debug." }
 }
 
-$noConfig = switch (($env:DRI_INPUT_NO_CONFIG ?? "false").Trim().ToLowerInvariant()) {
+$noConfigInput = $env:DRI_INPUT_NO_CONFIG
+if ([string]::IsNullOrWhiteSpace($noConfigInput)) {
+    $noConfigInput = "false"
+}
+
+$noConfig = switch ($noConfigInput.Trim().ToLowerInvariant()) {
     "" { $false }
     "false" { $false }
     "true" { $true }
@@ -346,16 +367,17 @@ else {
     $arguments += @("--sink", "http", "--sink-url", $sinkUrl)
     $arguments += @(
         "--sink-timeout-seconds",
-        ($env:DRI_INPUT_SINK_TIMEOUT_SECONDS ?? "15"),
+        $(if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_SINK_TIMEOUT_SECONDS)) { "15" } else { $env:DRI_INPUT_SINK_TIMEOUT_SECONDS }),
         "--sink-failure-mode",
-        ($env:DRI_INPUT_SINK_FAILURE_MODE ?? "non-fatal"),
+        $(if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_SINK_FAILURE_MODE)) { "non-fatal" } else { $env:DRI_INPUT_SINK_FAILURE_MODE }),
         "--sink-max-attempts",
-        ($env:DRI_INPUT_SINK_MAX_ATTEMPTS ?? "3"))
+        $(if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_SINK_MAX_ATTEMPTS)) { "3" } else { $env:DRI_INPUT_SINK_MAX_ATTEMPTS }))
 }
 
 & $toolCommand @arguments
 $exitCode = $LASTEXITCODE
 
+Set-ActionOutput -Name "repository-excluded" -Value "false"
 Set-ActionOutput -Name "inspector-version" -Value $installedToolVersion
 Set-ActionOutput -Name "exit-code" -Value ([string]$exitCode)
 
