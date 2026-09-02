@@ -32,15 +32,15 @@ public sealed class ActionRepositoryExclusionTests
     {
         var result = await InvokePowerShellAsync($"""
             . '{PowerShellLiteral(RepositoryExclusionScriptPath)}'
-            try {
+            try {{
                 Test-RepositoryExcluded `
                   -Repository 'rodri-oliveira-dev/DotNetRepoInspector' `
                   -ExcludedRepositories 'DotNetRepoInspector'
-            }
-            catch {
+            }}
+            catch {{
                 [Console]::Error.WriteLine($_.Exception.Message)
                 exit 1
-            }
+            }}
             """);
 
         Assert.NotEqual(0, result.ExitCode);
