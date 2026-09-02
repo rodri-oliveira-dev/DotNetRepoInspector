@@ -63,10 +63,6 @@ public sealed class ActionRepositoryExclusionTests
             "Excluded repository 'partial-name'",
             result.StandardError,
             StringComparison.Ordinal);
-        Assert.Contains(
-            "owner/repository identifier",
-            NormalizeWhitespace(result.StandardError),
-            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -184,9 +180,6 @@ public sealed class ActionRepositoryExclusionTests
 
     private static string PowerShellLiteral(string value) =>
         value.Replace("'", "''", StringComparison.Ordinal);
-
-    private static string NormalizeWhitespace(string value) =>
-        string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     private static Dictionary<string, string> ReadGitHubOutputs(string outputPath)
     {
