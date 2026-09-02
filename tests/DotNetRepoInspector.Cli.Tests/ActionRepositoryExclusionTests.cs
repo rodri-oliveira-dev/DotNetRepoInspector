@@ -65,7 +65,7 @@ public sealed class ActionRepositoryExclusionTests
             StringComparison.Ordinal);
         Assert.Contains(
             "owner/repository identifier",
-            result.StandardError,
+            NormalizeWhitespace(result.StandardError),
             StringComparison.Ordinal);
     }
 
@@ -184,6 +184,9 @@ public sealed class ActionRepositoryExclusionTests
 
     private static string PowerShellLiteral(string value) =>
         value.Replace("'", "''", StringComparison.Ordinal);
+
+    private static string NormalizeWhitespace(string value) =>
+        string.Join(" ", value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     private static Dictionary<string, string> ReadGitHubOutputs(string outputPath)
     {
