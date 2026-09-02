@@ -34,8 +34,7 @@ function Test-RepositoryExcluded {
     }
 
     foreach ($excludedRepositoryId in $excludedRepositoryIds) {
-        if ($excludedRepositoryId -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+}
-) {
+        if ($excludedRepositoryId -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
             throw "Excluded repository '$excludedRepositoryId' must use the full owner/repository identifier."
         }
     }
