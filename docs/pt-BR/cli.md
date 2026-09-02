@@ -125,6 +125,12 @@ Os tipos de classificação suportados são `web`, `worker`, `console`, `library
 
 Apenas um caminho de repositório pode ser informado. A CLI é não interativa e não solicita valores ausentes, tornando seu comportamento adequado para CI.
 
+## Contrato de descoberta de projetos
+
+A descoberta de projetos trata extensões suportadas sem distinção entre maiúsculas e minúsculas. Arquivos terminados em `.csproj`, `.CSPROJ` ou qualquer combinação equivalente de caixa representam o mesmo formato de projeto suportado, enquanto a caixa original do caminho no filesystem é preservada no projeto reportado.
+
+Automações e consumidores de inventário de frota devem tratar a coleção `projects` do relatório do Inspector como resultado canônico da descoberta. Não use uma pré-varredura case-sensitive separada, como `find ... -name '*.csproj'`, como fonte de verdade, pois ela pode divergir do Inspector em filesystems case-sensitive. Se uma pré-varredura for indispensável por otimização, ela deve usar comparação case-insensitive da extensão (por exemplo, `find ... -iname '*.csproj'`) e permanecer apenas consultiva, não autoritativa.
+
 ## Configuração do repositório
 
 Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório e overrides explícitos de classificação. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.

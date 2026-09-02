@@ -73,6 +73,18 @@ public sealed class ProjectDiscoveryTests
     }
 
     [Fact]
+    public void Discover_TreatsProjectExtensionCaseInsensitively()
+    {
+        var discoverer = new FileSystemProjectDiscoverer();
+
+        var projects = discoverer.Discover(
+            new ProjectDiscoveryRequest(FixturePath("Compatibility/PathCasing")));
+
+        var project = Assert.Single(projects);
+        Assert.Equal("MixedCase/Compatibility.MixedCase.CSPROJ", project.RelativePath);
+    }
+
+    [Fact]
     public void Discover_DoesNotParseProjectContents()
     {
         var discoverer = new FileSystemProjectDiscoverer();

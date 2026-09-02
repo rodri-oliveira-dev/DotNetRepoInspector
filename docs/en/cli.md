@@ -125,6 +125,12 @@ Supported classification kinds are `web`, `worker`, `console`, `library`, `test`
 
 Only one repository path may be supplied. The CLI is non-interactive and does not prompt for missing values, making its behavior suitable for CI.
 
+## Project discovery contract
+
+Project discovery is case-insensitive for supported project extensions. Files ending in `.csproj`, `.CSPROJ`, or any equivalent casing are treated as the same supported project format, while the original filesystem casing is preserved in the reported project path.
+
+Automation and fleet-inventory consumers should treat the Inspector report's `projects` collection as the canonical discovery result. Do not use a separate case-sensitive pre-scan such as `find ... -name '*.csproj'` as the source of truth, because it can disagree with the Inspector on case-sensitive filesystems. If a pre-scan is unavoidable for optimization, it must use case-insensitive extension matching (for example, `find ... -iname '*.csproj'`) and remain advisory rather than authoritative.
+
 ## Repository configuration
 
 When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions and explicit classification overrides. It is completely optional; when absent, the existing zero-configuration behavior is preserved.

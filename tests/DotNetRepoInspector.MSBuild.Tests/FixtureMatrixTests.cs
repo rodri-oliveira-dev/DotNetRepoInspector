@@ -104,8 +104,7 @@ public sealed class FixtureMatrixTests
     {
         string invalidProjectPath = ResolveFixturePath("InvalidProject/InvalidProject.csproj");
 
-        string[] projectFiles = Directory
-            .EnumerateFiles(_fixtureRoot, "*.csproj", SearchOption.AllDirectories)
+        string[] projectFiles = EnumerateCSharpProjects(_fixtureRoot)
             .Where(path => !string.Equals(path, invalidProjectPath, StringComparison.Ordinal))
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
@@ -202,12 +201,16 @@ public sealed class FixtureMatrixTests
     {
         string emptyRepository = ResolveFixturePath("EmptyRepository");
 
-        Assert.Empty(
-            Directory.EnumerateFiles(
-                emptyRepository,
-                "*.csproj",
-                SearchOption.AllDirectories));
+        Assert.Empty(EnumerateCSharpProjects(emptyRepository));
     }
+
+    private static IEnumerable<string> EnumerateCSharpProjects(string root) =>
+        Directory
+            .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            .Where(static path => string.Equals(
+                Path.GetExtension(path),
+                ".csproj",
+                StringComparison.OrdinalIgnoreCase));
 
     private static JsonDocument LoadCatalog()
     {
