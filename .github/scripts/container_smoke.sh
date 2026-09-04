@@ -94,7 +94,22 @@ inspect_fixture() {
   local report="${artifacts}/${fixture_name,,}-inspection.json"
 
   rm -f "${report}"
+  set +e
   hardened_run "${source}" /repo --output "/artifacts/$(basename "${report}")"
+  local actual=$?
+  set -e
+
+  if [[ "${actual}" -ne 0 ]]; then
+    echo "Inspection of ${fixture_name} exited with code ${actual}." >&2
+    if [[ -f "${report}" ]]; then
+      echo "Generated report:" >&2
+      cat "${report}" >&2
+    else
+      echo "No inspection report was generated." >&2
+    fi
+    fail "expected successful ${fixture_name} inspection"
+  fi
+
   validate_report "${report}" "${sdk_family}"
 }
 
