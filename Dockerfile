@@ -4,6 +4,12 @@
 # manifest digests are intentionally pinned; Dependabot servicing is handled by #103.
 FROM mcr.microsoft.com/dotnet/sdk:8.0.424-azurelinux3.0@sha256:6e8e68891aeff6ce36b558e27a897a062d5bf425d5f400a2a1fbdfa5bbd0921c AS dotnet8
 
+# This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
+# muxer/runtime/SDK files copied into the final multi-architecture image.
+FROM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS dotnet10
+
+# The application itself is framework-dependent/architecture-neutral, so compile
+# on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS build
 
 WORKDIR /src
@@ -21,7 +27,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # inspection. This avoids carrying unrelated SDK-image OS tooling into runtime.
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-azurelinux3.0@sha256:b9695c27ae6a28fcb49740f8e0d94fb361ab2a03eb702e9e43b89d5dfdb52e0b AS final
 
-COPY --from=build /usr/share/dotnet/ /usr/share/dotnet/
+COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
 # SDK remains authoritative for the dotnet muxer; the versioned .NET 8 host,
