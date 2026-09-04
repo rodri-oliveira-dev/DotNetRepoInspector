@@ -1,0 +1,53 @@
+# VCS and editor metadata
+.git
+.git/**
+**/.git
+**/.git/**
+.vs
+.vscode
+.idea
+*.user
+*.suo
+
+# Build/test output
+**/bin
+**/bin/**
+**/obj
+**/obj/**
+artifacts
+artifacts/**
+TestResults
+TestResults/**
+coverage
+coverage/**
+*.coverage
+*.coveragexml
+
+# Local caches
+.nuget
+.nuget/**
+**/.nuget/packages
+**/.nuget/packages/**
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+**/*.pfx
+**/*.p12
+**/*.pem
+**/*.key
+**/secrets.json
+**/appsettings.*.local.json
+**/.aws
+**/.aws/**
+**/.azure
+**/.azure/**
+**/.kube
+**/.kube/**
+**/.docker
+**/.docker/**
+
+# OS noise
+.DS_Store
+Thumbs.db
