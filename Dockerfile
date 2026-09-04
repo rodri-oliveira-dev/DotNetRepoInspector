@@ -1,16 +1,17 @@
 # syntax=docker/dockerfile:1
 
-# Keep each Microsoft image reference readable and immutable. The multi-platform
-# manifest digests are intentionally pinned; Dependabot servicing is handled by #103.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.424-azurelinux3.0@sha256:6e8e68891aeff6ce36b558e27a897a062d5bf425d5f400a2a1fbdfa5bbd0921c AS dotnet8
+# Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
+# linux/amd64 and linux/arm64. Version tags are resolved in CI and are pinned to
+# their immutable manifest digests after the multi-architecture/security check.
+FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS build
 
 WORKDIR /src
 COPY . .
@@ -24,8 +25,10 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 
 # Use the minimal Microsoft runtime-deps image for the operating-system layer,
 # then copy only the .NET installation required for SDK selection and MSBuild
-# inspection. This avoids carrying unrelated SDK-image OS tooling into runtime.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-azurelinux3.0@sha256:b9695c27ae6a28fcb49740f8e0d94fb361ab2a03eb702e9e43b89d5dfdb52e0b AS final
+# inspection. Noble is the default Linux distribution for .NET 10 and avoids the
+# Azure Linux Expat fixes that are announced upstream but not yet published in
+# the Azure Linux package feed used by the pinned 10.0.11 image.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
