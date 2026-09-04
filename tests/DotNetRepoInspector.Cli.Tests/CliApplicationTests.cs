@@ -126,6 +126,48 @@ public sealed class CliApplicationTests
     }
 
     [Fact]
+    public async Task RunAsync_ProjectErrorReturnsAggregateFailureWithoutChangingOtherProjectHealth()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var report = CreateReportWithProjectError();
+        var application = new CliApplication(
+            StubInspector.Returning(report),
+            "1.0.0-test");
+
+        var exitCode = await application.RunAsync(
+            ["."],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
+
+        var deserialized = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Empty(deserialized.Diagnostics);
+
+        var clean = deserialized.Projects.Single(
+            static project => project.Path == "src/Clean/Clean.csproj");
+        var broken = deserialized.Projects.Single(
+            static project => project.Path == "src/Broken/Broken.csproj");
+
+        Assert.Empty(clean.Diagnostics);
+        Assert.Single(broken.Diagnostics);
+
+        var health = InspectionHealthEvaluator.Evaluate(deserialized);
+        Assert.Equal(InspectionHealthStatus.Error, health.OverallStatus);
+        Assert.Equal(InspectionHealthStatus.Ok, health.RepositoryStatus);
+        Assert.Equal(1, health.ProjectsWithDiagnostics);
+        Assert.Equal(1, health.ProjectsWithErrors);
+        Assert.Equal(
+            InspectionHealthStatus.Ok,
+            InspectionHealthEvaluator.GetProjectStatus(clean));
+        Assert.Equal(
+            InspectionHealthStatus.Error,
+            InspectionHealthEvaluator.GetProjectStatus(broken));
+    }
+
+    [Fact]
     public async Task RunAsync_ReturnsInvalidArgumentsWithoutCallingInspector()
     {
         using var output = new StringWriter();
@@ -233,6 +275,50 @@ public sealed class CliApplicationTests
             new DotNetSdkMetadata(null, null, "10.0.400"),
             Array.Empty<ProjectInspection>(),
             diagnostics);
+
+    private static InspectionReport CreateReportWithProjectError()
+    {
+        var clean = new ProjectInspection(
+            "src/Clean/Clean.csproj",
+            "Clean",
+            "10.0.400",
+            [new ProjectSdkMetadata("Microsoft.NET.Sdk", null)],
+            ["net10.0"],
+            "Library",
+            false,
+            true,
+            Array.Empty<string>(),
+            new ProjectClassification("library", "high", ["output-type:Library"]),
+            Array.Empty<ProjectReferenceMetadata>(),
+            Array.Empty<InspectionDiagnostic>());
+
+        var broken = new ProjectInspection(
+            "src/Broken/Broken.csproj",
+            "Broken",
+            null,
+            Array.Empty<ProjectSdkMetadata>(),
+            Array.Empty<string>(),
+            null,
+            null,
+            null,
+            Array.Empty<string>(),
+            null,
+            Array.Empty<ProjectReferenceMetadata>(),
+            [
+                new InspectionDiagnostic(
+                    "DRI1006",
+                    InspectionDiagnosticSeverity.Error,
+                    "MSBuild could not evaluate the project.",
+                    "src/Broken/Broken.csproj",
+                    null)
+            ]);
+
+        return InspectionReport.Create(
+            new RepositoryMetadata("fixture", null, null, null, null),
+            new DotNetSdkMetadata(null, null, "10.0.400"),
+            [clean, broken],
+            Array.Empty<InspectionDiagnostic>());
+    }
 
     private static string FixturePath(string relativePath) =>
         Path.Combine(

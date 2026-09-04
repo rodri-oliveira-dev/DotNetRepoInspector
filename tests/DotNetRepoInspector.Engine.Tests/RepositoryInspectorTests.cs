@@ -96,6 +96,16 @@ public sealed class RepositoryInspectorTests
             Assert.Contains(
                 broken.Diagnostics,
                 static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
+
+            var health = InspectionHealthEvaluator.Evaluate(report);
+            Assert.Equal(1, health.ProjectsWithDiagnostics);
+            Assert.Equal(1, health.ProjectsWithErrors);
+            Assert.Equal(
+                InspectionHealthStatus.Ok,
+                InspectionHealthEvaluator.GetProjectStatus(valid));
+            Assert.Equal(
+                InspectionHealthStatus.Error,
+                InspectionHealthEvaluator.GetProjectStatus(broken));
         }
         finally
         {

@@ -214,6 +214,8 @@ Persistence does not change the inspection JSON contract. The JSON is produced b
 
 A code of `1` is intentionally different from a fatal failure: the JSON report still exists and contains the structured diagnostics that explain the partial inspection result. Code `5` also occurs after the inspection report has been produced; it represents failure to deliver the optional snapshot, not a mutation of inspection diagnostics.
 
+Exit code `1` is aggregate: it is returned when an `error` diagnostic exists either in top-level `diagnostics` or in any `projects[].diagnostics`. It is not a per-project status. Consumers must derive each project's health only from that project's own `diagnostics` collection and must use top-level `diagnostics` independently for repository/inspection health. See [`diagnostics.md`](diagnostics.md) for the aggregation rules and examples.
+
 ## Cancellation
 
 The process handles Ctrl+C cooperatively. The cancellation token is propagated through the CLI into the inspection engine and, when enabled, snapshot publication and the HTTP request. A cancelled invocation exits with code `130` and does not start an interactive recovery flow.

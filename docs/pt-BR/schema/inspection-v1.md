@@ -60,6 +60,8 @@ Diagnósticos são fatos estáveis da inspeção, e não linhas de log operacion
 
 A automação deve tomar decisões com base em `code` e `severity`, nunca em texto localizado. `context` contém strings estruturadas e não sensíveis que ajudam a identificar o componente ou fato afetado. Saída bruta de processos filhos, conteúdo de código-fonte, variáveis de ambiente, credenciais, tokens e outros secrets não devem ser copiados para o contrato normalizado de diagnósticos.
 
+O escopo do diagnóstico é representado pela posição no contrato. `diagnostics` no nível superior contém diagnósticos do repositório/inspeção, enquanto `projects[].diagnostics` contém somente diagnósticos daquele projeto. Consumidores não devem inferir warning/error de um projeto a partir do exit code da CLI ou de um diagnóstico associado a outro projeto. A saúde agregada e a quantidade de projetos afetados podem ser derivadas de forma determinística desses dois escopos; consulte [`../diagnostics.md`](../diagnostics.md).
+
 O catálogo estável de diagnósticos e as regras de logging operacional estão documentados em [`../diagnostics.md`](../diagnostics.md).
 
 ## Caminhos
