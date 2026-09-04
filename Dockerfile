@@ -13,6 +13,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b68
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c AS build
 
+ARG PRODUCT_VERSION=0.0.0
+ARG REPOSITORY_COMMIT=local
+
 WORKDIR /src
 COPY . .
 
@@ -21,7 +24,9 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
         --configuration Release \
         --no-restore \
         --output /out \
-        /p:UseAppHost=false
+        /p:UseAppHost=false \
+        /p:Version="${PRODUCT_VERSION}" \
+        /p:RepositoryCommit="${REPOSITORY_COMMIT}"
 
 # Use the minimal Microsoft runtime-deps image for the operating-system layer,
 # then copy only the .NET installation required for SDK selection and MSBuild
