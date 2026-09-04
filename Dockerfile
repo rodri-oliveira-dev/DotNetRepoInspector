@@ -19,15 +19,13 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 FROM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS final
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
-# SDK image stays authoritative for the dotnet muxer; versioned .NET 8 payloads
-# are overlaid side-by-side without replacing the top-level dotnet executable.
+# SDK image stays authoritative for the dotnet muxer; the versioned .NET 8 host,
+# SDK, runtime, and targeting packs are overlaid side-by-side. Workloads are not
+# part of the supported container contract.
 COPY --from=dotnet8 /usr/share/dotnet/host/ /usr/share/dotnet/host/
 COPY --from=dotnet8 /usr/share/dotnet/packs/ /usr/share/dotnet/packs/
 COPY --from=dotnet8 /usr/share/dotnet/sdk/ /usr/share/dotnet/sdk/
-COPY --from=dotnet8 /usr/share/dotnet/sdk-manifests/ /usr/share/dotnet/sdk-manifests/
 COPY --from=dotnet8 /usr/share/dotnet/shared/ /usr/share/dotnet/shared/
-COPY --from=dotnet8 /usr/share/dotnet/templates/ /usr/share/dotnet/templates/
-COPY --from=dotnet8 /usr/share/dotnet/metadata/ /usr/share/dotnet/metadata/
 
 COPY --from=build /out/ /opt/dotnet-repo-inspector/
 
