@@ -43,7 +43,17 @@ ENV DOTNET_CLI_HOME=/tmp/dotnet-home \
     HOME=/tmp \
     XDG_CACHE_HOME=/tmp/.cache
 
-RUN mkdir --parents /repo /artifacts \
+# The SDK images intentionally contain developer tooling beyond the Inspector's
+# execution contract. Apply currently available Azure Linux security updates and
+# remove optional tools that are not required for SDK selection/MSBuild inspection,
+# reducing both the attack surface and irrelevant scanner findings.
+RUN tdnf update -y expat expat-libs perl-DBI \
+    && tdnf clean all \
+    && rm -rf /var/cache/tdnf \
+        /usr/share/powershell \
+        /usr/share/dotnet/sdk/8.0.424/DotnetTools/dotnet-format \
+    && rm -f /usr/bin/pwsh \
+    && mkdir --parents /repo /artifacts \
     && chown "$APP_UID:$APP_UID" /repo /artifacts
 
 LABEL org.opencontainers.image.title="DotNetRepoInspector" \
