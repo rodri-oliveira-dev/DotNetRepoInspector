@@ -121,6 +121,15 @@ A avaliação MSBuild controlada pelo repositório pode acessar recursos dispon�
 
 Consulte [`security.md`](security.md) e a [ADR 0005](decisions/0005-container-execution-contract.md) para o modelo completo de confiança.
 
-## Próxima etapa de validação
+## Validação no CI
 
-A issue #102 adiciona smoke tests reutilizáveis e gates de CI para lint do Dockerfile, execução da imagem, as duas famílias de SDK, comportamento read-only/offline, exit codes e scan de vulnerabilidades. O contrato local documentado aqui será a entrada dessas validações automatizadas.
+O [`validate-container.yml`](../../.github/workflows/validate-container.yml) transforma a imagem em um gate de qualidade/segurança para pull requests. Ele:
+
+- executa Hadolint tratando warnings como falha;
+- faz build com `--pull` a partir das referências de base pinadas;
+- executa de fato a imagem em `linux/amd64` e `linux/arm64` via Buildx/QEMU;
+- roda a suíte reutilizável [`container_smoke.sh`](../../.github/scripts/container_smoke.sh) para validar non-root, `--help`, `--version`, resolução dos SDKs .NET 8/.NET 10, geração bem-sucedida do report, source/root filesystem read-only, operação offline e os exit codes documentados `0` a `5`;
+- executa um relatório Trivy visível com todos os findings `HIGH`/`CRITICAL`, inclusive os que ainda não possuem correção upstream;
+- executa um segundo gate Trivy com `ignore-unfixed`, de modo que somente vulnerabilidades `HIGH`/`CRITICAL` corrigíveis bloqueiem o workflow.
+
+O workflow possui apenas permissão de leitura no repositório e nunca autentica nem faz push para registry. As Actions de terceiros usadas pelo gate estão pinadas por commit SHA.
