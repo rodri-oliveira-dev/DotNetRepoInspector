@@ -17,6 +17,7 @@ _SEMVER_PATTERN = re.compile(
     r"(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?$"
 )
 _COMMIT_PATTERN = re.compile(r"^[0-9a-fA-F]{40}$")
+_DIGEST_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 _CONTAINER_IMAGES = (
     "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector",
     "docker.io/rodrigodotnet/dotnet-repo-inspector",
@@ -130,6 +131,13 @@ def _validate_commit(commit: str) -> str:
     return value
 
 
+def _validate_digest(digest: str) -> str:
+    value = digest.strip().lower()
+    if _DIGEST_PATTERN.fullmatch(value) is None:
+        raise ValueError("Container digest must be an immutable sha256 digest.")
+    return value
+
+
 def _validate_created(created: str) -> str:
     value = created.strip()
     if not value or value != created:
@@ -194,6 +202,76 @@ def _build_container_plan(
     }
 
 
+def _load_container_plan(
+    path: Path,
+    version: ProductVersion,
+    commit: str,
+) -> dict[str, object]:
+    document = json.loads(path.resolve().read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError("Container release plan must be a JSON object.")
+
+    created = _validate_created(str(document.get("created", "")))
+    expected = _build_container_plan(version, commit, created)
+    if document != expected:
+        raise ValueError(
+            "Container release plan does not match the repository's registry, tag, platform, or OCI metadata policy."
+        )
+    return document
+
+
+def _container_digest_from_metadata(path: Path) -> str:
+    document = json.loads(path.resolve().read_text(encoding="utf-8"))
+    if not isinstance(document, dict):
+        raise ValueError("Container build metadata must be a JSON object.")
+
+    digest = _validate_digest(str(document.get("containerimage.digest", "")))
+    descriptor = document.get("containerimage.descriptor")
+    if not isinstance(descriptor, dict):
+        raise ValueError("Container build metadata is missing containerimage.descriptor.")
+    descriptor_digest = _validate_digest(str(descriptor.get("digest", "")))
+    if descriptor_digest != digest:
+        raise ValueError(
+            "Container build metadata descriptor digest does not match containerimage.digest."
+        )
+    return digest
+
+
+def _build_container_distribution(
+    plan: dict[str, object],
+    digest: str,
+) -> dict[str, object]:
+    version = str(plan["version"])
+    images = [str(image) for image in plan["images"]]
+    return {
+        "schemaVersion": 1,
+        "product": str(plan["product"]),
+        "version": version,
+        "revision": str(plan["revision"]),
+        "created": str(plan["created"]),
+        "digest": digest,
+        "platforms": list(plan["platforms"]),
+        "images": [
+            {
+                "name": image,
+                "versionReference": f"{image}:{version}",
+                "immutableReference": f"{image}@{digest}",
+            }
+            for image in images
+        ],
+        "attestations": {
+            "sbom": {
+                "format": "SPDX",
+                "predicateType": "https://spdx.dev/Document",
+            },
+            "provenance": {
+                "mode": "max",
+                "predicateTypePrefix": "https://slsa.dev/provenance/",
+            },
+        },
+    }
+
+
 def _container_plan(args: argparse.Namespace) -> int:
     version = ProductVersion.parse(args.version)
     commit = _validate_commit(args.commit)
@@ -213,20 +291,47 @@ def _container_plan(args: argparse.Namespace) -> int:
 def _verify_container_plan(args: argparse.Namespace) -> int:
     version = ProductVersion.parse(args.version)
     commit = _validate_commit(args.commit)
-    document = json.loads(args.plan.resolve().read_text(encoding="utf-8"))
-    if not isinstance(document, dict):
-        raise ValueError("Container release plan must be a JSON object.")
-
-    created = _validate_created(str(document.get("created", "")))
-    expected = _build_container_plan(version, commit, created)
-    if document != expected:
-        raise ValueError(
-            "Container release plan does not match the repository's registry, tag, platform, or OCI metadata policy."
-        )
+    _load_container_plan(args.plan, version, commit)
 
     print(
         f"Verified container release plan for {version.text} at {commit} "
         f"across {', '.join(_CONTAINER_PLATFORMS)}."
+    )
+    return 0
+
+
+def _container_distribution(args: argparse.Namespace) -> int:
+    version = ProductVersion.parse(args.version)
+    commit = _validate_commit(args.commit)
+    plan = _load_container_plan(args.plan, version, commit)
+    digest = _container_digest_from_metadata(args.build_metadata)
+    distribution = _build_container_distribution(plan, digest)
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(distribution, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    print(json.dumps(distribution, indent=2, sort_keys=True))
+    return 0
+
+
+def _verify_container_distribution(args: argparse.Namespace) -> int:
+    version = ProductVersion.parse(args.version)
+    commit = _validate_commit(args.commit)
+    plan = _load_container_plan(args.plan, version, commit)
+    digest = _container_digest_from_metadata(args.build_metadata)
+    document = json.loads(args.distribution.resolve().read_text(encoding="utf-8"))
+    expected = _build_container_distribution(plan, digest)
+    if document != expected:
+        raise ValueError(
+            "Container distribution manifest does not match the validated release plan and immutable build digest."
+        )
+
+    print(
+        f"Verified container distribution manifest for {version.text} at {commit} "
+        f"and immutable digest {digest}."
     )
     return 0
 
@@ -360,6 +465,28 @@ def _build_parser() -> argparse.ArgumentParser:
     verify_container_plan.add_argument("--commit", required=True)
     verify_container_plan.add_argument("--plan", type=Path, required=True)
     verify_container_plan.set_defaults(handler=_verify_container_plan)
+
+    container_distribution = subparsers.add_parser(
+        "container-distribution",
+        description="Generate immutable container distribution metadata from Buildx metadata.",
+    )
+    container_distribution.add_argument("--version", required=True)
+    container_distribution.add_argument("--commit", required=True)
+    container_distribution.add_argument("--plan", type=Path, required=True)
+    container_distribution.add_argument("--build-metadata", type=Path, required=True)
+    container_distribution.add_argument("--output", type=Path, required=True)
+    container_distribution.set_defaults(handler=_container_distribution)
+
+    verify_container_distribution = subparsers.add_parser(
+        "verify-container-distribution",
+        description="Verify the immutable container distribution manifest.",
+    )
+    verify_container_distribution.add_argument("--version", required=True)
+    verify_container_distribution.add_argument("--commit", required=True)
+    verify_container_distribution.add_argument("--plan", type=Path, required=True)
+    verify_container_distribution.add_argument("--build-metadata", type=Path, required=True)
+    verify_container_distribution.add_argument("--distribution", type=Path, required=True)
+    verify_container_distribution.set_defaults(handler=_verify_container_distribution)
 
     manifest = subparsers.add_parser(
         "manifest", description="Generate deterministic release metadata and package checksums."
