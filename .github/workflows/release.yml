@@ -9,6 +9,7 @@ on:
       - feature/docker
     paths:
       - Dockerfile
+      - .trivyignore.yaml
       - .github/workflows/release.yml
       - .github/release.yml
       - .github/release-readiness-v1.json
@@ -79,13 +80,15 @@ jobs:
           --requested-version "${REQUESTED_VERSION}"
           --github-output "${GITHUB_OUTPUT}"
 
-      - name: Validate stable and prerelease container tag policy
+      - name: Validate stable, prerelease, and immutable distribution policy
         run: |
           set -euo pipefail
 
           created="2026-01-02T03:04:05Z"
           stable_plan="${RUNNER_TEMP}/container-stable.json"
           prerelease_plan="${RUNNER_TEMP}/container-prerelease.json"
+          synthetic_metadata="${RUNNER_TEMP}/container-build-metadata.json"
+          stable_distribution="${RUNNER_TEMP}/container-distribution.json"
 
           python ./.github/scripts/release_metadata.py container-plan \
             --version 1.2.3 \
@@ -123,6 +126,33 @@ jobs:
               "docker.io/rodrigodotnet/dotnet-repo-inspector:1.2.3-rc.1"
             ]
           ' "${prerelease_plan}" >/dev/null
+
+          synthetic_digest="sha256:$(printf '1%.0s' {1..64})"
+          jq -n --arg digest "${synthetic_digest}" '{
+            "containerimage.digest": $digest,
+            "containerimage.descriptor": {"digest": $digest}
+          }' > "${synthetic_metadata}"
+
+          python ./.github/scripts/release_metadata.py container-distribution \
+            --version 1.2.3 \
+            --commit "${GITHUB_SHA}" \
+            --plan "${stable_plan}" \
+            --build-metadata "${synthetic_metadata}" \
+            --output "${stable_distribution}" >/dev/null
+          python ./.github/scripts/release_metadata.py verify-container-distribution \
+            --version 1.2.3 \
+            --commit "${GITHUB_SHA}" \
+            --plan "${stable_plan}" \
+            --build-metadata "${synthetic_metadata}" \
+            --distribution "${stable_distribution}"
+
+          jq -e --arg digest "${synthetic_digest}" '
+            .digest == $digest and
+            .platforms == ["linux/amd64", "linux/arm64"] and
+            (.images | length) == 2 and
+            .attestations.sbom.predicateType == "https://spdx.dev/Document" and
+            .attestations.provenance.mode == "max"
+          ' "${stable_distribution}" >/dev/null
 
       - name: Generate container release plan
         env:
@@ -231,7 +261,7 @@ jobs:
     if: "${{ github.event_name == 'workflow_dispatch' && inputs.publish }}"
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 50
     environment: release
     permissions:
       contents: write
@@ -402,11 +432,121 @@ jobs:
           printf '%s' "${GHCR_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
           printf '%s' "${DOCKERHUB_TOKEN}" | docker login docker.io --username "rodrigodotnet" --password-stdin
 
-      - name: Publish multi-architecture container images
-        run: bash ./.github/scripts/container_release.sh publish ./artifacts/release/container-release-plan.json
+      - name: Publish multi-architecture container with SBOM and provenance
+        id: publish_container
+        run: |
+          set -euo pipefail
+          metadata="${RUNNER_TEMP}/container-build-metadata.json"
+          bash ./.github/scripts/container_release.sh publish \
+            ./artifacts/release/container-release-plan.json \
+            "${metadata}"
+          digest="$(jq -er '."containerimage.digest"' "${metadata}")"
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### Published container digest"
+            echo
+            echo "\`${digest}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Verify published container manifests and metadata
-        run: bash ./.github/scripts/container_release.sh verify ./artifacts/release/container-release-plan.json
+      - name: Verify published digest, platforms, SBOM, provenance, and metadata
+        run: >-
+          bash ./.github/scripts/container_release.sh verify
+          ./artifacts/release/container-release-plan.json
+          "${RUNNER_TEMP}/container-build-metadata.json"
+
+      - name: Generate immutable container distribution manifest
+        env:
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: |
+          set -euo pipefail
+          python ./.github/scripts/release_metadata.py container-distribution \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --plan ./artifacts/release/container-release-plan.json \
+            --build-metadata "${RUNNER_TEMP}/container-build-metadata.json" \
+            --output ./artifacts/release/container-distribution.json
+          python ./.github/scripts/release_metadata.py verify-container-distribution \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --plan ./artifacts/release/container-release-plan.json \
+            --build-metadata "${RUNNER_TEMP}/container-build-metadata.json" \
+            --distribution ./artifacts/release/container-distribution.json
+
+      - name: Report release HIGH/CRITICAL vulnerabilities (linux/amd64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/amd64
+        with:
+          scan-type: image
+          image-ref: "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector@${{ steps.publish_container.outputs.digest }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          version: v0.74.0
+
+      - name: Gate release fixable HIGH/CRITICAL vulnerabilities (linux/amd64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/amd64
+        with:
+          scan-type: image
+          image-ref: "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector@${{ steps.publish_container.outputs.digest }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
+          version: v0.74.0
+
+      - name: Report release HIGH/CRITICAL vulnerabilities (linux/arm64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        with:
+          scan-type: image
+          image-ref: "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector@${{ steps.publish_container.outputs.digest }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          version: v0.74.0
+
+      - name: Gate release fixable HIGH/CRITICAL vulnerabilities (linux/arm64)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_PLATFORM: linux/arm64
+        with:
+          scan-type: image
+          image-ref: "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector@${{ steps.publish_container.outputs.digest }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
+          version: v0.74.0
+
+      - name: Attest immutable container distribution manifest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: artifacts/release/container-distribution.json
+
+      - name: Attach verified container distribution to draft GitHub Release
+        env:
+          GH_TOKEN: "${{ github.token }}"
+          RELEASE_TAG: "${{ needs.build.outputs.tag }}"
+        run: >-
+          gh release upload "${RELEASE_TAG}"
+          ./artifacts/release/container-distribution.json
+          --clobber
 
       - name: Publish GitHub Release
         env:
