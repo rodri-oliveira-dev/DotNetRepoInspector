@@ -86,13 +86,13 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Resolve Microsoft image digests
+      - name: Validate pinned Microsoft image references
         run: |
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:8.0.130-noble
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:10.0.400-noble
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble
+          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5
+          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c
+          docker buildx imagetools inspect mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:9b37bbaf06fc653cb0e757215081139fb493658e1f864a738f6a478620c9196f
 
-      - name: Build image with refreshed bases
+      - name: Build image with pinned bases
         run: >-
           docker buildx build
           --pull
