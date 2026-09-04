@@ -1,0 +1,16 @@
+vulnerabilities:
+  - id: CVE-2025-26646
+    paths:
+      - "usr/share/dotnet/sdk/8.0.424/FSharp/fsc.deps.json"
+      - "usr/share/dotnet/sdk/8.0.424/FSharp/fsi.deps.json"
+      - "usr/share/dotnet/sdk/8.0.424/MSBuild.deps.json"
+      - "usr/share/dotnet/sdk/8.0.424/NuGet.CommandLine.XPlat.deps.json"
+      - "usr/share/dotnet/sdk/8.0.424/dotnet.deps.json"
+    statement: >-
+      Scanner false positive for Microsoft.Build.Tasks.Core 17.11.48. Aqua Trivy
+      discussion #10234 documents this exact package/version finding, while the
+      Microsoft advisory for CVE-2025-26646 does not list 17.11.48 as affected and
+      Microsoft explicitly lists 17.11.48 as a patched 17.11 servicing version for
+      the later CVE-2025-55247. Keep the informational scan unfiltered and review
+      this exception after the Trivy vulnerability database corrects branch matching.
+    expired_at: 2026-12-31

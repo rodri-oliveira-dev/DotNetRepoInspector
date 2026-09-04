@@ -18,5 +18,6 @@ An ADR should capture:
 - [ADR 0002: Distribute the GitHub Action as a composite action over the .NET Tool](0002-github-action-distribution-strategy.md) — Accepted.
 - [ADR 0003: Keep snapshot persistence optional behind sink adapters](0003-persistence-sink-architecture.md) — Accepted.
 - [ADR 0004: Define snapshot provenance and idempotency from canonical evidence](0004-snapshot-provenance-idempotency.md) — Accepted.
+- [ADR 0005: Define the container execution and SDK compatibility contract](0005-container-execution-contract.md) — Accepted.
 
 Likely next decisions include classification precedence and policy evaluation boundaries.
