@@ -65,10 +65,11 @@ Crie primeiro o diretório de saída no host:
 mkdir -p artifacts
 ```
 
-Depois inspecione um repositório ou fixture preparado usando source read-only, volume de artifacts gravável, filesystem do container read-only, sem rede, sem Linux capabilities e sem elevação de privilégios:
+No Linux, use o UID/GID do usuário do host para que o diretório de saída montado por bind continue gravável sem executar a imagem como root. Depois inspecione um repositório ou fixture preparado usando source read-only, volume de artifacts gravável, filesystem do container read-only, sem rede, sem Linux capabilities e sem elevação de privilégios:
 
 ```bash
 docker run --rm \
+  --user "$(id -u):$(id -g)" \
   --read-only \
   --network none \
   --cap-drop=ALL \
@@ -86,21 +87,7 @@ Repita o mesmo comando com `tests/Fixtures/Compatibility/Net10` para exercitar a
 
 ## UID/GID do host e ownership dos artifacts
 
-A imagem executa como non-root por padrão. No Linux, callers que desejam que os arquivos gerados pertençam à conta do host podem fornecer uma identidade numérica explícita:
-
-```bash
-docker run --rm \
-  --user "$(id -u):$(id -g)" \
-  --read-only \
-  --network none \
-  --cap-drop=ALL \
-  --security-opt=no-new-privileges \
-  --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
-  --mount type=bind,src="$PWD",dst=/repo,readonly \
-  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
-  dotnet-repo-inspector:local \
-  /repo --output /artifacts/inspection.json
-```
+A própria imagem declara como usuário padrão a identidade não-root `app` fornecida pela Microsoft. Informar `--user "$(id -u):$(id -g)"` é um override de runtime para ownership do bind mount; isso não torna o container privilegiado e a CLI não depende de uma entrada em passwd nem de home root-owned gravável.
 
 O diretório `/artifacts` do host deve ser gravável pelo UID/GID selecionado. A imagem não troca para root nem executa chmod/chown no repositório montado para contornar permissões do host.
 
