@@ -9,6 +9,7 @@ on:
       - Dockerfile
       - .dockerignore
       - .trivyignore.yaml
+      - .github/dependabot.yml
       - .github/scripts/container_smoke.sh
       - .github/workflows/validate-container.yml
       - src/**
@@ -23,6 +24,7 @@ on:
       - Dockerfile
       - .dockerignore
       - .trivyignore.yaml
+      - .github/dependabot.yml
       - .github/scripts/container_smoke.sh
       - .github/workflows/validate-container.yml
       - src/**
@@ -86,11 +88,35 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
-      - name: Validate pinned Microsoft image references
+      - name: Validate Dockerfile base references
+        shell: bash
         run: |
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c
-          docker buildx imagetools inspect mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:9b37bbaf06fc653cb0e757215081139fb493658e1f864a738f6a478620c9196f
+          mapfile -t base_images < <(
+            awk '
+              /^FROM / {
+                for (i = 2; i <= NF; i++) {
+                  if ($i !~ /^--platform=/) {
+                    print $i
+                    break
+                  }
+                }
+              }
+            ' Dockerfile | sort -u
+          )
+
+          if (( ${#base_images[@]} == 0 )); then
+            echo "No Dockerfile base images were found." >&2
+            exit 1
+          fi
+
+          for image in "${base_images[@]}"; do
+            if [[ ! "$image" =~ ^mcr\.microsoft\.com/dotnet/[[:alnum:]./_-]+:[[:alnum:]._-]+@sha256:[0-9a-f]{64}$ ]]; then
+              echo "Base image must use an approved Microsoft .NET tag plus immutable sha256 digest: $image" >&2
+              exit 1
+            fi
+
+            docker buildx imagetools inspect "$image"
+          done
 
       - name: Build image with pinned bases
         run: >-
