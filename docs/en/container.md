@@ -121,6 +121,15 @@ Repository-controlled MSBuild evaluation can access resources that the container
 
 See [`security.md`](security.md) and [ADR 0005](decisions/0005-container-execution-contract.md) for the complete trust model.
 
-## Next validation stage
+## CI validation
 
-Issue #102 adds reusable smoke tests and CI gates for Dockerfile linting, image execution, both SDK families, read-only/offline behavior, exit codes, and vulnerability scanning. The local contract documented here is the input to those automated checks.
+[`validate-container.yml`](../../.github/workflows/validate-container.yml) turns the image into a pull-request quality/security gate. It:
+
+- runs Hadolint with warnings treated as failures;
+- builds with `--pull` from the pinned base references;
+- executes the image for both `linux/amd64` and `linux/arm64` through Buildx/QEMU;
+- runs the reusable [`container_smoke.sh`](../../.github/scripts/container_smoke.sh) suite to verify non-root execution, `--help`, `--version`, .NET 8/.NET 10 SDK resolution, successful report generation, read-only source/root filesystems, offline operation, and documented CLI exit codes `0` through `5`;
+- runs a visible Trivy report for all `HIGH`/`CRITICAL` findings, including findings without an upstream fix;
+- runs a second Trivy gate with `ignore-unfixed` so only fixable `HIGH`/`CRITICAL` vulnerabilities block the workflow.
+
+The workflow has read-only repository permissions and never logs in to or pushes to a container registry. Third-party Actions used by this gate are pinned to commit SHAs.
