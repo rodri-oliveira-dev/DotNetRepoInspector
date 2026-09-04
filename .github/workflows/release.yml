@@ -6,10 +6,13 @@ on:
   pull_request:
     branches:
       - main
+      - feature/docker
     paths:
+      - Dockerfile
       - .github/workflows/release.yml
       - .github/release.yml
       - .github/release-readiness-v1.json
+      - .github/scripts/container_release.sh
       - .github/scripts/release_metadata.py
       - .github/scripts/validate_tool_package.ps1
       - action.yml
@@ -28,7 +31,7 @@ on:
         required: true
         type: string
       publish:
-        description: Publish the validated package, GitHub Release, provenance, and Action tags.
+        description: Publish the validated package, GitHub Release, provenance, Action tags, and container image.
         required: true
         default: false
         type: boolean
@@ -75,6 +78,78 @@ jobs:
           python ./.github/scripts/release_metadata.py resolve
           --requested-version "${REQUESTED_VERSION}"
           --github-output "${GITHUB_OUTPUT}"
+
+      - name: Validate stable and prerelease container tag policy
+        run: |
+          set -euo pipefail
+
+          created="2026-01-02T03:04:05Z"
+          stable_plan="${RUNNER_TEMP}/container-stable.json"
+          prerelease_plan="${RUNNER_TEMP}/container-prerelease.json"
+
+          python ./.github/scripts/release_metadata.py container-plan \
+            --version 1.2.3 \
+            --commit "${GITHUB_SHA}" \
+            --created "${created}" \
+            --output "${stable_plan}" >/dev/null
+
+          jq -e --arg revision "${GITHUB_SHA}" '
+            .platforms == ["linux/amd64", "linux/arm64"] and
+            .tags == [
+              "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:1.2.3",
+              "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:1.2",
+              "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:1",
+              "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest",
+              "docker.io/rodrigodotnet/dotnet-repo-inspector:1.2.3",
+              "docker.io/rodrigodotnet/dotnet-repo-inspector:1.2",
+              "docker.io/rodrigodotnet/dotnet-repo-inspector:1",
+              "docker.io/rodrigodotnet/dotnet-repo-inspector:latest"
+            ] and
+            .labels["org.opencontainers.image.version"] == "1.2.3" and
+            .labels["org.opencontainers.image.revision"] == $revision and
+            .annotations == .labels
+          ' "${stable_plan}" >/dev/null
+
+          python ./.github/scripts/release_metadata.py container-plan \
+            --version 1.2.3-rc.1 \
+            --commit "${GITHUB_SHA}" \
+            --created "${created}" \
+            --output "${prerelease_plan}" >/dev/null
+
+          jq -e '
+            .isPrerelease == true and
+            .tags == [
+              "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:1.2.3-rc.1",
+              "docker.io/rodrigodotnet/dotnet-repo-inspector:1.2.3-rc.1"
+            ]
+          ' "${prerelease_plan}" >/dev/null
+
+      - name: Generate container release plan
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: |
+          set -euo pipefail
+          created="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          python ./.github/scripts/release_metadata.py container-plan \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --created "${created}" \
+            --output ./artifacts/release/container-release-plan.json
+          python ./.github/scripts/release_metadata.py verify-container-plan \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --plan ./artifacts/release/container-release-plan.json
+
+      - name: Setup QEMU for container release validation
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: all
+
+      - name: Setup Docker Buildx for container release validation
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Validate multi-architecture container release build configuration
+        run: bash ./.github/scripts/container_release.sh check ./artifacts/release/container-release-plan.json
 
       - name: Restore
         run: dotnet restore ./DotNetRepoInspector.slnx
@@ -156,7 +231,7 @@ jobs:
     if: "${{ github.event_name == 'workflow_dispatch' && inputs.publish }}"
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
     environment: release
     permissions:
       contents: write
@@ -200,12 +275,17 @@ jobs:
       - name: Verify downloaded release candidate
         env:
           RELEASE_VERSION: "${{ needs.build.outputs.version }}"
-        run: >-
-          python ./.github/scripts/release_metadata.py verify
-          --version "${RELEASE_VERSION}"
-          --commit "${GITHUB_SHA}"
-          --manifest ./artifacts/release/release-manifest.json
-          --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+        run: |
+          set -euo pipefail
+          python ./.github/scripts/release_metadata.py verify \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --manifest ./artifacts/release/release-manifest.json \
+            --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+          python ./.github/scripts/release_metadata.py verify-container-plan \
+            --version "${RELEASE_VERSION}" \
+            --commit "${GITHUB_SHA}" \
+            --plan ./artifacts/release/container-release-plan.json
 
       - name: Attest release artifacts
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -214,6 +294,7 @@ jobs:
             artifacts/release/DotNetRepoInspector.${{ needs.build.outputs.version }}.nupkg
             artifacts/release/release-manifest.json
             artifacts/release/SHA256SUMS
+            artifacts/release/container-release-plan.json
 
       - name: Create or resume draft GitHub Release
         env:
@@ -293,6 +374,39 @@ jobs:
           --source github
           --api-key "${GITHUB_TOKEN}"
           --skip-duplicate
+
+      - name: Validate Docker Hub publication credential
+        env:
+          DOCKERHUB_TOKEN: "${{ secrets.DOCKERHUB_TOKEN }}"
+        run: |
+          set -euo pipefail
+          if [[ -z "${DOCKERHUB_TOKEN}" ]]; then
+            echo "DOCKERHUB_TOKEN is required for official container publication. Configure a Docker Hub access token with Read & Write permission in the protected release environment/repository secrets." >&2
+            exit 4
+          fi
+
+      - name: Setup QEMU for multi-architecture publication
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: all
+
+      - name: Setup Docker Buildx for multi-architecture publication
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Authenticate to GHCR and Docker Hub
+        env:
+          GHCR_TOKEN: "${{ github.token }}"
+          DOCKERHUB_TOKEN: "${{ secrets.DOCKERHUB_TOKEN }}"
+        run: |
+          set -euo pipefail
+          printf '%s' "${GHCR_TOKEN}" | docker login ghcr.io --username "${GITHUB_ACTOR}" --password-stdin
+          printf '%s' "${DOCKERHUB_TOKEN}" | docker login docker.io --username "rodrigodotnet" --password-stdin
+
+      - name: Publish multi-architecture container images
+        run: bash ./.github/scripts/container_release.sh publish ./artifacts/release/container-release-plan.json
+
+      - name: Verify published container manifests and metadata
+        run: bash ./.github/scripts/container_release.sh verify ./artifacts/release/container-release-plan.json
 
       - name: Publish GitHub Release
         env:
