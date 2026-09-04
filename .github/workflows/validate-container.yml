@@ -103,9 +103,11 @@ jobs:
           image-ref: "${{ env.IMAGE_TAG }}"
           format: table
           vuln-type: os,library
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: false
           exit-code: "0"
+          version: v0.74.0
 
       - name: Gate on fixable HIGH/CRITICAL vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -114,6 +116,8 @@ jobs:
           image-ref: "${{ env.IMAGE_TAG }}"
           format: table
           vuln-type: os,library
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          version: v0.74.0
