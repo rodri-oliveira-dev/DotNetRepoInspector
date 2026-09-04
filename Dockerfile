@@ -32,10 +32,10 @@ FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:9b37bbaf06fc653c
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
-# SDK remains authoritative for the dotnet muxer; .NET 8.0.424 is overlaid
-# side-by-side and satisfies the repository's 8.0.100 + latestFeature fixture.
-# Workloads themselves are outside the supported container contract, so only the
-# documented first-run workload integrity check is skipped.
+# SDK remains authoritative for the dotnet muxer; the serviced .NET 8 SDK is
+# overlaid side-by-side and satisfies the repository's 8.0.100 + latestFeature
+# fixture. Workloads themselves are outside the supported container contract, so
+# only the documented first-run workload integrity check is skipped.
 COPY --from=dotnet8 /usr/share/dotnet/host/ /usr/share/dotnet/host/
 COPY --from=dotnet8 /usr/share/dotnet/packs/ /usr/share/dotnet/packs/
 COPY --from=dotnet8 /usr/share/dotnet/sdk/ /usr/share/dotnet/sdk/
@@ -56,10 +56,10 @@ ENV DOTNET_CLI_HOME=/tmp/dotnet-home \
     XDG_CACHE_HOME=/tmp/.cache
 
 # runtime-deps intentionally has no dotnet executable. Expose the copied muxer,
-# remove optional SDK tooling that is not part of the Inspector contract, and
-# prepare the documented source/output mount points for the non-root app user.
+# remove optional .NET 8 SDK tooling that is not part of the Inspector contract,
+# and prepare the documented source/output mount points for the non-root app user.
 RUN ln --symbolic /usr/share/dotnet/dotnet /usr/bin/dotnet \
-    && rm -rf /usr/share/dotnet/sdk/8.0.424/DotnetTools/dotnet-format \
+    && rm -rf /usr/share/dotnet/sdk/8.0.*/DotnetTools/dotnet-format \
     && mkdir --parents /repo /artifacts \
     && chown "$APP_UID:$APP_UID" /repo /artifacts
 
