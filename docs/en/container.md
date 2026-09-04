@@ -65,10 +65,11 @@ Create the output directory on the host first:
 mkdir -p artifacts
 ```
 
-Then inspect a prepared repository or fixture with a read-only source mount, writable artifacts mount, read-only container filesystem, no network, no Linux capabilities, and no privilege escalation:
+On Linux, use the invoking host UID/GID so the bind-mounted output directory remains writable without making the image run as root. Then inspect a prepared repository or fixture with a read-only source mount, writable artifacts mount, read-only container filesystem, no network, no Linux capabilities, and no privilege escalation:
 
 ```bash
 docker run --rm \
+  --user "$(id -u):$(id -g)" \
   --read-only \
   --network none \
   --cap-drop=ALL \
@@ -86,21 +87,7 @@ Repeat the same command with `tests/Fixtures/Compatibility/Net10` to exercise .N
 
 ## Host UID/GID and artifact ownership
 
-The image runs non-root by default. On Linux, callers that want generated files owned by their host account can supply an explicit numeric identity:
-
-```bash
-docker run --rm \
-  --user "$(id -u):$(id -g)" \
-  --read-only \
-  --network none \
-  --cap-drop=ALL \
-  --security-opt=no-new-privileges \
-  --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
-  --mount type=bind,src="$PWD",dst=/repo,readonly \
-  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
-  dotnet-repo-inspector:local \
-  /repo --output /artifacts/inspection.json
-```
+The image itself declares the Microsoft-provided non-root `app` identity as its default user. Supplying `--user "$(id -u):$(id -g)"` is a runtime override for bind-mount ownership; it does not make the container privileged and the CLI does not require a passwd entry or writable root-owned home directory.
 
 The host `/artifacts` directory must be writable by the selected UID/GID. The image does not switch to root or chmod/chown the mounted repository to work around host permission problems.
 
