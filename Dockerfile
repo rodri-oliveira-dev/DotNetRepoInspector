@@ -20,16 +20,15 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
 # SDK image stays authoritative for the dotnet muxer; the versioned .NET 8 host,
-# SDK, runtime, targeting packs, workload manifests, and SDK workload metadata
-# are overlaid side-by-side. Workloads themselves are outside the supported
-# container contract and the workload resolver is disabled below so it cannot
-# contaminate structured MSBuild output while validating an unsupported surface.
+# SDK, runtime, targeting packs, and workload manifests are overlaid side-by-side.
+# Workloads themselves are outside the supported container contract, so the
+# documented first-run workload integrity check is skipped below while normal
+# MSBuild workload resolution semantics remain unchanged.
 COPY --from=dotnet8 /usr/share/dotnet/host/ /usr/share/dotnet/host/
 COPY --from=dotnet8 /usr/share/dotnet/packs/ /usr/share/dotnet/packs/
 COPY --from=dotnet8 /usr/share/dotnet/sdk/ /usr/share/dotnet/sdk/
 COPY --from=dotnet8 /usr/share/dotnet/sdk-manifests/ /usr/share/dotnet/sdk-manifests/
 COPY --from=dotnet8 /usr/share/dotnet/shared/ /usr/share/dotnet/shared/
-COPY --from=dotnet8 /usr/share/dotnet/metadata/ /usr/share/dotnet/metadata/
 
 COPY --from=build /out/ /opt/dotnet-repo-inspector/
 
@@ -38,7 +37,7 @@ ENV DOTNET_CLI_HOME=/tmp/dotnet-home \
     DOTNET_SKIP_FIRST_TIME_EXPERIENCE=true \
     DOTNET_CLI_TELEMETRY_OPTOUT=true \
     DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE=true \
-    MSBuildEnableWorkloadResolver=false \
+    DOTNET_SKIP_WORKLOAD_INTEGRITY_CHECK=true \
     NUGET_PACKAGES=/tmp/nuget/packages \
     NUGET_XMLDOC_MODE=skip \
     HOME=/tmp \
