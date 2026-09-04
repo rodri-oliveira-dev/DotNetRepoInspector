@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 
 # Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
-# linux/amd64 and linux/arm64. Version tags are resolved in CI and are pinned to
-# immutable manifest digests after the multi-architecture/security check.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.130-noble AS dotnet8
+# linux/amd64 and linux/arm64. Keep human-readable version tags and pin each
+# multi-platform manifest by immutable digest.
+FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c AS build
 
 WORKDIR /src
 COPY . .
@@ -27,15 +27,15 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:9b37bbaf06fc653cb0e757215081139fb493658e1f864a738f6a478620c9196f AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
-# SDK remains authoritative for the dotnet muxer; the serviced .NET 8 SDK from
-# the 8.0.1xx feature band is overlaid side-by-side. The compatibility fixture
-# requests 8.0.100 with rollForward=latestFeature, so 8.0.130 remains inside the
-# declared .NET 8 contract while using a patched MSBuild servicing line.
+# SDK remains authoritative for the dotnet muxer; .NET 8.0.424 is overlaid
+# side-by-side and satisfies the repository's 8.0.100 + latestFeature fixture.
+# Workloads themselves are outside the supported container contract, so only the
+# documented first-run workload integrity check is skipped.
 COPY --from=dotnet8 /usr/share/dotnet/host/ /usr/share/dotnet/host/
 COPY --from=dotnet8 /usr/share/dotnet/packs/ /usr/share/dotnet/packs/
 COPY --from=dotnet8 /usr/share/dotnet/sdk/ /usr/share/dotnet/sdk/
@@ -59,7 +59,7 @@ ENV DOTNET_CLI_HOME=/tmp/dotnet-home \
 # remove optional SDK tooling that is not part of the Inspector contract, and
 # prepare the documented source/output mount points for the non-root app user.
 RUN ln --symbolic /usr/share/dotnet/dotnet /usr/bin/dotnet \
-    && rm -rf /usr/share/dotnet/sdk/8.0.130/DotnetTools/dotnet-format \
+    && rm -rf /usr/share/dotnet/sdk/8.0.424/DotnetTools/dotnet-format \
     && mkdir --parents /repo /artifacts \
     && chown "$APP_UID:$APP_UID" /repo /artifacts
 
