@@ -87,7 +87,7 @@ Repita o mesmo comando com `tests/Fixtures/Compatibility/Net10` para exercitar a
 
 ## UID/GID do host e ownership dos artifacts
 
-A própria imagem declara como usuário padrão a identidade não-root `app` fornecida pela Microsoft. Informar `--user "$(id -u):$(id-g)"` é um override de runtime para ownership do bind mount; isso não torna o container privilegiado e a CLI não depende de uma entrada em passwd nem de home root-owned gravável.
+A própria imagem declara como usuário padrão a identidade não-root `app` fornecida pela Microsoft. Informar `--user "$(id -u):$(id -g)"` é um override de runtime para ownership do bind mount; isso não torna o container privilegiado e a CLI não depende de uma entrada em passwd nem de home root-owned gravável.
 
 O diretório `/artifacts` do host deve ser gravável pelo UID/GID selecionado. A imagem não troca para root nem executa chmod/chown no repositório montado para contornar permissões do host.
 
