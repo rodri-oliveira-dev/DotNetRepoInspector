@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-# Keep each Microsoft SDK reference readable and immutable. The multi-platform
+# Keep each Microsoft image reference readable and immutable. The multi-platform
 # manifest digests are intentionally pinned; Dependabot servicing is handled by #103.
 FROM mcr.microsoft.com/dotnet/sdk:8.0.424-azurelinux3.0@sha256:6e8e68891aeff6ce36b558e27a897a062d5bf425d5f400a2a1fbdfa5bbd0921c AS dotnet8
 
@@ -16,10 +16,15 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
         --output /out \
         /p:UseAppHost=false
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0.400-azurelinux3.0@sha256:148df6ae5a1a242c4d737aecea047eabd7764c05f9d7016433ce64d6bb6fe00c AS final
+# Use the minimal Microsoft runtime-deps image for the operating-system layer,
+# then copy only the .NET installation required for SDK selection and MSBuild
+# inspection. This avoids carrying unrelated SDK-image OS tooling into runtime.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-azurelinux3.0@sha256:b9695c27ae6a28fcb49740f8e0d94fb361ab2a03eb702e9e43b89d5dfdb52e0b AS final
+
+COPY --from=build /usr/share/dotnet/ /usr/share/dotnet/
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10
-# SDK image stays authoritative for the dotnet muxer; the versioned .NET 8 host,
+# SDK remains authoritative for the dotnet muxer; the versioned .NET 8 host,
 # SDK, runtime, targeting packs, and workload manifests are overlaid side-by-side.
 # Workloads themselves are outside the supported container contract, so the
 # documented first-run workload integrity check is skipped below while normal
@@ -43,16 +48,11 @@ ENV DOTNET_CLI_HOME=/tmp/dotnet-home \
     HOME=/tmp \
     XDG_CACHE_HOME=/tmp/.cache
 
-# The SDK images intentionally contain developer tooling beyond the Inspector's
-# execution contract. Apply currently available Azure Linux security updates and
-# remove optional tools that are not required for SDK selection/MSBuild inspection,
-# reducing both the attack surface and irrelevant scanner findings.
-RUN tdnf update -y expat expat-libs perl-DBI \
-    && tdnf clean all \
-    && rm -rf /var/cache/tdnf \
-        /usr/share/powershell \
-        /usr/share/dotnet/sdk/8.0.424/DotnetTools/dotnet-format \
-    && rm -f /usr/bin/pwsh \
+# runtime-deps intentionally has no dotnet executable. Expose the copied muxer,
+# remove optional SDK tooling that is not part of the Inspector contract, and
+# prepare the documented source/output mount points for the non-root app user.
+RUN ln --symbolic /usr/share/dotnet/dotnet /usr/bin/dotnet \
+    && rm -rf /usr/share/dotnet/sdk/8.0.424/DotnetTools/dotnet-format \
     && mkdir --parents /repo /artifacts \
     && chown "$APP_UID:$APP_UID" /repo /artifacts
 
