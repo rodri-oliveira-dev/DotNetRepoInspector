@@ -1,0 +1,139 @@
+# Local container image
+
+**Languages:** English | [Português (Brasil)](../pt-BR/container.md)
+
+The repository contains the implementation of the planned official DotNetRepoInspector container image. This stage is for local build and validation only; issue #101 does **not** publish an image to GHCR or Docker Hub.
+
+The runtime contract is defined by [ADR 0005](decisions/0005-container-execution-contract.md).
+
+## Image contents
+
+The image:
+
+- runs DotNetRepoInspector on .NET 10;
+- contains stable .NET 8 and .NET 10 SDK families side by side so repository `global.json` selection remains authoritative;
+- uses Microsoft .NET SDK images with explicit version/OS tags and immutable multi-platform digests;
+- runs as the Microsoft-provided non-root `app` identity (`APP_UID`, currently 1654) by default;
+- keeps `/repo` for read-only source and `/artifacts` for explicit writable output;
+- redirects CLI home, NuGet cache, and other transient state to `/tmp`, allowing the container root filesystem to be read-only when `/tmp` is mounted as `tmpfs`;
+- starts the existing CLI directly, so container arguments are the normal DotNetRepoInspector CLI arguments.
+
+## Build locally
+
+From the repository root:
+
+```bash
+docker build --pull -t dotnet-repo-inspector:local .
+```
+
+No registry push is performed by this command or by the repository's normal validation workflow.
+
+## Verify the SDK matrix
+
+The CLI is the image entrypoint. Override it only for image diagnostics such as checking installed SDKs:
+
+```bash
+docker run --rm \
+  --entrypoint dotnet \
+  dotnet-repo-inspector:local \
+  --list-sdks
+```
+
+The output must contain at least one stable `8.0.x` SDK and one stable `10.0.x` SDK.
+
+The compatibility fixtures intentionally use normal `global.json` roll-forward semantics:
+
+- `tests/Fixtures/Compatibility/Net8` selects the .NET 8 family;
+- `tests/Fixtures/Compatibility/Net10` selects the .NET 10 family.
+
+The image does not rewrite `global.json` and does not force inspected repositories onto the Inspector's .NET 10 SDK.
+
+## CLI smoke checks
+
+```bash
+docker run --rm dotnet-repo-inspector:local --help
+docker run --rm dotnet-repo-inspector:local --version
+```
+
+The container preserves the CLI's existing output and exit-code contract.
+
+## Hardened offline inspection
+
+Create the output directory on the host first:
+
+```bash
+mkdir -p artifacts
+```
+
+Then inspect a prepared repository or fixture with a read-only source mount, writable artifacts mount, read-only container filesystem, no network, no Linux capabilities, and no privilege escalation:
+
+```bash
+docker run --rm \
+  --read-only \
+  --network none \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
+  --mount type=bind,src="$PWD/tests/Fixtures/Compatibility/Net8",dst=/repo,readonly \
+  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
+  dotnet-repo-inspector:local \
+  /repo --output /artifacts/net8-inspection.json
+```
+
+A successful run writes the normalized `InspectionReport` to the host `artifacts` directory without requiring a writable repository, Docker socket, host credential directory, privileged mode, or network access.
+
+Repeat the same command with `tests/Fixtures/Compatibility/Net10` to exercise .NET 10 SDK resolution.
+
+## Host UID/GID and artifact ownership
+
+The image runs non-root by default. On Linux, callers that want generated files owned by their host account can supply an explicit numeric identity:
+
+```bash
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  --read-only \
+  --network none \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
+  --mount type=bind,src="$PWD",dst=/repo,readonly \
+  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
+  dotnet-repo-inspector:local \
+  /repo --output /artifacts/inspection.json
+```
+
+The host `/artifacts` directory must be writable by the selected UID/GID. The image does not switch to root or chmod/chown the mounted repository to work around host permission problems.
+
+## Network-dependent scenarios
+
+Basic prepared-repository inspection is offline-capable and should prefer `--network none`.
+
+Network access is an explicit deviation for features that inherently require it, such as the opt-in HTTP sink or private SDK/package sources. For the HTTP sink, keep the existing credential contract: pass the bearer token only at runtime through `DOTNET_REPO_INSPECTOR_HTTP_TOKEN`; never embed credentials in the image, a build argument, a CLI argument, or `--sink-url`.
+
+Example shape:
+
+```bash
+docker run --rm \
+  -e DOTNET_REPO_INSPECTOR_HTTP_TOKEN \
+  --mount type=bind,src="$PWD",dst=/repo,readonly \
+  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
+  dotnet-repo-inspector:local \
+  /repo \
+  --output /artifacts/inspection.json \
+  --sink http \
+  --sink-url https://evidence.example/api/snapshots
+```
+
+Do not mount broad Docker, cloud, SSH, Kubernetes, NuGet, or other host credential directories as a shortcut.
+
+## Security boundary
+
+**Containerization does not make MSBuild evaluation a security sandbox.**
+
+Repository-controlled MSBuild evaluation can access resources that the container identity can access. Hardened mounts, non-root execution, a read-only root filesystem, dropped capabilities, and disabled networking reduce exposure, but untrusted repositories still require an isolated, ephemeral environment without sensitive data or credentials.
+
+See [`security.md`](security.md) and [ADR 0005](decisions/0005-container-execution-contract.md) for the complete trust model.
+
+## Next validation stage
+
+Issue #102 adds reusable smoke tests and CI gates for Dockerfile linting, image execution, both SDK families, read-only/offline behavior, exit codes, and vulnerability scanning. The local contract documented here is the input to those automated checks.
