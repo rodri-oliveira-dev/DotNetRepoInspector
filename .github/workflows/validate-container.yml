@@ -1,0 +1,160 @@
+name: Validate container
+
+on:
+  pull_request:
+    branches:
+      - main
+      - feature/docker
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .trivyignore.yaml
+      - .github/dependabot.yml
+      - .github/scripts/container_smoke.sh
+      - .github/workflows/validate-container.yml
+      - src/**
+      - tests/Fixtures/Compatibility/**
+      - Directory.Build.props
+      - Directory.Packages.props
+      - global.json
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - .trivyignore.yaml
+      - .github/dependabot.yml
+      - .github/scripts/container_smoke.sh
+      - .github/workflows/validate-container.yml
+      - src/**
+      - tests/Fixtures/Compatibility/**
+      - Directory.Build.props
+      - Directory.Packages.props
+      - global.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "container-${{ github.workflow }}-${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  dockerfile-lint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Lint Dockerfile
+        uses: hadolint/hadolint-action@2a66e89f53d0771bb131a7fa31f3136336094aa6 # v3.4.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+  image-validation:
+    name: Image (${{ matrix.platform }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            suffix: amd64
+          - platform: linux/arm64
+            suffix: arm64
+    env:
+      IMAGE_TAG: dotnet-repo-inspector:ci-${{ matrix.suffix }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: all
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Validate Dockerfile base references
+        shell: bash
+        run: |
+          mapfile -t base_images < <(
+            awk '
+              /^FROM / {
+                for (i = 2; i <= NF; i++) {
+                  if ($i !~ /^--platform=/) {
+                    print $i
+                    break
+                  }
+                }
+              }
+            ' Dockerfile | sort -u
+          )
+
+          if (( ${#base_images[@]} == 0 )); then
+            echo "No Dockerfile base images were found." >&2
+            exit 1
+          fi
+
+          for image in "${base_images[@]}"; do
+            if [[ ! "$image" =~ ^mcr\.microsoft\.com/dotnet/[[:alnum:]./_-]+:[[:alnum:]._-]+@sha256:[0-9a-f]{64}$ ]]; then
+              echo "Base image must use an approved Microsoft .NET tag plus immutable sha256 digest: $image" >&2
+              exit 1
+            fi
+
+            docker buildx imagetools inspect "$image"
+          done
+
+      - name: Build image with pinned bases
+        run: >-
+          docker buildx build
+          --pull
+          --platform "${{ matrix.platform }}"
+          --load
+          --tag "${IMAGE_TAG}"
+          .
+
+      - name: Run reusable container smoke suite
+        run: bash ./.github/scripts/container_smoke.sh "${IMAGE_TAG}"
+
+      - name: Report HIGH/CRITICAL vulnerabilities including unfixed findings
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: "${{ env.IMAGE_TAG }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: "0"
+          version: v0.74.0
+
+      # Keep the report above unfiltered for visibility. The blocking scan applies
+      # only reviewed, path-scoped, expiring scanner exceptions.
+      - name: Gate on fixable HIGH/CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: "${{ env.IMAGE_TAG }}"
+          format: table
+          vuln-type: os,library
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
+          exit-code: "1"
+          version: v0.74.0
