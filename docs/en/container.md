@@ -126,10 +126,21 @@ See [`security.md`](security.md) and [ADR 0005](decisions/0005-container-executi
 [`validate-container.yml`](../../.github/workflows/validate-container.yml) turns the image into a pull-request quality/security gate. It:
 
 - runs Hadolint with warnings treated as failures;
-- builds with `--pull` from the pinned base references;
+- validates every Microsoft .NET base reference read from the proposed `Dockerfile`, requiring a human-readable tag plus an immutable `sha256` digest;
+- builds with `--pull` from those pinned base references;
 - executes the image for both `linux/amd64` and `linux/arm64` through Buildx/QEMU;
 - runs the reusable [`container_smoke.sh`](../../.github/scripts/container_smoke.sh) suite to verify non-root execution, `--help`, `--version`, .NET 8/.NET 10 SDK resolution, successful report generation, read-only source/root filesystems, offline operation, and documented CLI exit codes `0` through `5`;
 - runs a visible Trivy report for all `HIGH`/`CRITICAL` findings, including findings without an upstream fix;
 - runs a second Trivy gate with `ignore-unfixed` so only fixable `HIGH`/`CRITICAL` vulnerabilities block the workflow.
 
 The workflow has read-only repository permissions and never logs in to or pushes to a container registry. Third-party Actions used by this gate are pinned to commit SHAs.
+
+## Base-image maintenance with Dependabot
+
+[`.github/dependabot.yml`](../../.github/dependabot.yml) monitors the root `Dockerfile` with the `docker` ecosystem. During the initial container stabilization period it checks on weekdays at `08:00` in `America/Sao_Paulo`, with at most three simultaneous Docker version-update pull requests.
+
+Docker base references remain in `image:version-tag@sha256:digest` form. Dependabot is allowed to propose updated tags/digests, but every resulting `Dockerfile` pull request must pass the same Hadolint, multi-architecture build, smoke, and Trivy gates before merge. The workflow reads base references from the proposed `Dockerfile`, rather than duplicating their versions or digests in CI, so an update cannot be validated against a stale hardcoded reference.
+
+GitHub documents that the Docker ecosystem scans `Dockerfile` manifests from the configured `directory`, and Dependabot's Docker updater preserves and updates an existing digest when changing an already digest-pinned image. Dependabot evaluates `dependabot.yml` from the default branch, so live creation of Docker update pull requests starts only after this configuration reaches the default branch; that documented behavior is the equivalent validation used while this work is still on the integration branch.
+
+The initial `daily` cadence can return to `weekly` after the container rollout is stable: at least four consecutive weeks without recurring manual base-image remediation or security-gate tuning, and no known backlog of fixable `HIGH`/`CRITICAL` findings. Reducing the schedule must not relax digest pinning or any CI/security gate.
