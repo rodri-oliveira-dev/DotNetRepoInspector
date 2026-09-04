@@ -8,14 +8,10 @@ artifacts="${work_root}/artifacts"
 host_uid="$(id -u)"
 host_gid="$(id -g)"
 
-cleanup() {
-  rm -rf "${work_root}"
-}
+cleanup() { rm -rf "${work_root}"; }
 trap cleanup EXIT
 
 mkdir -p "${artifacts}"
-# The smoke suite deliberately exercises arbitrary host UID/GID execution.
-# Keep only the disposable output directory writable by that identity.
 chmod 0777 "${artifacts}"
 
 fail() {
@@ -26,21 +22,16 @@ fail() {
 expect_exit() {
   local expected="$1"
   shift
-
   set +e
   "$@"
   local actual=$?
   set -e
-
-  if [[ "${actual}" -ne "${expected}" ]]; then
-    fail "expected exit code ${expected}, got ${actual}: $*"
-  fi
+  [[ "${actual}" -eq "${expected}" ]] || fail "expected exit code ${expected}, got ${actual}: $*"
 }
 
-hardened_run() {
+hardened_docker() {
   local source="$1"
   shift
-
   docker run --rm \
     --user "${host_uid}:${host_gid}" \
     --read-only \
@@ -50,46 +41,60 @@ hardened_run() {
     --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
     --mount "type=bind,src=${source},dst=/repo,readonly" \
     --mount "type=bind,src=${artifacts},dst=/artifacts" \
-    "${image}" \
     "$@"
+}
+
+hardened_run() {
+  local source="$1"
+  shift
+  hardened_docker "${source}" "${image}" "$@"
 }
 
 validate_report() {
   local report="$1"
   local sdk_family="$2"
-
   python3 - "${report}" "${sdk_family}" <<'PY'
-import json
-import pathlib
-import sys
-
+import json, pathlib, sys
 path = pathlib.Path(sys.argv[1])
 sdk_family = sys.argv[2]
-
 if not path.is_file():
     raise SystemExit(f"inspection report was not created: {path}")
-
 with path.open(encoding="utf-8") as stream:
     report = json.load(stream)
-
 if report.get("schemaVersion") != "1.3":
     raise SystemExit(f"unexpected schemaVersion: {report.get('schemaVersion')!r}")
-
 resolved = (report.get("dotNetSdk") or {}).get("resolvedVersion")
 if not isinstance(resolved, str) or not resolved.startswith(f"{sdk_family}."):
-    raise SystemExit(
-        f"expected resolved SDK family {sdk_family}.x, got {resolved!r}"
-    )
-
+    raise SystemExit(f"expected resolved SDK family {sdk_family}.x, got {resolved!r}")
 projects = report.get("projects")
 if not isinstance(projects, list) or not projects:
     raise SystemExit("successful compatibility inspection did not contain projects")
 PY
 }
 
+show_raw_msbuild() {
+  local source="$1"
+  local project_name="$2"
+  echo "Raw dotnet msbuild structured output:" >&2
+  set +e
+  hardened_docker "${source}" \
+    --entrypoint dotnet \
+    "${image}" \
+    msbuild "/repo/${project_name}" \
+    -nologo \
+    -verbosity:quiet \
+    -getProperty:IsPackable,IsTestProject,OutputType,RuntimeIdentifier,RuntimeIdentifiers,TargetFramework,TargetFrameworks \
+    -getItem:ProjectReference \
+    1>&2
+  local raw_exit=$?
+  set -e
+  echo "Raw dotnet msbuild exit code: ${raw_exit}" >&2
+}
+
 inspect_fixture() {
   local fixture_name="$1"
   local sdk_family="$2"
+  local project_name="Compatibility.${fixture_name}.csproj"
   local source="${repo_root}/tests/Fixtures/Compatibility/${fixture_name}"
   local report="${artifacts}/${fixture_name,,}-inspection.json"
 
@@ -107,17 +112,15 @@ inspect_fixture() {
     else
       echo "No inspection report was generated." >&2
     fi
+    show_raw_msbuild "${source}" "${project_name}"
     fail "expected successful ${fixture_name} inspection"
   fi
-
   validate_report "${report}" "${sdk_family}"
 }
 
 echo "Verifying default non-root identity..."
 default_uid="$(docker run --rm --network none --entrypoint sh "${image}" -c 'id -u')"
-if [[ -z "${default_uid}" || "${default_uid}" == "0" ]]; then
-  fail "image default user must be non-root; actual uid=${default_uid:-<empty>}"
-fi
+[[ -n "${default_uid}" && "${default_uid}" != "0" ]] || fail "image default user must be non-root; actual uid=${default_uid:-<empty>}"
 
 echo "Verifying CLI entrypoint..."
 help_output="$(docker run --rm --network none "${image}" --help)"
@@ -137,53 +140,29 @@ inspect_fixture "Net10" "10.0"
 
 echo "Verifying the repository mount is actually read-only..."
 readonly_source="${repo_root}/tests/Fixtures/Compatibility/Net8"
-if docker run --rm \
-  --user "${host_uid}:${host_gid}" \
-  --read-only \
-  --network none \
-  --cap-drop=ALL \
-  --security-opt=no-new-privileges \
-  --tmpfs /tmp:rw,nosuid,nodev,size=64m,mode=1777 \
-  --mount "type=bind,src=${readonly_source},dst=/repo,readonly" \
-  --entrypoint sh \
-  "${image}" \
-  -c 'touch /repo/.dotnet-repo-inspector-write-probe'; then
+if hardened_docker "${readonly_source}" --entrypoint sh "${image}" -c 'touch /repo/.dotnet-repo-inspector-write-probe'; then
   fail "read-only source mount unexpectedly accepted a write"
 fi
 
 echo "Verifying documented CLI exit codes 0-5 with controlled scenarios..."
-# 0 is already proven by the successful Net8/Net10 inspections above.
 missing_sdk_source="${repo_root}/tests/Fixtures/Compatibility/MissingSdk"
 missing_sdk_report="${artifacts}/missing-sdk-inspection.json"
-expect_exit 1 hardened_run \
-  "${missing_sdk_source}" \
-  /repo --output /artifacts/missing-sdk-inspection.json
-
+expect_exit 1 hardened_run "${missing_sdk_source}" /repo --output /artifacts/missing-sdk-inspection.json
 python3 - "${missing_sdk_report}" <<'PY'
-import json
-import pathlib
-import sys
-
+import json, pathlib, sys
 path = pathlib.Path(sys.argv[1])
 with path.open(encoding="utf-8") as stream:
     report = json.load(stream)
-
 diagnostics = report.get("diagnostics") or []
-if not any(
-    item.get("code") == "DRI1002" and item.get("severity") == "error"
-    for item in diagnostics
-):
+if not any(item.get("code") == "DRI1002" and item.get("severity") == "error" for item in diagnostics):
     raise SystemExit("missing-SDK report did not contain DRI1002/error")
 PY
 
 expect_exit 2 docker run --rm --network none "${image}" --definitely-invalid-option
 expect_exit 3 docker run --rm --network none "${image}" /path-that-does-not-exist
-expect_exit 4 hardened_run \
-  "${readonly_source}" \
-  /repo --output /repo/forbidden-output.json
+expect_exit 4 hardened_run "${readonly_source}" /repo --output /repo/forbidden-output.json
 expect_exit 5 hardened_run \
-  "${readonly_source}" \
-  /repo \
+  "${readonly_source}" /repo \
   --output /artifacts/persistence-failure-inspection.json \
   --sink http \
   --sink-url http://127.0.0.1:9/snapshots \
