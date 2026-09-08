@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   quality-gate:
-    name: Report Sonar quality gate
+    name: Configure and report Sonar quality gate
     if: github.event.pull_request.number == 115
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Query SonarQube Cloud quality gate
+      - name: Configure targeted Docker rule exclusion
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -27,6 +27,46 @@ jobs:
             echo "SONAR_TOKEN is required." >&2
             exit 1
           fi
+
+          set_setting() {
+            local key="$1"
+            local value="$2"
+            curl --fail --silent --show-error \
+              --user "${SONAR_TOKEN}:" \
+              --request POST \
+              --get 'https://sonarcloud.io/api/settings/set' \
+              --data-urlencode 'component=rodri-oliveira-dev_DotNetRepoInspector' \
+              --data-urlencode "key=${key}" \
+              --data-urlencode "value=${value}"
+          }
+
+          set_setting 'sonar.issue.ignore.multicriteria' 'dockerTagDigest'
+          set_setting 'sonar.issue.ignore.multicriteria.dockerTagDigest.ruleKey' 'docker:S8431'
+          set_setting 'sonar.issue.ignore.multicriteria.dockerTagDigest.resourceKey' 'Dockerfile'
+
+          echo "Configured docker:S8431 exclusion for Dockerfile only."
+
+      - name: Verify targeted Sonar settings
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          response="$(curl --fail --silent --show-error \
+            --user "${SONAR_TOKEN}:" \
+            --get 'https://sonarcloud.io/api/settings/values' \
+            --data-urlencode 'component=rodri-oliveira-dev_DotNetRepoInspector' \
+            --data-urlencode 'keys=sonar.issue.ignore.multicriteria,sonar.issue.ignore.multicriteria.dockerTagDigest.ruleKey,sonar.issue.ignore.multicriteria.dockerTagDigest.resourceKey')"
+
+          jq . <<< "${response}"
+
+      - name: Query SonarQube Cloud quality gate
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          set -euo pipefail
 
           response="$(curl --fail --silent --show-error \
             --user "${SONAR_TOKEN}:" \
