@@ -3,15 +3,15 @@
 # Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
 # linux/amd64 and linux/arm64. Keep human-readable version tags and pin each
 # multi-platform manifest by immutable digest.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5 AS dotnet8
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:4beef5b8919dcaa2dc924233bd069257e883cc7a061e09088a97d152d6a48510 AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:4beef5b8919dcaa2dc924233bd069257e883cc7a061e09088a97d152d6a48510 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS build
 
 ARG PRODUCT_VERSION=0.0.0
 ARG REPOSITORY_COMMIT=local
