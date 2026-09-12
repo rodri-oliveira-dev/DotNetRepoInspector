@@ -32,7 +32,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:3b8db93b36e94c7de4524d5b3da230ab9ef5e336c469c7d5c44e0cdbab49d297 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-noble@sha256:9c2883a67963933e3c4b8d0f732b72c172b48f8f606b6f5dcb95f09e84fcc797 AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
