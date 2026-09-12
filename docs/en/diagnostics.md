@@ -42,6 +42,39 @@ For `DRI1014`, `source` identifies the configured repository-relative project pa
 
 Infrastructure adapters and the configuration boundary translate internal failures to this catalog. Raw localized error messages are deliberately not required for classification of the failure.
 
+## Diagnostic scope and health aggregation
+
+Diagnostic scope is structural and must be preserved by consumers:
+
+- top-level `diagnostics` belongs to the repository/inspection scope;
+- `projects[].diagnostics` belongs only to that project;
+- a diagnostic on one project does not change the health of sibling projects;
+- the CLI exit code is an aggregate execution result. Exit code `1` means that at least one error diagnostic exists either at repository scope or on a project. It must not be copied to every project as a project status.
+
+The Core API exposes `InspectionHealthEvaluator` for deterministic aggregation. `RepositoryStatus` is derived only from top-level diagnostics, `OverallStatus` considers both scopes, and project counters are derived only from each project's own diagnostic collection. `GetProjectStatus(project)` returns `ok`, `warning`, or `error` without consulting repository-level diagnostics.
+
+JSON consumers can calculate the same metrics without inventing a parallel status rule. For example:
+
+```jq
+def status($diagnostics):
+  if any($diagnostics[]; .severity == "error") then "error"
+  elif any($diagnostics[]; .severity == "warning") then "warning"
+  else "ok"
+  end;
+
+{
+  repositoryStatus: status(.diagnostics),
+  projectsWithDiagnostics:
+    ([.projects[] | select((.diagnostics | length) > 0)] | length),
+  projectsWithWarnings:
+    ([.projects[] | select(any(.diagnostics[]; .severity == "warning"))] | length),
+  projectsWithErrors:
+    ([.projects[] | select(any(.diagnostics[]; .severity == "error"))] | length)
+}
+```
+
+These counters intentionally count affected projects separately from the number of diagnostics. A project with multiple diagnostics is still one affected project.
+
 ## Operational logs
 
 Operational logs are emitted to **stderr**. JSON output belongs exclusively on **stdout**. This separation allows callers to pipe or parse stdout as JSON even when verbose logging is enabled.

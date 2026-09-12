@@ -214,6 +214,8 @@ Persistência não altera o contrato JSON de inspeção. O JSON é produzido por
 
 O código `1` é intencionalmente diferente de uma falha fatal: o relatório JSON ainda existe e contém os diagnósticos estruturados que explicam o resultado parcial da inspeção. O código `5` também ocorre depois que o relatório de inspeção já foi produzido; ele representa falha no delivery do snapshot opcional, e não uma alteração nos diagnósticos da inspeção.
 
+O código de saída `1` é agregado: ele é retornado quando existe um diagnóstico `error` em `diagnostics` no nível superior ou em qualquer `projects[].diagnostics`. Ele não representa o status de cada projeto. Consumidores devem derivar a saúde de cada projeto somente da coleção `diagnostics` daquele projeto e usar `diagnostics` de nível superior de forma independente para a saúde do repositório/inspeção. Consulte [`diagnostics.md`](diagnostics.md) para as regras de agregação e exemplos.
+
 ## Cancelamento
 
 O processo trata Ctrl+C de forma cooperativa. O cancellation token é propagado pela CLI até a engine de inspeção e, quando habilitados, a publicação do snapshot e a requisição HTTP. Uma execução cancelada termina com código `130` e não inicia um fluxo interativo de recuperação.

@@ -60,6 +60,8 @@ Diagnostics are stable inspection facts, not operational log lines. A diagnostic
 
 Automation must branch on `code` and `severity`, never on localized text. `context` contains structured, non-sensitive strings that help identify the affected component or fact. Raw child-process output, source-code content, environment variables, credentials, tokens, and other secrets must not be copied into the normalized diagnostic contract.
 
+Diagnostic scope is represented by location in the contract. Top-level `diagnostics` contains repository/inspection-level diagnostics, while `projects[].diagnostics` contains only diagnostics for that project. Consumers must not infer a project warning/error from the CLI exit code or from a diagnostic attached to another project. Aggregate health and affected-project counts can be derived deterministically from these two scopes; see [`../diagnostics.md`](../diagnostics.md).
+
 The stable diagnostic catalog and operational logging rules are documented in [`../diagnostics.md`](../diagnostics.md).
 
 ## Paths

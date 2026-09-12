@@ -42,6 +42,39 @@ Para `DRI1014`, `source` identifica o caminho do projeto configurado, relativo a
 
 Adapters de infraestrutura e a fronteira de configuração traduzem falhas internas para este catálogo. Mensagens de erro brutas e localizadas não são necessárias para classificar a falha.
 
+## Escopo dos diagnósticos e agregação de saúde
+
+O escopo dos diagnósticos é estrutural e deve ser preservado pelos consumidores:
+
+- `diagnostics` no nível superior pertence ao escopo do repositório/inspeção;
+- `projects[].diagnostics` pertence somente àquele projeto;
+- um diagnóstico em um projeto não altera a saúde dos projetos irmãos;
+- o exit code da CLI é um resultado agregado da execução. O código `1` significa que existe pelo menos um diagnóstico de erro no escopo do repositório ou em algum projeto. Ele não deve ser copiado para todos os projetos como status individual.
+
+A API do Core expõe `InspectionHealthEvaluator` para agregação determinística. `RepositoryStatus` é derivado somente dos diagnósticos de nível superior, `OverallStatus` considera os dois escopos e os contadores de projetos usam apenas a coleção de diagnósticos de cada projeto. `GetProjectStatus(project)` retorna `ok`, `warning` ou `error` sem consultar diagnósticos do repositório.
+
+Consumidores do JSON podem calcular as mesmas métricas sem criar uma regra paralela de status. Por exemplo:
+
+```jq
+def status($diagnostics):
+  if any($diagnostics[]; .severity == "error") then "error"
+  elif any($diagnostics[]; .severity == "warning") then "warning"
+  else "ok"
+  end;
+
+{
+  repositoryStatus: status(.diagnostics),
+  projectsWithDiagnostics:
+    ([.projects[] | select((.diagnostics | length) > 0)] | length),
+  projectsWithWarnings:
+    ([.projects[] | select(any(.diagnostics[]; .severity == "warning"))] | length),
+  projectsWithErrors:
+    ([.projects[] | select(any(.diagnostics[]; .severity == "error"))] | length)
+}
+```
+
+Esses contadores separam intencionalmente a quantidade de projetos afetados da quantidade de diagnósticos. Um projeto com vários diagnósticos continua sendo apenas um projeto afetado.
+
 ## Logs operacionais
 
 Logs operacionais são emitidos em **stderr**. A saída JSON pertence exclusivamente a **stdout**. Essa separação permite que consumidores façam pipe ou parsing de stdout como JSON mesmo quando o logging detalhado está habilitado.
