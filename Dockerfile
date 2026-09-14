@@ -3,7 +3,7 @@
 # Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
 # linux/amd64 and linux/arm64. Keep human-readable version tags and pin each
 # multi-platform manifest by immutable digest.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS dotnet8
+FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
