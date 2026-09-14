@@ -3,15 +3,15 @@
 # Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
 # linux/amd64 and linux/arm64. Keep human-readable version tags and pin each
 # multi-platform manifest by immutable digest.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS dotnet8
+FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf864b86765beb87507bbc3f48661a4f6f1ffc2b5 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:4ea6fe75dd36706bb6d8c3c293d4c4315840f5d76ea28ac97def77e3ec487fa5 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS build
 
 ARG PRODUCT_VERSION=0.0.0
 ARG REPOSITORY_COMMIT=local
@@ -32,7 +32,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-noble@sha256:9c2883a67963933e3c4b8d0f732b72c172b48f8f606b6f5dcb95f09e84fcc797 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-noble@sha256:23257ea51d7c12e0d5aabecaffe24b4eccacff63a2e669ea9408ac29790d4ce1 AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
