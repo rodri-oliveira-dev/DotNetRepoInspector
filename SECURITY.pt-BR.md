@@ -32,9 +32,10 @@ O escopo detalhado de coleta, o modelo de confiança do MSBuild, as permissões 
 
 As mudanças do repositório são avaliadas por controles complementares, sem depender de um único scanner:
 
-- o CodeQL executa análise semântica de segurança para C# em pull requests, pushes para `main` e em agendamento semanal, reutilizando o contrato normal de build Release do repositório;
+- o GitHub CodeQL Default Setup é a fonte oficial dos alerts CodeQL exibidos em **Security > Code scanning**;
+- o workflow versionado `.github/workflows/codeql.yml` verifica de forma independente que o C# pode ser extraído e analisado usando o contrato normal de build Release do repositório e mantém seu SARIF como artifact temporário do workflow, em vez de enviar uma análise CodeQL concorrente;
 - o Dependency Review avalia alterações de dependências introduzidas por pull requests e bloqueia novas dependências vulneráveis de alta severidade;
 - o Dependabot mantém dependências de pacotes, containers, SDK e workflows conforme a política versionada do repositório;
 - CI, validação de containers e checks de pacote/release adicionam salvaguardas de build e distribuição.
 
-O CodeQL usa permissões de menor privilégio, actions fixadas por SHA, o SDK selecionado pelo `global.json` e build manual para que a análise não introduza um segundo contrato de compilação.
+O workflow versionado do CodeQL usa permissões somente de leitura para o repositório, actions fixadas por SHA, o SDK selecionado pelo `global.json` e build manual para que o caminho de extração não introduza um segundo contrato de compilação. O envio do SARIF desse workflow ao Code Scanning fica intencionalmente desabilitado enquanto o GitHub CodeQL Default Setup permanecer ativo, pois o GitHub não aceita uploads CodeQL de advanced setup simultaneamente ao default setup.
