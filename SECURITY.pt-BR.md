@@ -27,3 +27,15 @@ Antes do primeiro lançamento público estável, as correções de segurança t�
 O DotNetRepoInspector inspeciona metadados MSBuild avaliados. **A avaliação do MSBuild não é um sandbox.** Inspecione repositórios não confiáveis somente em um ambiente isolado, efêmero e sem privilégios, que não contenha credenciais nem dados aos quais o repositório inspecionado não deva ter acesso.
 
 O escopo detalhado de coleta, o modelo de confiança do MSBuild, as permissões da GitHub Action, as medidas de hardening do ambiente, as regras de logging e as orientações sobre credenciais dos sinks estão documentados em [`docs/en/security.md`](docs/en/security.md) e [`docs/pt-BR/security.md`](docs/pt-BR/security.md).
+
+## Controles automatizados de segurança do repositório
+
+As mudanças do repositório são avaliadas por controles complementares, sem depender de um único scanner:
+
+- o GitHub CodeQL Default Setup é a fonte oficial dos alerts CodeQL exibidos em **Security > Code scanning**;
+- o workflow versionado `.github/workflows/codeql.yml` verifica de forma independente que o C# pode ser extraído e analisado usando o contrato normal de build Release do repositório e mantém seu SARIF como artifact temporário do workflow, em vez de enviar uma análise CodeQL concorrente;
+- o Dependency Review avalia alterações de dependências introduzidas por pull requests e bloqueia novas dependências vulneráveis de alta severidade;
+- o Dependabot mantém dependências de pacotes, containers, SDK e workflows conforme a política versionada do repositório;
+- CI, validação de containers e checks de pacote/release adicionam salvaguardas de build e distribuição.
+
+O workflow versionado do CodeQL usa permissões somente de leitura para o repositório, actions fixadas por SHA, o SDK selecionado pelo `global.json` e build manual para que o caminho de extração não introduza um segundo contrato de compilação. O envio do SARIF desse workflow ao Code Scanning fica intencionalmente desabilitado enquanto o GitHub CodeQL Default Setup permanecer ativo, pois o GitHub não aceita uploads CodeQL de advanced setup simultaneamente ao default setup.
