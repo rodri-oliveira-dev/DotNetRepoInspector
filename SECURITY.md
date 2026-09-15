@@ -27,3 +27,14 @@ Before the first stable public release, security fixes target the current `main`
 DotNetRepoInspector inspects evaluated MSBuild metadata. **MSBuild evaluation is not a sandbox.** Only inspect untrusted repositories in an isolated, ephemeral, non-privileged environment that does not contain credentials or data the inspected repository must not access.
 
 The detailed collection scope, MSBuild trust model, GitHub Action permissions, environment hardening, logging rules, and sink credential guidance are documented in [`docs/en/security.md`](docs/en/security.md) and [`docs/pt-BR/security.md`](docs/pt-BR/security.md).
+
+## Automated repository security controls
+
+Repository changes are evaluated by complementary controls rather than a single scanner:
+
+- CodeQL performs semantic C# security analysis on pull requests, pushes to `main`, and a weekly schedule using the repository's normal Release build contract;
+- Dependency Review evaluates dependency changes introduced by pull requests and blocks high-severity vulnerable additions;
+- Dependabot keeps package, container, SDK, and workflow dependencies current according to the versioned repository policy;
+- CI, container validation, and package/release checks provide additional build and distribution safeguards.
+
+CodeQL uses least-privilege workflow permissions, SHA-pinned actions, the SDK selected by `global.json`, and a manual build so the analysis does not introduce a second compilation contract.
