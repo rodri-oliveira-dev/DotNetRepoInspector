@@ -32,9 +32,10 @@ The detailed collection scope, MSBuild trust model, GitHub Action permissions, e
 
 Repository changes are evaluated by complementary controls rather than a single scanner:
 
-- CodeQL performs semantic C# security analysis on pull requests, pushes to `main`, and a weekly schedule using the repository's normal Release build contract;
+- GitHub CodeQL default setup is the authoritative source of CodeQL alerts shown under **Security > Code scanning**;
+- the versioned `.github/workflows/codeql.yml` workflow independently verifies that C# can be extracted and analyzed using the repository's normal Release build contract, and retains its SARIF as a short-lived workflow artifact instead of uploading a competing CodeQL analysis;
 - Dependency Review evaluates dependency changes introduced by pull requests and blocks high-severity vulnerable additions;
 - Dependabot keeps package, container, SDK, and workflow dependencies current according to the versioned repository policy;
 - CI, container validation, and package/release checks provide additional build and distribution safeguards.
 
-CodeQL uses least-privilege workflow permissions, SHA-pinned actions, the SDK selected by `global.json`, and a manual build so the analysis does not introduce a second compilation contract.
+The versioned CodeQL workflow uses read-only repository permissions, SHA-pinned actions, the SDK selected by `global.json`, and a manual build so its extraction path does not introduce a second compilation contract. Its SARIF upload to Code Scanning is intentionally disabled while GitHub CodeQL default setup remains enabled, because GitHub does not accept advanced-setup CodeQL uploads concurrently with default setup.
