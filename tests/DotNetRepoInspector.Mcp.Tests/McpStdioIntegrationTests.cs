@@ -27,8 +27,17 @@ public sealed class McpStdioIntegrationTests
         Assert.Equal(McpProductInfo.ServerName, client.ServerInfo.Name);
         Assert.Equal(McpProductInfo.Version, client.ServerInfo.Version);
         Assert.NotNull(client.ServerCapabilities.Tools);
-        var tool = Assert.Single(tools);
-        Assert.Equal("inspect_repository", tool.Name);
+        Assert.Equal(
+            [
+                "get_project_details",
+                "get_project_reference_graph",
+                "get_repository_diagnostics",
+                "get_sdk_metadata",
+                "inspect_repository",
+                "list_projects"
+            ],
+            tools.Select(static tool => tool.Name).Order(StringComparer.Ordinal));
+        var tool = tools.Single(static candidate => candidate.Name == "inspect_repository");
         Assert.Contains("canonical", tool.Description, StringComparison.OrdinalIgnoreCase);
 
         var inputSchema = tool.ProtocolTool.InputSchema;
@@ -41,13 +50,195 @@ public sealed class McpStdioIntegrationTests
         Assert.False(inputSchema.GetProperty("additionalProperties").GetBoolean());
         Assert.NotNull(tool.ProtocolTool.OutputSchema);
 
+        foreach (var publishedTool in tools)
+        {
+            Assert.False(
+                publishedTool.ProtocolTool.InputSchema
+                    .GetProperty("additionalProperties")
+                    .GetBoolean());
+            Assert.NotNull(publishedTool.ProtocolTool.OutputSchema);
+        }
+
+        var detailsSchema = tools
+            .Single(static candidate => candidate.Name == "get_project_details")
+            .ProtocolTool.InputSchema;
+        Assert.Contains(
+            "projectPath",
+            detailsSchema.GetProperty("required").EnumerateArray()
+                .Select(static item => item.GetString()));
+
         Assert.Contains(
             standardError,
             static line => line.Contains("started", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
-    public async Task InspectRepository_RejectsUnknownInputProperties()
+    public async Task GranularTools_ReturnFocusedFactsEquivalentToEngine()
+    {
+        var fixturePath = FixturePath("ProjectKinds");
+        var standardError = new ConcurrentQueue<string>();
+        await using var client = await CreateClientAsync(
+            fixturePath,
+            standardError,
+            TestContext.Current.CancellationToken);
+        var expected = await new RepositoryInspector().InspectAsync(
+            new RepositoryInspectionRequest(fixturePath),
+            TestContext.Current.CancellationToken);
+
+        var projectsResult = await CallAsync(client, "list_projects");
+        var projectsData = SuccessData(projectsResult);
+        Assert.Equal(expected.SchemaVersion, projectsData.GetProperty("inspectionSchemaVersion").GetString());
+        Assert.Equal(expected.Projects.Count, projectsData.GetProperty("projects").GetArrayLength());
+        Assert.True(
+            projectsResult.StructuredContent!.Value.GetRawText().Length <
+            InspectionJsonSerializer.Serialize(expected).Length);
+
+        var projectPath = expected.Projects[0].Path;
+        var detailsResult = await client.CallToolAsync(
+            "get_project_details",
+            new Dictionary<string, object?> { ["projectPath"] = projectPath },
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Equal(
+            projectPath,
+            SuccessData(detailsResult).GetProperty("project").GetProperty("path").GetString());
+
+        var graphData = SuccessData(await CallAsync(client, "get_project_reference_graph"));
+        Assert.Equal(expected.Projects.Count, graphData.GetProperty("projects").GetArrayLength());
+
+        var diagnosticsData = SuccessData(await CallAsync(client, "get_repository_diagnostics"));
+        Assert.Equal(
+            expected.Diagnostics.Count + expected.Projects.Sum(static project => project.Diagnostics.Count),
+            diagnosticsData.GetProperty("diagnostics").GetArrayLength());
+
+        var sdkData = SuccessData(await CallAsync(client, "get_sdk_metadata"));
+        Assert.Equal(
+            expected.DotNetSdk.ResolvedVersion,
+            sdkData.GetProperty("dotNetSdk").GetProperty("resolvedVersion").GetString());
+    }
+
+    [Fact]
+    public async Task GranularTools_ReturnDeterministicEmptyCollectionsForEmptyRepository()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("EmptyRepository"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(0, SuccessData(await CallAsync(client, "list_projects"))
+            .GetProperty("projects").GetArrayLength());
+        Assert.Equal(0, SuccessData(await CallAsync(client, "get_project_reference_graph"))
+            .GetProperty("projects").GetArrayLength());
+        Assert.Equal(0, SuccessData(await CallAsync(client, "get_repository_diagnostics"))
+            .GetProperty("diagnostics").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task GetProjectDetails_ReturnsPredictableErrorsForMissingAndOutsideProjects()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("ProjectKinds"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        var missing = await client.CallToolAsync(
+            "get_project_details",
+            new Dictionary<string, object?> { ["projectPath"] = "Missing/Missing.csproj" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        AssertToolError(missing, "project_not_found");
+
+        var outside = await client.CallToolAsync(
+            "get_project_details",
+            new Dictionary<string, object?> { ["projectPath"] = "../Outside.csproj" },
+            cancellationToken: TestContext.Current.CancellationToken);
+        AssertToolError(outside, "path_outside_repository_root");
+    }
+
+    [Fact]
+    public async Task GetProjectDetails_RejectsMissingRequiredProjectPath()
+    {
+        var standardError = new ConcurrentQueue<string>();
+        await using var client = await CreateClientAsync(
+            FixturePath("EmptyRepository"),
+            standardError,
+            TestContext.Current.CancellationToken);
+
+        var result = await CallAsync(client, "get_project_details");
+
+        Assert.True(result.IsError);
+        Assert.Contains(
+            "projectPath",
+            string.Join(Environment.NewLine, standardError),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReferenceGraph_PreservesUnresolvedReferencesAsPartialResults()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("ProjectReferences/Unresolved"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        var data = SuccessData(await CallAsync(client, "get_project_reference_graph"));
+        var project = Assert.Single(data.GetProperty("projects").EnumerateArray());
+        Assert.Equal("Missing/Missing.csproj", Assert.Single(
+            project.GetProperty("references").EnumerateArray())
+            .GetProperty("path").GetString());
+        Assert.Equal(
+            InspectionDiagnosticCodes.ProjectReferenceUnresolved,
+            Assert.Single(project.GetProperty("diagnostics").EnumerateArray())
+                .GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task SdkAndDiagnosticsTools_PreserveMissingSdkAsPartialResult()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("Compatibility/MissingSdk"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        var sdkData = SuccessData(await CallAsync(client, "get_sdk_metadata"));
+        Assert.True(
+            sdkData.TryGetProperty("dotNetSdk", out var sdkMetadata),
+            sdkData.GetRawText());
+        Assert.False(sdkMetadata.TryGetProperty("resolvedVersion", out _));
+
+        var diagnostics = SuccessData(await CallAsync(client, "get_repository_diagnostics"))
+            .GetProperty("diagnostics").EnumerateArray().ToArray();
+        Assert.Contains(diagnostics, static item =>
+            item.GetProperty("diagnostic").GetProperty("code").GetString() ==
+            InspectionDiagnosticCodes.DotNetSdkUnavailable);
+    }
+
+    [Fact]
+    public async Task Server_PropagatesProtocolCancellationAndRemainsResponsive()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("ProjectKinds"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+        using var cancellationSource = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await client.CallToolAsync(
+                "inspect_repository",
+                new Dictionary<string, object?>(),
+                cancellationToken: cancellationSource.Token));
+
+        var tools = await client.ListToolsAsync(
+            cancellationToken: TestContext.Current.CancellationToken);
+        Assert.Contains(tools, static tool => tool.Name == "inspect_repository");
+    }
+
+    [Theory]
+    [InlineData("inspect_repository")]
+    [InlineData("list_projects")]
+    [InlineData("get_project_details")]
+    [InlineData("get_project_reference_graph")]
+    [InlineData("get_repository_diagnostics")]
+    [InlineData("get_sdk_metadata")]
+    public async Task Tools_RejectUnknownInputProperties(string toolName)
     {
         await using var client = await CreateClientAsync(
             FixturePath("EmptyRepository"),
@@ -55,7 +246,7 @@ public sealed class McpStdioIntegrationTests
             TestContext.Current.CancellationToken);
 
         var result = await client.CallToolAsync(
-            "inspect_repository",
+            toolName,
             new Dictionary<string, object?>
             {
                 ["command"] = "arbitrary-command"
@@ -71,9 +262,10 @@ public sealed class McpStdioIntegrationTests
     public async Task InspectRepository_ReturnsReportEquivalentToEngineForRealFixture()
     {
         var fixturePath = FixturePath("ProjectKinds");
+        var standardError = new ConcurrentQueue<string>();
         await using var client = await CreateClientAsync(
             fixturePath,
-            new ConcurrentQueue<string>(),
+            standardError,
             TestContext.Current.CancellationToken);
         var expected = await new RepositoryInspector().InspectAsync(
             new RepositoryInspectionRequest(fixturePath),
@@ -84,7 +276,11 @@ public sealed class McpStdioIntegrationTests
             new Dictionary<string, object?>(),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.False(result.IsError);
+        Assert.False(
+            result.IsError,
+            string.Join(
+                Environment.NewLine,
+                result.Content.Select(static content => content.ToString()).Concat(standardError)));
         Assert.NotNull(result.StructuredContent);
         var envelope = result.StructuredContent.Value;
         Assert.Equal("1.0", envelope.GetProperty("mcpSchemaVersion").GetString());
@@ -116,7 +312,7 @@ public sealed class McpStdioIntegrationTests
             new Dictionary<string, object?>(),
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.False(result.IsError);
+        Assert.False(result.IsError, string.Join(Environment.NewLine, result.Content));
         var reportJson = result.StructuredContent!.Value
             .GetProperty("data")
             .GetProperty("report")
@@ -125,6 +321,22 @@ public sealed class McpStdioIntegrationTests
         Assert.Contains(
             report.Projects.SelectMany(static project => project.Diagnostics),
             static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public async Task ListProjects_PreservesPartialProjectDiagnosticCounts()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath("InvalidProject"),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        var projects = SuccessData(await CallAsync(client, "list_projects"))
+            .GetProperty("projects").EnumerateArray().ToArray();
+
+        var project = Assert.Single(projects);
+        Assert.True(project.GetProperty("diagnosticCount").GetInt32() > 0);
+        Assert.True(project.GetProperty("errorCount").GetInt32() > 0);
     }
 
     [Fact]
@@ -180,6 +392,35 @@ public sealed class McpStdioIntegrationTests
         return await McpClient.CreateAsync(
             transport,
             cancellationToken: cancellationToken);
+    }
+
+    private static ValueTask<ModelContextProtocol.Protocol.CallToolResult> CallAsync(
+        McpClient client,
+        string toolName) =>
+        client.CallToolAsync(
+            toolName,
+            new Dictionary<string, object?>(),
+            cancellationToken: TestContext.Current.CancellationToken);
+
+    private static System.Text.Json.JsonElement SuccessData(
+        ModelContextProtocol.Protocol.CallToolResult result)
+    {
+        Assert.False(result.IsError, string.Join(Environment.NewLine, result.Content));
+        var envelope = result.StructuredContent!.Value;
+        Assert.Equal("1.0", envelope.GetProperty("mcpSchemaVersion").GetString());
+        Assert.True(envelope.GetProperty("ok").GetBoolean());
+        return envelope.GetProperty("data");
+    }
+
+    private static void AssertToolError(
+        ModelContextProtocol.Protocol.CallToolResult result,
+        string expectedCode)
+    {
+        Assert.True(result.IsError);
+        var envelope = result.StructuredContent!.Value;
+        Assert.False(envelope.GetProperty("ok").GetBoolean());
+        Assert.Equal(expectedCode, envelope.GetProperty("error").GetProperty("code").GetString());
+        Assert.DoesNotContain("stack", envelope.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
 
     private static Process StartServerProcess(string repositoryRoot)
