@@ -39,7 +39,7 @@ As convenções atuais de MCP/.NET importam para esta decisão porque o ecossist
 - Usar o pacote oficial do MCP C# SDK apropriado para hosting stdio (`ModelContextProtocol`) e `Microsoft.Extensions.Hosting`.
 - Usar stdio como único transporte do MVP via `.WithStdioServerTransport()`.
 - Registrar tools read-only a partir do assembly do adapter MCP.
-- Aceitar um repository root explícito no startup do servidor, por exemplo `--repository-root <path>`.
+- Aceitar um repository root explícito no startup do servidor por meio de `--root <path>`.
 - Resolver o root de startup para um caminho absoluto existente antes de servir qualquer tool.
 - Rejeitar entradas de tool que sejam caminhos absolutos, tentativas de path traversal, caminhos relativos malformados ou caminhos resolvidos fora do root de startup.
 - Propagar cancelamento da requisição MCP para `IRepositoryInspector.InspectAsync`.

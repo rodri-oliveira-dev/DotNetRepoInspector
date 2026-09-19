@@ -39,7 +39,7 @@ Current MCP/.NET packaging conventions matter to this decision because the ecosy
 - Use the official MCP C# SDK package appropriate for stdio hosting (`ModelContextProtocol`) and `Microsoft.Extensions.Hosting`.
 - Use stdio as the only MVP transport through `.WithStdioServerTransport()`.
 - Register read-only tools from the MCP adapter assembly.
-- Accept an explicit repository root at server startup, for example `--repository-root <path>`.
+- Accept an explicit repository root at server startup through `--root <path>`.
 - Resolve the startup root to an existing absolute path before serving any tool.
 - Reject tool inputs that are absolute paths, path traversal attempts, malformed relative paths, or paths resolving outside the startup root.
 - Propagate MCP request cancellation to `IRepositoryInspector.InspectAsync`.
