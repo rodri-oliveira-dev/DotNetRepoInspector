@@ -42,7 +42,9 @@ public static class McpApplication
 
         builder.Services.AddSingleton(parseResult.Options.RepositoryRoot);
         builder.Services.AddSingleton<IRepositoryInspector, RepositoryInspector>();
+        builder.Services.AddSingleton<RepositoryInspectionExecutor>();
         builder.Services.AddSingleton<InspectRepositoryHandler>();
+        builder.Services.AddSingleton<GranularRepositoryToolsHandler>();
         var toolJsonOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions)
         {
             UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow

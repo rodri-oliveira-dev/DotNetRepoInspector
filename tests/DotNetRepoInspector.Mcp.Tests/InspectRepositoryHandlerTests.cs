@@ -13,7 +13,7 @@ public sealed class InspectRepositoryHandlerTests
         var report = CreateReport();
         var inspector = StubInspector.Returning(report);
         var root = new RepositoryRoot(Path.GetFullPath("."));
-        var handler = new InspectRepositoryHandler(inspector, root);
+        var handler = CreateHandler(inspector, root);
 
         var result = await handler.ExecuteAsync(
             "config/settings.json",
@@ -50,7 +50,7 @@ public sealed class InspectRepositoryHandlerTests
     public async Task ExecuteAsync_RejectsPathsOutsideConfiguredRoot(string configurationPath)
     {
         var inspector = StubInspector.Returning(CreateReport());
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -75,7 +75,7 @@ public sealed class InspectRepositoryHandlerTests
     public async Task ExecuteAsync_RejectsAbsolutePathsOutsideConfiguredRoot()
     {
         var inspector = StubInspector.Returning(CreateReport());
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -100,7 +100,7 @@ public sealed class InspectRepositoryHandlerTests
     public async Task ExecuteAsync_RejectsExcludedPathOutsideConfiguredRoot()
     {
         var inspector = StubInspector.Returning(CreateReport());
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -125,7 +125,7 @@ public sealed class InspectRepositoryHandlerTests
     public async Task ExecuteAsync_RejectsClassificationOverrideOutsideConfiguredRoot()
     {
         var inspector = StubInspector.Returning(CreateReport());
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -155,7 +155,7 @@ public sealed class InspectRepositoryHandlerTests
         const string secret = "super-secret-token";
         var inspector = new StubInspector(
             static (_, _) => throw new IOException(secret));
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -182,7 +182,7 @@ public sealed class InspectRepositoryHandlerTests
             observedToken = cancellationToken;
             return Task.FromCanceled<InspectionReport>(cancellationToken);
         });
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
         using var cancellationSource = new CancellationTokenSource();
@@ -203,7 +203,7 @@ public sealed class InspectRepositoryHandlerTests
     public async Task ExecuteAsync_ReturnsInvalidInputForConflictingConfigurationOptions()
     {
         var inspector = StubInspector.Returning(CreateReport());
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
 
@@ -227,7 +227,7 @@ public sealed class InspectRepositoryHandlerTests
     [Fact]
     public async Task ExecuteAsync_PreservesMissingSdkAsEngineDiagnostics()
     {
-        var handler = new InspectRepositoryHandler(
+        var handler = CreateHandler(
             new RepositoryInspector(),
             new RepositoryRoot(FixturePath("Compatibility/MissingSdk")));
 
@@ -255,6 +255,11 @@ public sealed class InspectRepositoryHandlerTests
             new DotNetSdkMetadata("10.0.400", null, "10.0.401"),
             Array.Empty<ProjectInspection>(),
             Array.Empty<InspectionDiagnostic>());
+
+    private static InspectRepositoryHandler CreateHandler(
+        IRepositoryInspector inspector,
+        RepositoryRoot repositoryRoot) =>
+        new(new RepositoryInspectionExecutor(inspector, repositoryRoot));
 
     private static string FixturePath(string relativePath) =>
         Path.Combine(

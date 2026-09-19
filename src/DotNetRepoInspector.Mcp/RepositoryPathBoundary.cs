@@ -2,6 +2,14 @@ namespace DotNetRepoInspector.Mcp;
 
 internal static class RepositoryPathBoundary
 {
+    public static RepositoryPathValidationResult ValidateRelativeProjectPath(
+        RepositoryRoot repositoryRoot,
+        string? projectPath)
+    {
+        ArgumentNullException.ThrowIfNull(repositoryRoot);
+        return ValidateRelativePath(repositoryRoot.FullPath, projectPath);
+    }
+
     public static RepositoryPathValidationResult ValidateAndNormalize(
         RepositoryRoot repositoryRoot,
         string? configurationPath,

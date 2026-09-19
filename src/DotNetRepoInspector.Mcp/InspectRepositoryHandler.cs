@@ -1,8 +1,6 @@
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 using DotNetRepoInspector.Core.Contracts;
-using DotNetRepoInspector.Engine;
 
 using ModelContextProtocol.Protocol;
 
@@ -10,20 +8,13 @@ namespace DotNetRepoInspector.Mcp;
 
 public sealed class InspectRepositoryHandler
 {
-    private const string McpSchemaVersion = "1.0";
-
-    private readonly IRepositoryInspector _repositoryInspector;
-    private readonly RepositoryRoot _repositoryRoot;
+    private readonly RepositoryInspectionExecutor _executor;
 
     public InspectRepositoryHandler(
-        IRepositoryInspector repositoryInspector,
-        RepositoryRoot repositoryRoot)
+        RepositoryInspectionExecutor executor)
     {
-        ArgumentNullException.ThrowIfNull(repositoryInspector);
-        ArgumentNullException.ThrowIfNull(repositoryRoot);
-
-        _repositoryInspector = repositoryInspector;
-        _repositoryRoot = repositoryRoot;
+        ArgumentNullException.ThrowIfNull(executor);
+        _executor = executor;
     }
 
     public async Task<CallToolResult> ExecuteAsync(
@@ -33,45 +24,18 @@ public sealed class InspectRepositoryHandler
         IReadOnlyDictionary<string, string>? classificationOverrides,
         CancellationToken cancellationToken)
     {
-        var validation = RepositoryPathBoundary.ValidateAndNormalize(
-            _repositoryRoot,
+        var outcome = await _executor.ExecuteAsync(
             configurationPath,
             disableConfigurationFile,
             excludedPaths,
-            classificationOverrides);
-        if (!validation.Succeeded)
+            classificationOverrides,
+            cancellationToken);
+        if (!outcome.Succeeded)
         {
-            return CreateError(validation.ErrorCode!, validation.ErrorMessage!);
+            return CreateError(outcome.ErrorCode!, outcome.ErrorMessage!);
         }
 
-        try
-        {
-            var report = await _repositoryInspector.InspectAsync(
-                new RepositoryInspectionRequest(
-                    _repositoryRoot.FullPath,
-                    ConfigurationPath: validation.ConfigurationPath,
-                    DisableConfigurationFile: disableConfigurationFile,
-                    ExcludedPaths: validation.ExcludedPaths,
-                    ClassificationOverrides: validation.ClassificationOverrides),
-                cancellationToken);
-
-            return CreateSuccess(report);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception exception) when (
-            exception is ArgumentException or
-            IOException or
-            UnauthorizedAccessException or
-            InvalidOperationException or
-            NotSupportedException)
-        {
-            return CreateError(
-                "inspection_failed",
-                "Repository inspection failed before a report could be produced.");
-        }
+        return CreateSuccess(outcome.Report!);
     }
 
     private static CallToolResult CreateSuccess(InspectionReport report)
@@ -79,54 +43,14 @@ public sealed class InspectRepositoryHandler
         var reportNode = JsonNode.Parse(InspectionJsonSerializer.Serialize(report));
         var response = new JsonObject
         {
-            ["mcpSchemaVersion"] = McpSchemaVersion,
-            ["ok"] = true,
-            ["data"] = new JsonObject
-            {
-                ["report"] = reportNode
-            },
-            ["error"] = null
+            ["report"] = reportNode
         };
 
-        return CreateResult(response, isError: false);
+        return McpToolResults.Success(response);
     }
 
     internal static CallToolResult CreateError(string code, string message)
     {
-        var response = new JsonObject
-        {
-            ["mcpSchemaVersion"] = McpSchemaVersion,
-            ["ok"] = false,
-            ["data"] = null,
-            ["error"] = new JsonObject
-            {
-                ["code"] = code,
-                ["message"] = message,
-                ["details"] = new JsonObject()
-            }
-        };
-
-        return CreateResult(response, isError: true);
-    }
-
-    private static CallToolResult CreateResult(JsonNode response, bool isError)
-    {
-        var json = response.ToJsonString(new JsonSerializerOptions
-        {
-            WriteIndented = false
-        });
-
-        return new CallToolResult
-        {
-            IsError = isError,
-            StructuredContent = JsonSerializer.SerializeToElement(response),
-            Content =
-            [
-                new TextContentBlock
-                {
-                    Text = json
-                }
-            ]
-        };
+        return McpToolResults.Error(code, message);
     }
 }
