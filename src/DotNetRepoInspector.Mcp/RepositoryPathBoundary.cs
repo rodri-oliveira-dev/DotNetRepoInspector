@@ -7,7 +7,7 @@ internal static class RepositoryPathBoundary
         string? projectPath)
     {
         ArgumentNullException.ThrowIfNull(repositoryRoot);
-        return ValidateRelativePath(repositoryRoot.FullPath, projectPath);
+        return ValidateRelativePath(repositoryRoot.FullPath, projectPath, enforceFileSizeLimit: false);
     }
 
     public static RepositoryPathValidationResult ValidateAndNormalize(
@@ -26,10 +26,21 @@ internal static class RepositoryPathBoundary
                 "configurationPath cannot be combined with disableConfigurationFile.");
         }
 
+        if (excludedPaths?.Count > McpSecurityLimits.MaxExcludedPaths ||
+            classificationOverrides?.Count > McpSecurityLimits.MaxClassificationOverrides)
+        {
+            return RepositoryPathValidationResult.Failure(
+                "input_too_large",
+                "The tool request exceeds an input collection limit.");
+        }
+
         var normalizedConfigurationPath = configurationPath;
         if (configurationPath is not null)
         {
-            var result = ValidateRelativePath(repositoryRoot.FullPath, configurationPath);
+            var result = ValidateRelativePath(
+                repositoryRoot.FullPath,
+                configurationPath,
+                enforceFileSizeLimit: true);
             if (!result.Succeeded)
             {
                 return result;
@@ -37,11 +48,25 @@ internal static class RepositoryPathBoundary
 
             normalizedConfigurationPath = result.NormalizedPath;
         }
+        else if (!disableConfigurationFile)
+        {
+            var result = ValidateRelativePath(
+                repositoryRoot.FullPath,
+                ".dotnetrepoinspector.json",
+                enforceFileSizeLimit: true);
+            if (!result.Succeeded)
+            {
+                return result;
+            }
+        }
 
         var normalizedExcludedPaths = new List<string>();
         foreach (var path in excludedPaths ?? Array.Empty<string>())
         {
-            var result = ValidateRelativePath(repositoryRoot.FullPath, path);
+            var result = ValidateRelativePath(
+                repositoryRoot.FullPath,
+                path,
+                enforceFileSizeLimit: false);
             if (!result.Succeeded)
             {
                 return result;
@@ -54,7 +79,18 @@ internal static class RepositoryPathBoundary
         foreach (var pair in classificationOverrides ??
                  new Dictionary<string, string>(StringComparer.Ordinal))
         {
-            var result = ValidateRelativePath(repositoryRoot.FullPath, pair.Key);
+            if (string.IsNullOrWhiteSpace(pair.Value) ||
+                pair.Value.Length > McpSecurityLimits.MaxClassificationValueLength)
+            {
+                return RepositoryPathValidationResult.Failure(
+                    "invalid_tool_input",
+                    "Classification override values must be non-empty and within the supported length limit.");
+            }
+
+            var result = ValidateRelativePath(
+                repositoryRoot.FullPath,
+                pair.Key,
+                enforceFileSizeLimit: false);
             if (!result.Succeeded)
             {
                 return result;
@@ -71,7 +107,8 @@ internal static class RepositoryPathBoundary
 
     private static RepositoryPathValidationResult ValidateRelativePath(
         string repositoryRoot,
-        string? path)
+        string? path,
+        bool enforceFileSizeLimit)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -85,6 +122,13 @@ internal static class RepositoryPathBoundary
             return RepositoryPathValidationResult.Failure(
                 "path_outside_repository_root",
                 "Absolute paths are outside the configured repository boundary.");
+        }
+
+        if (path.Length > McpSecurityLimits.MaxRelativePathLength)
+        {
+            return RepositoryPathValidationResult.Failure(
+                "input_too_large",
+                "A repository-relative path exceeds the supported length limit.");
         }
 
         try
@@ -107,17 +151,65 @@ internal static class RepositoryPathBoundary
                     "The supplied path resolves outside the configured repository root.");
             }
 
+            var linkResult = ValidateNoLinks(repositoryRoot, relativePath);
+            if (!linkResult.Succeeded)
+            {
+                return linkResult;
+            }
+
+            if (enforceFileSizeLimit &&
+                File.Exists(fullPath) &&
+                new FileInfo(fullPath).Length > McpSecurityLimits.MaxConfigurationFileBytes)
+            {
+                return RepositoryPathValidationResult.Failure(
+                    "input_too_large",
+                    "The configuration file exceeds the supported size limit.");
+            }
+
             return RepositoryPathValidationResult.PathSuccess(relativePath.Replace('\\', '/'));
         }
         catch (Exception exception) when (
             exception is ArgumentException or
-            NotSupportedException or
-            PathTooLongException)
+            IOException or
+            UnauthorizedAccessException or
+            NotSupportedException)
         {
             return RepositoryPathValidationResult.Failure(
                 "invalid_tool_input",
                 "A supplied repository-relative path is invalid.");
         }
+    }
+
+    private static RepositoryPathValidationResult ValidateNoLinks(
+        string repositoryRoot,
+        string relativePath)
+    {
+        var currentPath = repositoryRoot;
+        foreach (var segment in relativePath.Split(
+                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+                     StringSplitOptions.RemoveEmptyEntries))
+        {
+            currentPath = Path.Combine(currentPath, segment);
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(currentPath);
+            }
+            catch (Exception exception) when (
+                exception is FileNotFoundException or DirectoryNotFoundException)
+            {
+                break;
+            }
+
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
+            {
+                return RepositoryPathValidationResult.Failure(
+                    "path_through_link",
+                    "Tool paths must not traverse symbolic links or junctions below the repository root.");
+            }
+        }
+
+        return RepositoryPathValidationResult.PathSuccess(relativePath.Replace('\\', '/'));
     }
 }
 

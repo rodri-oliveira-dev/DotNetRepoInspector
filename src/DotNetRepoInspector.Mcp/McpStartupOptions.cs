@@ -46,20 +46,23 @@ public sealed record McpStartupOptions(RepositoryRoot RepositoryRoot)
 
         try
         {
-            var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-            if (!Directory.Exists(normalizedRoot))
+            var fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+            if (!Directory.Exists(fullRoot))
             {
                 return McpStartupOptionsParseResult.Failure(
                     "The configured repository root does not exist or is not a directory.");
             }
+
+            var normalizedRoot = RepositoryRootCanonicalizer.NormalizeExistingDirectory(root);
 
             return McpStartupOptionsParseResult.Success(
                 new McpStartupOptions(new RepositoryRoot(normalizedRoot)));
         }
         catch (Exception exception) when (
             exception is ArgumentException or
-            NotSupportedException or
-            PathTooLongException)
+            IOException or
+            UnauthorizedAccessException or
+            NotSupportedException)
         {
             return McpStartupOptionsParseResult.Failure(
                 "The configured repository root is not a valid path.");

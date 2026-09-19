@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Engine;
 
@@ -52,6 +54,11 @@ public sealed class RepositoryInspectionExecutor
                     ClassificationOverrides: validation.ClassificationOverrides),
                 cancellationToken);
 
+            // Apply the canonical serializer's normalization and sensitive-context redaction
+            // before any granular MCP projection can serialize contract records directly.
+            report = InspectionJsonSerializer.Deserialize(
+                InspectionJsonSerializer.Serialize(report));
+
             return RepositoryInspectionOutcome.Success(report);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -61,6 +68,7 @@ public sealed class RepositoryInspectionExecutor
         catch (Exception exception) when (
             exception is ArgumentException or
             IOException or
+            JsonException or
             UnauthorizedAccessException or
             InvalidOperationException or
             NotSupportedException)

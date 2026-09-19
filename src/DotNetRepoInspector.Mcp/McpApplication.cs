@@ -21,6 +21,7 @@ public static class McpApplication
     {
         ArgumentNullException.ThrowIfNull(args);
 
+        McpProcessEnvironment.HardenCurrentProcess();
         standardError ??= Console.Error;
         var parseResult = McpStartupOptions.Parse(args);
         if (!parseResult.Succeeded || parseResult.Options is null)

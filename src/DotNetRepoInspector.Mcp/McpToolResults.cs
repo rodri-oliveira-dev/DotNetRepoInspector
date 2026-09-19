@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -46,6 +47,14 @@ internal static class McpToolResults
         {
             WriteIndented = false
         });
+
+        if (!isError &&
+            Encoding.UTF8.GetByteCount(json) > McpSecurityLimits.MaxToolResultUtf8Bytes)
+        {
+            return Error(
+                "result_too_large",
+                "The tool result exceeds the supported response size limit.");
+        }
 
         return new CallToolResult
         {

@@ -1,15 +1,15 @@
-using System.Diagnostics;
+using System.Collections;
 
-namespace DotNetRepoInspector.MSBuild;
+namespace DotNetRepoInspector.Mcp;
 
-internal static class SecureProcessEnvironment
+internal static class McpProcessEnvironment
 {
     private static readonly string[] SensitiveNameFragments =
     [
-        "ACCESSTOKEN",
-        "ACCESS_TOKEN",
         "ACCESSKEY",
         "ACCESS_KEY",
+        "ACCESSTOKEN",
+        "ACCESS_TOKEN",
         "APIKEY",
         "API_KEY",
         "AUTHORIZATION",
@@ -44,24 +44,19 @@ internal static class SecureProcessEnvironment
         ],
         StringComparer.OrdinalIgnoreCase);
 
-    public static void HardenDotNetProcess(ProcessStartInfo startInfo)
+    public static void HardenCurrentProcess()
     {
-        ArgumentNullException.ThrowIfNull(startInfo);
-
-        foreach (var name in startInfo.Environment.Keys.ToArray())
+        foreach (DictionaryEntry variable in Environment.GetEnvironmentVariables())
         {
-            if (IsSensitiveEnvironmentVariable(name))
+            var name = variable.Key.ToString();
+            if (name is not null && IsSensitiveName(name))
             {
-                startInfo.Environment.Remove(name);
+                Environment.SetEnvironmentVariable(name, null);
             }
         }
-
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "true";
-        startInfo.Environment["DOTNET_NOLOGO"] = "true";
-        startInfo.Environment["MSBUILDDISABLENODEREUSE"] = "1";
     }
 
-    private static bool IsSensitiveEnvironmentVariable(string name) =>
+    internal static bool IsSensitiveName(string name) =>
         SensitiveExactNames.Contains(name) ||
         SensitiveNameFragments.Any(fragment =>
             name.Contains(fragment, StringComparison.OrdinalIgnoreCase));
