@@ -192,6 +192,7 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         {
             FileName = _dotNetExecutable,
             WorkingDirectory = workingDirectory,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -210,6 +211,8 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         {
             throw new Win32Exception($"Unable to start '{_dotNetExecutable}'.");
         }
+
+        process.StandardInput.Close();
 
         var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var standardError = process.StandardError.ReadToEndAsync(cancellationToken);
