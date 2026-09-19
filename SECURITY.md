@@ -28,6 +28,8 @@ DotNetRepoInspector inspects evaluated MSBuild metadata. **MSBuild evaluation is
 
 The detailed collection scope, MSBuild trust model, GitHub Action permissions, environment hardening, logging rules, and sink credential guidance are documented in [`docs/en/security.md`](docs/en/security.md) and [`docs/pt-BR/security.md`](docs/pt-BR/security.md).
 
+The local MCP server's assets, trust boundaries, path/link policy, resource limits, mitigations, and residual risks are documented in the [`MCP threat model`](docs/en/architecture/mcp-threat-model.md) and its [Portuguese counterpart](docs/pt-BR/architecture/mcp-threat-model.md).
+
 ## Automated repository security controls
 
 Repository changes are evaluated by complementary controls rather than a single scanner:

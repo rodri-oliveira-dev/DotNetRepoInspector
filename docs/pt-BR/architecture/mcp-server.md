@@ -99,7 +99,9 @@ Uma falha esperada do adapter ou uma falha fatal do Engine define `isError` do M
 }
 ```
 
-Os códigos atuais de erro da tool são `invalid_tool_input`, `path_outside_repository_root` e `inspection_failed`. SDKs ausentes, projetos malformados, metadata Git indisponível e outras falhas recuperáveis de inspeção permanecem diagnósticos canônicos de `InspectionReport`. O cancelamento da requisição é nativo do protocolo: ele é propagado como cancelamento em vez de ser convertido em um envelope da tool.
+Os códigos atuais de erro da tool são `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large` e `inspection_failed`. Inputs são limitados a paths relativos de 1.024 caracteres, 256 exclusões, 256 classification overrides com valores de 128 caracteres e arquivos de configuração de 1 MiB. Resultados MCP bem-sucedidos são limitados a 8 MiB UTF-8. SDKs ausentes, projetos malformados, metadata Git indisponível e outras falhas recuperáveis de inspeção permanecem diagnósticos canônicos de `InspectionReport`. O cancelamento da requisição é nativo do protocolo: ele é propagado como cancelamento em vez de ser convertido em um envelope da tool.
+
+A justificativa completa de segurança e os riscos residuais estão no [threat model MCP](mcp-threat-model.md). Em particular, a fronteira do root limita argumentos das tools, mas não isola imports, property functions, SDK resolvers, processos filhos, acesso ao filesystem ou acesso à rede do MSBuild.
 
 ### Tools granulares
 

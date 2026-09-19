@@ -99,7 +99,9 @@ An expected adapter or fatal Engine failure sets MCP `isError` to `true`:
 }
 ```
 
-Current tool error codes are `invalid_tool_input`, `path_outside_repository_root`, and `inspection_failed`. Missing SDKs, malformed projects, unavailable Git metadata, and other recoverable inspection failures remain canonical `InspectionReport` diagnostics. Request cancellation is protocol-native: it propagates as cancellation instead of being converted to a tool envelope.
+Current tool error codes are `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large`, and `inspection_failed`. Inputs are bounded to 1,024-character relative paths, 256 exclusions, 256 classification overrides with 128-character values, and 1 MiB configuration files. Successful MCP results are limited to 8 MiB UTF-8. Missing SDKs, malformed projects, unavailable Git metadata, and other recoverable inspection failures remain canonical `InspectionReport` diagnostics. Request cancellation is protocol-native: it propagates as cancellation instead of being converted to a tool envelope.
+
+The complete security rationale and residual-risk statement are in the [MCP threat model](mcp-threat-model.md). In particular, the root boundary constrains tool arguments but does not sandbox MSBuild imports, property functions, SDK resolvers, child processes, filesystem access, or network access.
 
 ### Granular tools
 
