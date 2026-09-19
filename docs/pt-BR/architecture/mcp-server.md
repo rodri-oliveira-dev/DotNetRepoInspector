@@ -11,7 +11,7 @@
 - O startup exige exatamente um diretório de repositório existente por meio de `--root <path>` ou `--root=<path>`.
 - O root absoluto normalizado é imutável durante a vida do processo e constitui o escopo máximo do filesystem aceito nos argumentos de tools.
 - O servidor usa somente stdio e publica o nome `DotNetRepoInspector.Mcp` e a versão do assembly do produto durante a negociação MCP.
-- A única tool deste incremento é `inspect_repository`. Ela mapeia suas opções para o `RepositoryInspectionRequest` existente e retorna o `InspectionReport` canônico sem interpretação ou resumo.
+- O MVP publica `inspect_repository`, `list_projects`, `get_project_details`, `get_project_reference_graph`, `get_repository_diagnostics` e `get_sdk_metadata`. Cada tool mapeia opções para o `RepositoryInspectionRequest` existente; as tools granulares apenas projetam visões focadas a partir do `InspectionReport` canônico.
 - O cancelamento do cliente é propagado a `IRepositoryInspector.InspectAsync`. Fechar stdin encerra o servidor de forma graciosa.
 
 ### Requisitos não funcionais
@@ -24,7 +24,7 @@
 
 ## Plan
 
-O host executável é responsável pelo parsing de startup, validação do root, DI, metadata MCP, transporte stdio, logs em stderr e ciclo de vida do processo. `InspectRepositoryHandler` é responsável pela validação do adapter e mapeia a chamada da tool para `RepositoryInspectionRequest`. `RepositoryInspector` continua sendo o único orquestrador da inspeção e `InspectionJsonSerializer` continua sendo a fronteira de serialização canônica do report.
+O host executável é responsável pelo parsing de startup, validação do root, DI, metadata MCP, transporte stdio, logs em stderr e ciclo de vida do processo. `RepositoryInspectionExecutor` centraliza a validação do adapter e a chamada única a `IRepositoryInspector`; os handlers completo e granulares mapeiam seu resultado para os schemas declarados. `RepositoryInspector` continua sendo o único orquestrador da inspeção e `InspectionJsonSerializer` continua sendo a fronteira de serialização canônica do report completo.
 
 Os testes são divididos em testes rápidos do parser/handler e testes de protocolo no nível do processo. Os testes de protocolo iniciam o servidor compilado por meio do cliente do SDK C# oficial, negociam capabilities, listam tools, inspecionam repositórios fixture reais e comparam o report retornado com um resultado direto do Engine.
 
@@ -35,10 +35,12 @@ Os testes são divididos em testes rápidos do parser/handler e testes de protoc
 3. Implementar e testar a fronteira explícita de startup `--root`.
 4. Implementar `inspect_repository`, saída estruturada, falhas sanitizadas, validação de caminhos e propagação de cancelamento.
 5. Comprovar negociação do protocolo, discovery, execução de fixture, equivalência com o Engine, root inválido, diagnósticos, isolamento de stdout e ausência de regressão na CLI.
+6. Adicionar as cinco projeções granulares read-only com schemas fechados de entrada/saída e resultados vazios/parciais determinísticos.
+7. Exercitar cada tool do MVP por meio de um processo filho stdio real, incluindo entradas inválidas, projetos/SDKs ausentes, referências não resolvidas, cancelamento e shutdown.
 
 ## Implementation
 
-O host usa `ModelContextProtocol` 2.2.0 e `Microsoft.Extensions.Hosting` 10.0.12 por meio do Central Package Management. O projeto MCP referencia Core e Engine, enquanto Core e Engine não possuem dependência de MCP. Empacotamento e publicação continuam adiados para os itens de distribuição do roadmap.
+O host usa `ModelContextProtocol` 2.2.0 e `Microsoft.Extensions.Hosting` 10.0.12 por meio do Central Package Management. O projeto MCP referencia Core e Engine, enquanto Core e Engine não possuem dependência de MCP. A suíte de protocolo usa o cliente do SDK oficial para iniciar o executável do servidor e não exige rede, credenciais ou LLM. Empacotamento e publicação continuam adiados para os itens de distribuição do roadmap.
 
 Inicie o host ainda não empacotado a partir do output de build do repositório com um root explícito:
 
@@ -98,6 +100,20 @@ Uma falha esperada do adapter ou uma falha fatal do Engine define `isError` do M
 ```
 
 Os códigos atuais de erro da tool são `invalid_tool_input`, `path_outside_repository_root` e `inspection_failed`. SDKs ausentes, projetos malformados, metadata Git indisponível e outras falhas recuperáveis de inspeção permanecem diagnósticos canônicos de `InspectionReport`. O cancelamento da requisição é nativo do protocolo: ele é propagado como cancelamento em vez de ser convertido em um envelope da tool.
+
+### Tools granulares
+
+Todas as tools granulares aceitam as mesmas propriedades opcionais de inspeção de `inspect_repository`, rejeitam propriedades desconhecidas e retornam `data.inspectionSchemaVersion`. `get_project_details` exige adicionalmente um `projectPath` normalizado e relativo ao repositório; um projeto ausente retorna `project_not_found`.
+
+| Tool | Dados focados |
+| --- | --- |
+| `list_projects` | `projects` com path, name, target frameworks, classification e contagens de diagnósticos. |
+| `get_project_details` | Um `ProjectInspection` canônico em `project`. |
+| `get_project_reference_graph` | Paths de projetos, referências canônicas e diagnósticos de referências não resolvidas. |
+| `get_repository_diagnostics` | Diagnósticos de repositório e projeto com contexto anulável em `projectPath`. |
+| `get_sdk_metadata` | Fatos canônicos do SDK configurado e resolvido em `dotNetSdk`. |
+
+Um repositório vazio retorna arrays vazios. Condições recuperáveis, como SDK ausente, projeto malformado ou referência não resolvida, permanecem resultados parciais bem-sucedidos com diagnósticos canônicos. Falhas fatais de inspeção usam `inspection_failed`; o cancelamento é propagado pelo protocolo sem envelope de tool.
 
 ## Referências
 

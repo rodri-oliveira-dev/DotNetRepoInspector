@@ -139,8 +139,10 @@ O catálogo inicial de tools v1 é:
 | --- | --- | --- |
 | `inspect_repository` | Executar `IRepositoryInspector` para o root configurado e retornar o `InspectionReport` canônico completo. | #127 |
 | `list_projects` | Retornar um índice compacto de projetos derivado do mesmo relatório de inspeção: path, name, target frameworks, classification e contagens de diagnósticos. | #128 |
-| `get_project` | Retornar um `ProjectInspection` por caminho de projeto relativo ao repositório, derivado de um relatório de inspeção. | #128 |
-| `list_diagnostics` | Retornar diagnósticos de repositório e de projetos com o contexto de caminho do projeto. | #128 |
+| `get_project_details` | Retornar um `ProjectInspection` por caminho de projeto relativo ao repositório, derivado de um relatório de inspeção. | #128 |
+| `get_project_reference_graph` | Retornar arestas de referências entre projetos e diagnósticos de referências não resolvidas. | #128 |
+| `get_repository_diagnostics` | Retornar diagnósticos de repositório e de projetos com o contexto de caminho do projeto. | #128 |
+| `get_sdk_metadata` | Retornar metadata do .NET SDK configurado e resolvido. | #128 |
 
 Nenhum prompt ou resource faz parte do MVP. As tools são intencionalmente read-only e determinísticas; prompts no cliente podem decidir como usar os fatos, mas o servidor não pede que um modelo os interprete.
 
@@ -212,7 +214,7 @@ Saída de `list_projects`:
 }
 ```
 
-`get_project` adiciona uma entrada obrigatória:
+`get_project_details` adiciona uma entrada obrigatória:
 
 ```json
 {
@@ -222,7 +224,9 @@ Saída de `list_projects`:
 
 Sua saída contém um único `ProjectInspection` em `data.project`.
 
-Saída de `list_diagnostics`:
+`get_project_reference_graph` retorna `data.projects`, em que cada item contém o `path` do projeto, suas `references` canônicas e `diagnostics` de referências não resolvidas.
+
+Saída de `get_repository_diagnostics`:
 
 ```json
 {
@@ -239,6 +243,8 @@ Saída de `list_diagnostics`:
   }
 }
 ```
+
+`get_sdk_metadata` retorna o `DotNetSdkMetadata` canônico em `data.dotNetSdk`. Toda resposta granular também carrega `data.inspectionSchemaVersion`, permitindo que consumidores rastreiem os fatos projetados até o contrato versionado de `InspectionReport`. Inspeções vazias e parciais recuperáveis são resultados bem-sucedidos com coleções vazias, fatos de SDK anuláveis ou diagnósticos canônicos; não são erros do adapter.
 
 ### Versionamento e identidade do pacote
 

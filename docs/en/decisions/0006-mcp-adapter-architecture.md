@@ -139,8 +139,10 @@ The initial v1 tool catalog is:
 | --- | --- | --- |
 | `inspect_repository` | Run `IRepositoryInspector` for the configured root and return the full canonical `InspectionReport`. | #127 |
 | `list_projects` | Return a compact project index derived from the same inspection report: path, name, target frameworks, classification, and diagnostic counts. | #128 |
-| `get_project` | Return one `ProjectInspection` by repository-relative project path, derived from an inspection report. | #128 |
-| `list_diagnostics` | Return repository-level diagnostics and project diagnostics with their project path context. | #128 |
+| `get_project_details` | Return one `ProjectInspection` by repository-relative project path, derived from an inspection report. | #128 |
+| `get_project_reference_graph` | Return project-reference edges and unresolved-reference diagnostics. | #128 |
+| `get_repository_diagnostics` | Return repository-level diagnostics and project diagnostics with their project path context. | #128 |
+| `get_sdk_metadata` | Return configured and resolved .NET SDK metadata. | #128 |
 
 No prompts or resources are part of the MVP. Tools are intentionally read-only and deterministic; client-side prompts may decide how to use the facts, but the server does not ask a model to interpret them.
 
@@ -212,7 +214,7 @@ Common inspection options accepted by tools that run or derive from inspection:
 }
 ```
 
-`get_project` adds one required input:
+`get_project_details` adds one required input:
 
 ```json
 {
@@ -222,7 +224,9 @@ Common inspection options accepted by tools that run or derive from inspection:
 
 Its output contains a single `ProjectInspection` as `data.project`.
 
-`list_diagnostics` output:
+`get_project_reference_graph` returns `data.projects`, where each item contains a project `path`, its canonical `references`, and unresolved-reference `diagnostics`.
+
+`get_repository_diagnostics` output:
 
 ```json
 {
@@ -239,6 +243,8 @@ Its output contains a single `ProjectInspection` as `data.project`.
   }
 }
 ```
+
+`get_sdk_metadata` returns the canonical `DotNetSdkMetadata` as `data.dotNetSdk`. Every granular response also carries `data.inspectionSchemaVersion`, so consumers can trace projected facts to the versioned `InspectionReport` contract. Empty and recoverable partial inspections are successful results with empty collections, nullable SDK facts, or canonical diagnostics; they are not adapter errors.
 
 ### Versioning and package identity
 
