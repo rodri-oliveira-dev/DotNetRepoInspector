@@ -57,6 +57,10 @@ public sealed class McpStdioIntegrationTests
                     .GetProperty("additionalProperties")
                     .GetBoolean());
             Assert.NotNull(publishedTool.ProtocolTool.OutputSchema);
+            Assert.True(publishedTool.ProtocolTool.Annotations?.ReadOnlyHint);
+            Assert.False(publishedTool.ProtocolTool.Annotations?.DestructiveHint);
+            Assert.True(publishedTool.ProtocolTool.Annotations?.IdempotentHint);
+            Assert.False(publishedTool.ProtocolTool.Annotations?.OpenWorldHint);
         }
 
         var detailsSchema = tools
@@ -231,6 +235,31 @@ public sealed class McpStdioIntegrationTests
         Assert.Contains(tools, static tool => tool.Name == "inspect_repository");
     }
 
+    [Fact]
+    public async Task Server_DoesNotExposeInheritedSecretInProtocolOrStandardLogs()
+    {
+        const string secret = "mcp-security-secret-must-not-leak";
+        var standardError = new ConcurrentQueue<string>();
+        await using var client = await CreateClientAsync(
+            FixturePath("EmptyRepository"),
+            standardError,
+            TestContext.Current.CancellationToken,
+            new Dictionary<string, string?>
+            {
+                ["DRI_SECURITY_TEST_ACCESS_TOKEN"] = secret
+            });
+
+        var result = await CallAsync(client, "inspect_repository");
+
+        Assert.DoesNotContain(
+            secret,
+            result.StructuredContent!.Value.GetRawText(),
+            StringComparison.Ordinal);
+        Assert.DoesNotContain(
+            standardError,
+            line => line.Contains(secret, StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("inspect_repository")]
     [InlineData("list_projects")]
@@ -377,7 +406,8 @@ public sealed class McpStdioIntegrationTests
     private static async Task<McpClient> CreateClientAsync(
         string repositoryRoot,
         ConcurrentQueue<string> standardError,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IDictionary<string, string?>? environmentVariables = null)
     {
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
@@ -386,7 +416,8 @@ public sealed class McpStdioIntegrationTests
             Arguments = ["--root", repositoryRoot],
             WorkingDirectory = repositoryRoot,
             ShutdownTimeout = TimeSpan.FromSeconds(10),
-            StandardErrorLines = standardError.Enqueue
+            StandardErrorLines = standardError.Enqueue,
+            EnvironmentVariables = environmentVariables
         });
 
         return await McpClient.CreateAsync(

@@ -46,4 +46,42 @@ public sealed class McpStartupOptionsTests
         Assert.False(result.Succeeded);
         Assert.Contains("unknown", result.Error, StringComparison.OrdinalIgnoreCase);
     }
+
+    [Fact]
+    public void Parse_ResolvesSymbolicLinkRootToItsFinalTarget()
+    {
+        var target = Directory.CreateTempSubdirectory("DotNetRepoInspector-McpTarget-").FullName;
+        var parent = Directory.CreateTempSubdirectory("DotNetRepoInspector-McpLink-").FullName;
+        var link = Path.Combine(parent, "repository");
+
+        try
+        {
+            try
+            {
+                Directory.CreateSymbolicLink(link, target);
+            }
+            catch (Exception exception) when (
+                exception is IOException or UnauthorizedAccessException or NotSupportedException)
+            {
+                return;
+            }
+
+            var result = McpStartupOptions.Parse(["--root", link]);
+
+            Assert.True(result.Succeeded);
+            Assert.Equal(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(target)),
+                result.Options!.RepositoryRoot.FullPath);
+        }
+        finally
+        {
+            if (Directory.Exists(link))
+            {
+                Directory.Delete(link);
+            }
+
+            Directory.Delete(parent, recursive: true);
+            Directory.Delete(target, recursive: true);
+        }
+    }
 }
