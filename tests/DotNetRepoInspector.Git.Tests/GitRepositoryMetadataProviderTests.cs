@@ -42,7 +42,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(repositoryRoot, recursive: true);
+            TemporaryDirectory.Delete(repositoryRoot);
         }
     }
 
@@ -69,7 +69,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(repositoryRoot, recursive: true);
+            TemporaryDirectory.Delete(repositoryRoot);
         }
     }
 
@@ -96,7 +96,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(repositoryRoot, recursive: true);
+            TemporaryDirectory.Delete(repositoryRoot);
         }
     }
 
@@ -123,7 +123,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(directory, recursive: true);
+            TemporaryDirectory.Delete(directory);
         }
     }
 
@@ -145,7 +145,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(directory, recursive: true);
+            TemporaryDirectory.Delete(directory);
         }
     }
 
@@ -176,7 +176,7 @@ public sealed class GitRepositoryMetadataProviderTests
         }
         finally
         {
-            Directory.Delete(repositoryRoot, recursive: true);
+            TemporaryDirectory.Delete(repositoryRoot);
         }
     }
 

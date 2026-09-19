@@ -37,7 +37,7 @@ public static class InspectionJsonSerializer
         ValidateRequiredShape(report);
         ValidateVersion(report.SchemaVersion);
 
-        return JsonSerializer.Serialize(Normalize(report), _jsonOptions);
+        return NormalizeJsonNewLines(JsonSerializer.Serialize(Normalize(report), _jsonOptions));
     }
 
     public static InspectionReport Deserialize(string json)
@@ -170,6 +170,11 @@ public static class InspectionJsonSerializer
         path is null
             ? null
             : NormalizePath(path);
+
+    private static string NormalizeJsonNewLines(string json) =>
+        json
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
 
     private static void ValidateVersion(string schemaVersion)
     {
