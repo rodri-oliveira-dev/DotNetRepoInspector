@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
+    <SonarQubeTestProject>true</SonarQubeTestProject>
     <RootNamespace>DotNetRepoInspector.Mcp.Evals</RootNamespace>
     <AssemblyName>DotNetRepoInspector.Mcp.Evals</AssemblyName>
   </PropertyGroup>
