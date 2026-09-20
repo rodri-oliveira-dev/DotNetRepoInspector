@@ -34,20 +34,23 @@ $serverArgumentsPath = Join-Path $artifactsPath "dnx-server-arguments.json"
     "--"
 ) | ConvertTo-Json | Set-Content -LiteralPath $serverArgumentsPath -Encoding utf8
 
-& dotnet run `
-    --project ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj `
-    --configuration Release `
-    --no-build `
-    -- `
-    --server dnx `
-    --server-arguments-file $serverArgumentsPath `
-    --fixtures ./tests/Fixtures `
-    --dataset ./evals/DotNetRepoInspector.Mcp.Evals/Dataset/mcp-evals-v1.json `
-    --output (Join-Path $artifactsPath "evals") `
-    --client dnx-rc-controlled-feed `
-    --provider protocol `
-    --model deterministic-assertions `
-    --client-version $Version
+$fixtureEvalArguments = @(
+    "run",
+    "--project", "./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj",
+    "--configuration", "Release",
+    "--no-build",
+    "--",
+    "--server", "dnx",
+    "--server-arguments-file", $serverArgumentsPath,
+    "--fixtures", "./tests/Fixtures",
+    "--dataset", "./evals/DotNetRepoInspector.Mcp.Evals/Dataset/mcp-evals-v1.json",
+    "--output", (Join-Path $artifactsPath "evals"),
+    "--client", "dnx-rc-controlled-feed",
+    "--provider", "protocol",
+    "--model", "deterministic-assertions",
+    "--client-version", $Version
+)
+& dotnet @fixtureEvalArguments
 if ($LASTEXITCODE -ne 0) { throw "RC deterministic evals from the controlled feed failed." }
 
 $repositoryDatasetPath = Join-Path $artifactsPath "repository-smoke-dataset.json"
@@ -72,20 +75,23 @@ $repositoryDatasetPath = Join-Path $artifactsPath "repository-smoke-dataset.json
     )
 } | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $repositoryDatasetPath -Encoding utf8
 
-& dotnet run `
-    --project ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj `
-    --configuration Release `
-    --no-build `
-    -- `
-    --server dnx `
-    --server-arguments-file $serverArgumentsPath `
-    --fixtures . `
-    --dataset $repositoryDatasetPath `
-    --output (Join-Path $artifactsPath "repository") `
-    --client dnx-rc-controlled-feed `
-    --provider protocol `
-    --model deterministic-assertions `
-    --client-version $Version
+$repositoryEvalArguments = @(
+    "run",
+    "--project", "./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj",
+    "--configuration", "Release",
+    "--no-build",
+    "--",
+    "--server", "dnx",
+    "--server-arguments-file", $serverArgumentsPath,
+    "--fixtures", ".",
+    "--dataset", $repositoryDatasetPath,
+    "--output", (Join-Path $artifactsPath "repository"),
+    "--client", "dnx-rc-controlled-feed",
+    "--provider", "protocol",
+    "--model", "deterministic-assertions",
+    "--client-version", $Version
+)
+& dotnet @repositoryEvalArguments
 if ($LASTEXITCODE -ne 0) { throw "RC packaged-server repository smoke failed." }
 
 Write-Host "RC package validation, deterministic evals, and repository smoke passed for exact version $Version."

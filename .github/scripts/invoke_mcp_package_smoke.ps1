@@ -55,22 +55,26 @@ $serverArgumentsPath = Join-Path $artifactsFullPath "dnx-server-arguments.json"
     "--"
 ) | ConvertTo-Json | Set-Content -LiteralPath $serverArgumentsPath -Encoding utf8
 
+$evalArguments = @(
+    "run",
+    "--project", "./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj",
+    "--configuration", "Release",
+    "--no-build",
+    "--",
+    "--server", "dnx",
+    "--server-arguments-file", $serverArgumentsPath,
+    "--fixtures", $fixtureFullPath,
+    "--dataset", $datasetPath,
+    "--output", $artifactsFullPath,
+    "--client", "dnx-package-smoke",
+    "--provider", "protocol",
+    "--model", "deterministic-assertions",
+    "--client-version", $Version
+)
+
 for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
     Write-Host "Packaged MCP smoke attempt $attempt/$MaxAttempts from '$PackageSource'."
-    & dotnet run `
-        --project ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj `
-        --configuration Release `
-        --no-build `
-        -- `
-        --server dnx `
-        --server-arguments-file $serverArgumentsPath `
-        --fixtures $fixtureFullPath `
-        --dataset $datasetPath `
-        --output $artifactsFullPath `
-        --client dnx-package-smoke `
-        --provider protocol `
-        --model deterministic-assertions `
-        --client-version $Version
+    & dotnet @evalArguments
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "The exact MCP package version completed dnx resolution, stdio handshake, discovery, and inspect_repository."

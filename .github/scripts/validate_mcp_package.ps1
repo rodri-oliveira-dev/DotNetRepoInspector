@@ -149,19 +149,22 @@ if (-not (Test-Path -LiteralPath $toolExecutable -PathType Leaf)) {
     -ArtifactsDirectory (Join-Path $artifactsFullPath "dnx")
 
 $installedSmokeDirectory = Join-Path $artifactsFullPath "installed-tool-smoke"
-& dotnet run `
-    --project ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj `
-    --configuration Release `
-    --no-build `
-    -- `
-    --server $toolExecutable `
-    --fixtures $fixtureFullPath `
-    --dataset (Join-Path $artifactsFullPath "dnx/package-smoke-dataset.json") `
-    --output $installedSmokeDirectory `
-    --client installed-tool-package-smoke `
-    --provider protocol `
-    --model deterministic-assertions `
-    --client-version $Version
+$installedToolArguments = @(
+    "run",
+    "--project", "./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj",
+    "--configuration", "Release",
+    "--no-build",
+    "--",
+    "--server", $toolExecutable,
+    "--fixtures", $fixtureFullPath,
+    "--dataset", (Join-Path $artifactsFullPath "dnx/package-smoke-dataset.json"),
+    "--output", $installedSmokeDirectory,
+    "--client", "installed-tool-package-smoke",
+    "--provider", "protocol",
+    "--model", "deterministic-assertions",
+    "--client-version", $Version
+)
+& dotnet @installedToolArguments
 if ($LASTEXITCODE -ne 0) { throw "Installed MCP dotnet tool smoke failed." }
 
 Write-Host "MCP package metadata, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."
