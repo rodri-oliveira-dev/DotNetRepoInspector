@@ -18,6 +18,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`releases.md`](releases.md) — Semantic Versioning, compatibilidade de schema, publicação protegida, artifacts, tags e provenance.
 - [`v1-release-readiness.md`](v1-release-readiness.md) — baseline pública da v1.0.0, gate automatizado de readiness, checklist da primeira publicação e verificação pós-release.
 - [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
+- [`mcp-agent-compatibility.md`](mcp-agent-compatibility.md) — matriz de compatibilidade de clientes MCP, smoke tests e evals determinísticos.
 - [`performance.md`](performance.md) — baseline sintética para repositórios grandes, hotspots medidos e guardrails de regressão.
 - [`real-repository-validation.md`](real-repository-validation.md) — harness de validação com repositórios públicos fixados por commit e política de reprodução de bugs.
 - [`project-reference-graph.md`](project-reference-graph.md) — semântica normalizada do grafo de `ProjectReference`.
