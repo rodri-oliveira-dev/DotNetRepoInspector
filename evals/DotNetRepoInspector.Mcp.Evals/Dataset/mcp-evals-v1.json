@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "id": "dotnet-repo-inspector-mcp-evals-v1",
+  "description": "Deterministic MCP eval dataset derived from synthetic fixtures and InspectionReport projections.",
+  "cases": [
+    {
+      "id": "tfm-project-index",
+      "question": "Which target frameworks are configured by the projects in this repository?",
+      "fixturePath": "ProjectKinds",
+      "expectedTool": "list_projects",
+      "assertions": [
+        {
+          "kind": "project_target_frameworks",
+          "projectPath": "Web/Web.csproj",
+          "values": [ "net10.0" ]
+        },
+        {
+          "kind": "project_target_frameworks",
+          "projectPath": "MultiTargeting/MultiTargeting.csproj",
+          "values": [ "net8.0", "net10.0" ]
+        }
+      ]
+    },
+    {
+      "id": "classification-project-kinds",
+      "question": "Classify the discovered projects by deterministic project kind.",
+      "fixturePath": "ProjectKinds",
+      "expectedTool": "list_projects",
+      "assertions": [
+        {
+          "kind": "project_classification",
+          "projectPath": "Web/Web.csproj",
+          "value": "web"
+        },
+        {
+          "kind": "project_classification",
+          "projectPath": "Worker/Worker.csproj",
+          "value": "worker"
+        },
+        {
+          "kind": "project_classification",
+          "projectPath": "Console/Console.csproj",
+          "value": "console"
+        },
+        {
+          "kind": "project_classification",
+          "projectPath": "Library/Library.csproj",
+          "value": "library"
+        },
+        {
+          "kind": "project_classification",
+          "projectPath": "Test/Test.csproj",
+          "value": "test"
+        }
+      ]
+    },
+    {
+      "id": "dependency-fan-out",
+      "question": "What project references does A declare?",
+      "fixturePath": "ProjectReferences/FanOut",
+      "expectedTool": "get_project_reference_graph",
+      "assertions": [
+        {
+          "kind": "project_reference",
+          "projectPath": "A/A.csproj",
+          "values": [ "B/B.csproj", "C/C.csproj" ]
+        }
+      ]
+    },
+    {
+      "id": "diagnostics-missing-sdk",
+      "question": "Identify repository diagnostics for an unavailable configured SDK.",
+      "fixturePath": "Compatibility/MissingSdk",
+      "expectedTool": "get_repository_diagnostics",
+      "assertions": [
+        {
+          "kind": "diagnostic_code",
+          "value": "DRI1002"
+        }
+      ]
+    },
+    {
+      "id": "diagnostics-unresolved-reference",
+      "question": "Find diagnostics caused by unresolved project references.",
+      "fixturePath": "ProjectReferences/Unresolved",
+      "expectedTool": "get_project_reference_graph",
+      "assertions": [
+        {
+          "kind": "project_reference",
+          "projectPath": "App/App.csproj",
+          "values": [ "Missing/Missing.csproj" ]
+        },
+        {
+          "kind": "diagnostic_code",
+          "value": "DRI1003"
+        }
+      ]
+    },
+    {
+      "id": "graph-chain-interpretation",
+      "question": "Interpret the project reference chain from A to C.",
+      "fixturePath": "ProjectReferences/Chain",
+      "expectedTool": "get_project_reference_graph",
+      "assertions": [
+        {
+          "kind": "project_reference",
+          "projectPath": "A/A.csproj",
+          "values": [ "B/B.csproj" ]
+        },
+        {
+          "kind": "project_reference",
+          "projectPath": "B/B.csproj",
+          "values": [ "C/C.csproj" ]
+        }
+      ]
+    },
+    {
+      "id": "sdk-metadata-global-json",
+      "question": "Which configured .NET SDK version is declared by global.json?",
+      "fixturePath": "Sdk/WithGlobalJson",
+      "expectedTool": "get_sdk_metadata",
+      "assertions": [
+        {
+          "kind": "sdk_configured_version",
+          "value": "10.0.100"
+        }
+      ]
+    }
+  ]
+}

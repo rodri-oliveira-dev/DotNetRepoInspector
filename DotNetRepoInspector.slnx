@@ -23,4 +23,7 @@
     <Project Path="benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj" />
     <Project Path="benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj" />
   </Folder>
+  <Folder Name="/evals/">
+    <Project Path="evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj" />
+  </Folder>
 </Solution>
