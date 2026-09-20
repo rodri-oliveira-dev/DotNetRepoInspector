@@ -21,6 +21,20 @@
     "transport": "stdio",
     "publicationStatus": "release-ready",
     "publicationIssue": 136,
+    "releaseCandidate": {
+      "version": "1.2.0-rc.1",
+      "status": "blocked",
+      "readinessIssue": 137,
+      "evidence": "docs/en/mcp-release-candidate.md",
+      "blockingIssues": [
+        106,
+        133,
+        139
+      ],
+      "externalBlockers": [
+        "nuget-trusted-publishing-policy"
+      ]
+    },
     "requiredControls": [
       "explicit-root",
       "read-only-tools",
@@ -41,6 +55,8 @@
     "docs/en/releases.md",
     "docs/pt-BR/releases.md",
     "docs/en/v1-release-readiness.md",
-    "docs/pt-BR/v1-release-readiness.md"
+    "docs/pt-BR/v1-release-readiness.md",
+    "docs/en/mcp-release-candidate.md",
+    "docs/pt-BR/mcp-release-candidate.md"
   ]
 }

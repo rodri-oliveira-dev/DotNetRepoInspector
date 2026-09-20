@@ -20,6 +20,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
 - [`mcp.md`](mcp.md) — instalação do MCP, inicialização stdio, configuração de clientes, catálogo de tools, segurança, exemplos e troubleshooting.
 - [`mcp-agent-compatibility.md`](mcp-agent-compatibility.md) — matriz de compatibilidade de clientes MCP, smoke tests e evals determinísticos.
+- [`mcp-release-candidate.md`](mcp-release-candidate.md) — gates, findings, evidências e bloqueios para GA do release candidate MCP.
 - [`performance.md`](performance.md) — baseline sintética para repositórios grandes, hotspots medidos e guardrails de regressão.
 - [`real-repository-validation.md`](real-repository-validation.md) — harness de validação com repositórios públicos fixados por commit e política de reprodução de bugs.
 - [`project-reference-graph.md`](project-reference-graph.md) — semântica normalizada do grafo de `ProjectReference`.

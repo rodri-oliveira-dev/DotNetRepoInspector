@@ -132,6 +132,35 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void McpReleaseCandidate_RecordsVersionAndUnresolvedPromotionGates()
+    {
+        JsonElement releaseCandidate = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("releaseCandidate");
+
+        Assert.Equal("1.2.0-rc.1", RequiredString(releaseCandidate, "version"));
+        Assert.Equal("blocked", RequiredString(releaseCandidate, "status"));
+        Assert.Equal(137, releaseCandidate.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            "docs/en/mcp-release-candidate.md",
+            RequiredString(releaseCandidate, "evidence"));
+
+        int[] blockingIssues = releaseCandidate
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Equal([106, 133, 139], blockingIssues);
+
+        string[] externalBlockers = releaseCandidate
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
@@ -175,6 +204,7 @@ public sealed class ReleaseReadinessTests
             "release.yml"));
 
         Assert.Contains("validate_mcp_package.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("validate_mcp_rc.ps1", workflow, StringComparison.Ordinal);
         Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg", workflow, StringComparison.Ordinal);
         Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg", workflow, StringComparison.Ordinal);
         Assert.Contains("invoke_mcp_package_smoke.ps1", workflow, StringComparison.Ordinal);

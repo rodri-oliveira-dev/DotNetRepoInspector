@@ -21,6 +21,7 @@ on:
       - .github/scripts/validate_tool_package.ps1
       - .github/scripts/validate_mcp_package.ps1
       - .github/scripts/invoke_mcp_package_smoke.ps1
+      - .github/scripts/validate_mcp_rc.ps1
       - action.yml
       - README.md
       - README.pt-BR.md
