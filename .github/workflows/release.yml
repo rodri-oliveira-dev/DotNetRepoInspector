@@ -13,7 +13,10 @@ on:
       - .github/workflows/release.yml
       - .github/release.yml
       - .github/release-readiness-v1.json
+      - DotNetRepoInspector.slnx
+      - Directory.Packages.props
       - .github/scripts/container_release.sh
+      - .github/scripts/coverage_summary.py
       - .github/scripts/release_metadata.py
       - .github/scripts/validate_tool_package.ps1
       - action.yml
@@ -24,7 +27,9 @@ on:
       - docs/pt-BR/v1-release-readiness.md
       - src/DotNetRepoInspector.Core/Contracts/InspectionSchema.cs
       - src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+      - src/DotNetRepoInspector.Mcp/**
       - tests/DotNetRepoInspector.Cli.Tests/ReleaseReadinessTests.cs
+      - tests/DotNetRepoInspector.Mcp.Tests/**
   workflow_dispatch:
     inputs:
       version:

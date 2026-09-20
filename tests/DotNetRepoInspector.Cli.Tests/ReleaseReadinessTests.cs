@@ -100,6 +100,33 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void V1Baseline_RecognizesMcpAsPlannedPublishableArtifact()
+    {
+        JsonElement mcp = LoadBaseline().GetProperty("mcp");
+        string projectPath = RequiredString(mcp, "project");
+        XDocument project = XDocument.Load(Path.Combine(
+            RepositoryRoot,
+            projectPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("DotNetRepoInspector.Mcp", RequiredString(mcp, "packageId"));
+        Assert.Equal(RequiredString(mcp, "packageId"), ProjectProperty(project, "PackageId"));
+        Assert.Equal("net10.0", ProjectProperty(project, "TargetFramework"));
+        Assert.Equal("false", ProjectProperty(project, "IsPackable"));
+        Assert.Equal("dotnet-repo-inspector-mcp", RequiredString(mcp, "toolCommandName"));
+        Assert.Equal("stdio", RequiredString(mcp, "transport"));
+        Assert.Equal("planned", RequiredString(mcp, "publicationStatus"));
+        Assert.Equal(135, mcp.GetProperty("publicationIssue").GetInt32());
+
+        var controls = mcp.GetProperty("requiredControls")
+            .EnumerateArray()
+            .Select(static item => item.GetString())
+            .ToArray();
+        Assert.Contains("hermetic-e2e", controls);
+        Assert.Contains("security-tests", controls);
+        Assert.Contains("performance-baseline", controls);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
