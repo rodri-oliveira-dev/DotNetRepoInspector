@@ -14,6 +14,8 @@ Este documento **não** significa que a `v1.0.0` já foi publicada. Até o workf
 | Schema de inspeção | `1.3` (major `1`) |
 | Pacote NuGet | `DotNetRepoInspector` |
 | Comando da .NET Tool | `dotnet-repo-inspect` / `dotnet repo-inspect` |
+| Pacote NuGet MCP | `DotNetRepoInspector.Mcp` (`DotnetTool`, `McpServer`) |
+| Comando da Tool MCP | `dotnet-repo-inspector-mcp` / `dnx DotNetRepoInspector.Mcp@<version>` |
 | Runtime da Tool | `net10.0` |
 | Alias estável da GitHub Action | `v1` |
 | Tag imutável da GitHub Action | `v1.0.0` |
@@ -22,7 +24,7 @@ Este documento **não** significa que a `v1.0.0` já foi publicada. Até o workf
 
 A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. Testes do repositório comparam essa baseline com `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
 
-O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como artefato publicável planejado, com controles de stdio, limite de root, read-only, E2E hermético, segurança e performance. Seu projeto permanece intencionalmente com `IsPackable=false`; metadata do pacote e publicação ficam adiadas para a issue #135 e para o trabalho posterior do release protegido.
+O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como pacote framework-dependent pronto para release, com controles de stdio, root explícito, read-only, E2E hermético, segurança, performance, `McpServer`, `.mcp/server.json` embutido, símbolos e smoke da tool empacotada. Readiness de release não significa que o pacote já foi publicado.
 
 ## Contrato público incluído na v1
 
@@ -66,7 +68,8 @@ O gate verifica:
 4. o projeto da CLI continua sendo uma .NET Tool empacotável com package ID, comando, target framework, licença, README e repository URL esperados;
 5. o exemplo canônico de schema anuncia o mesmo `schemaVersion`;
 6. arquivos obrigatórios de licença, segurança, contribuição, conduta, templates de issue/PR e documentação de releases existem;
-7. os READMEs públicos não contêm mais mensagens pré-v1 que descrevam o schema como hipotético ou não definitivo.
+7. o projeto MCP permanece uma .NET Tool e `McpServer` empacotável com identidade, comando, manifesto e estratégia framework-dependent esperados;
+8. os READMEs públicos não contêm mais mensagens pré-v1 que descrevam o schema como hipotético ou não definitivo.
 
 Esse gate não valida configurações externas das contas GitHub/NuGet.org; elas permanecem como pré-requisitos administrativos.
 
@@ -79,6 +82,7 @@ Antes de iniciar a release oficial, confirme na `main`:
 - build/analyzers possuem zero warnings e erros;
 - a suíte completa de testes passa;
 - a validação do pacote instala o `DotNetRepoInspector.1.0.0.nupkg` exato global e localmente e verifica `--help`, `--version` e uma inspeção real;
+- a validação MCP inspeciona `.nupkg`/`.snupkg` exatos, instala a tool, resolve por `dnx` com fonte local e executa uma chamada stdio real de `inspect_repository`;
 - o release candidate contém `release-manifest.json` e `SHA256SUMS`;
 - o manifest aponta para o commit exato da release e informa schema `1.3`;
 - smoke tests da GitHub Action e de compatibilidade estão verdes em Ubuntu, Windows e macOS.
@@ -92,8 +96,8 @@ Estes passos ficam intencionalmente fora do código do repositório e devem ser 
 1. Criar um GitHub Environment `release` protegido.
 2. Exigir aprovação nesse environment e restringir deployment à `main` conforme apropriado para o repositório.
 3. Definir `NUGET_USER` como variável do repositório/environment com a conta NuGet.org usada na publicação.
-4. No NuGet.org, configurar **Trusted Publishing** para o pacote `DotNetRepoInspector`, este repositório GitHub, `.github/workflows/release.yml` e, preferencialmente, o environment `release`.
-5. Confirmar que o package ID está disponível/pertence à conta NuGet pretendida antes da primeira publicação.
+4. No NuGet.org, configurar **Trusted Publishing** para `DotNetRepoInspector` e `DotNetRepoInspector.Mcp`, owner `rodri-oliveira-dev`, repositório `DotNetRepoInspector`, arquivo de workflow `release.yml` e, preferencialmente, environment `release`.
+5. Confirmar que ambos os package IDs, especialmente o novo `DotNetRepoInspector.Mcp`, estão disponíveis/pertencem à conta NuGet pretendida antes da primeira publicação.
 
 Nenhuma API key NuGet de longa duração deve ser adicionada ao GitHub Secrets. O workflow usa OIDC/Trusted Publishing.
 
@@ -116,6 +120,7 @@ Depois que o workflow terminar com sucesso, valide independentemente:
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.0.0
 dotnet repo-inspect --version
+dnx DotNetRepoInspector.Mcp@1.0.0 --yes -- --root /caminho/absoluto/para/o/repositorio
 ```
 
 A versão exibida deve ser `1.0.0`.

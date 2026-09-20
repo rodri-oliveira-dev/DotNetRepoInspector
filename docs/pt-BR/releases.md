@@ -2,7 +2,7 @@
 
 **Idiomas:** [English](../en/releases.md) | Português (Brasil)
 
-O DotNetRepoInspector usa uma única versão de produto para a .NET Tool e para a GitHub Action reutilizável. A publicação oficial é deliberadamente separada do CI normal e acontece somente pelo workflow protegido `Release`.
+O DotNetRepoInspector usa uma única versão de produto para a .NET Tool da CLI, o pacote do servidor MCP e a GitHub Action reutilizável. A publicação oficial é deliberadamente separada do CI normal e acontece somente pelo workflow protegido `Release`.
 
 ## Versão do produto
 
@@ -46,6 +46,8 @@ Consumidores que priorizam conveniência podem usar `@v1`; quem prioriza máxima
 Todo build de release produz o mesmo conjunto validado antes da publicação:
 
 - `DotNetRepoInspector.<version>.nupkg`;
+- `DotNetRepoInspector.Mcp.<version>.nupkg`;
+- `DotNetRepoInspector.Mcp.<version>.snupkg`;
 - `release-manifest.json`;
 - `SHA256SUMS`.
 
@@ -54,10 +56,10 @@ O manifest registra:
 - versão do produto e tag imutável;
 - SHA completo de 40 caracteres do commit de origem;
 - `schemaVersion` observado em uma inspeção real feita pela Tool empacotada;
-- SHA-256 do `.nupkg`;
+- SHA-256 de cada artifact de pacote CLI/MCP;
 - aliases da Action elegíveis para movimentação naquela versão.
 
-O build passa o pacote pelo validador existente da .NET Tool, incluindo metadata/conteúdo, instalação global e local, `--help`, `--version` e inspeção real de repositório. Portanto, o pacote é validado antes de poder entrar no job de publicação.
+O build passa a CLI pelo validador existente da .NET Tool. O validador MCP verifica os dois package types, `.mcp/server.json`, metadata, símbolos, dependências runtime incorporadas, ausência de secrets/dependências de projetos privados, instalação isolada da tool, resolução da versão exata via `dnx`, handshake stdio, discovery e uma chamada real empacotada de `inspect_repository`. Ambos os pacotes são validados antes de poderem entrar no job de publicação.
 
 ## Pull requests normais
 
@@ -75,7 +77,7 @@ Antes da primeira release oficial, mantenedores devem configurar um GitHub Envir
 2. restringir branches/tags de deployment para que a publicação seja iniciada somente a partir da `main`;
 3. definir a variável de environment/repositório `NUGET_USER` com o nome da conta NuGet.org usada pelo Trusted Publishing.
 
-O NuGet.org também deve possuir uma policy de Trusted Publishing para o pacote `DotNetRepoInspector` confiando neste repositório, no workflow `release.yml` e, preferencialmente, no environment `release`.
+O NuGet.org deve possuir policies/escopos de Trusted Publishing para `DotNetRepoInspector` e `DotNetRepoInspector.Mcp` confiando no owner `rodri-oliveira-dev`, repositório `DotNetRepoInspector`, arquivo de workflow `release.yml` e, preferencialmente, environment `release`. Um maintainer deve confirmar que o novo package ID está disponível ou pertence à conta antes da publicação.
 
 Nenhuma API key de longa duração do NuGet pertence a GitHub Secrets. O job de publicação solicita uma identidade OIDC e `NuGet/login` a troca por uma API key temporária.
 
@@ -97,12 +99,13 @@ O workflow deriva automaticamente a tag imutável da release prefixando a versã
 O job protegido ordena deliberadamente as operações irreversíveis:
 
 1. baixa e verifica novamente o artifact exato produzido pelo job de build;
-2. gera provenance GitHub/SLSA para pacote, manifest e arquivo de checksums;
+2. gera provenance GitHub/SLSA para pacotes CLI/MCP, símbolos MCP, manifest e arquivo de checksums;
 3. cria ou retoma uma GitHub Release em **draft** para a tag completa imutável e anexa os artifacts;
 4. autentica no NuGet.org via Trusted Publishing/OIDC;
-5. publica o `.nupkg` exato com comportamento seguro para duplicidade;
-6. publica a GitHub Release;
-7. somente em releases estáveis, move `v<major>` e `v<major>.<minor>` para o commit da release.
+5. publica os dois `.nupkg` exatos com comportamento seguro para duplicidade;
+6. resolve a versão MCP exata do NuGet.org por `dnx` e exige sucesso de handshake, discovery e `inspect_repository`;
+7. publica a GitHub Release;
+8. somente em releases estáveis, move `v<major>` e `v<major>.<minor>` para o commit da release.
 
 Essa ordem impede que um alias estável da Action aponte para uma release cujo pacote NuGet não tenha sido publicado com sucesso.
 

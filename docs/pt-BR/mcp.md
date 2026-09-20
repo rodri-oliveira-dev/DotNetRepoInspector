@@ -75,7 +75,26 @@ Argumentos de startup inválidos retornam exit code `2`. Exatamente um `--root <
 
 ### Estado da distribuição e `dnx`
 
-`DotNetRepoInspector.Mcp` possui atualmente `IsPackable=false`. Não há manifesto de pacote `.mcp/server.json` e o pacote não foi publicado no NuGet.org. Portanto, não existe hoje um comando suportado `dnx DotNetRepoInspector.Mcp`. Empacotamento NuGet, metadata de pacote `McpServer`, smoke tests via `dnx` e publicação protegida pertencem às issues #135 e #136 do roadmap. Até sua implementação, use o comando de build local acima.
+`DotNetRepoInspector.Mcp` é uma .NET Tool framework-dependent com package ID `DotNetRepoInspector.Mcp`, comando `dotnet-repo-inspector-mcp`, package types `DotnetTool` e `McpServer`, símbolos e `.mcp/server.json` embutido. O manifesto declara stdio e exige o filepath `--root`; não contém input nem valor de credencial.
+
+O workflow protegido empacota e valida uma versão exata em lockstep com o produto. A partir de uma fonte local controlada:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.0.0 \
+  --source /caminho/absoluto/para/pacotes \
+  --yes -- \
+  --root /caminho/absoluto/para/o/repositorio
+```
+
+O mesmo pacote pode ser instalado convencionalmente:
+
+```bash
+dotnet tool install --tool-path ./tools DotNetRepoInspector.Mcp \
+  --version 1.0.0 --add-source /caminho/absoluto/para/pacotes
+./tools/dotnet-repo-inspector-mcp --root /caminho/absoluto/para/o/repositorio
+```
+
+O pacote ainda não foi publicado no NuGet.org. O comando `dnx` público só se torna consumível depois que o workflow protegido de release publicar essa versão exata; não confunda dry-run local aprovado com publicação.
 
 ## Repository root e fronteira de filesystem
 
@@ -431,7 +450,7 @@ Use paths absolutos, verifique suposições de working directory, coloque cada a
 
 ### `dnx` não encontra ou não executa o servidor
 
-Isso é esperado atualmente. `DotNetRepoInspector.Mcp` não é packable nem publicado e não possui manifesto de pacote MCP. Use o build local. Não configure um pacote do NuGet.org até que o trabalho de distribuição do roadmap publique e valide o pacote.
+Use SDK .NET 10 ou posterior, fixe o pacote como `DotNetRepoInspector.Mcp@<versao-exata>` e coloque opções do `dnx` antes de `--`; argumentos depois de `--` são enviados ao servidor. Para pacote local/não publicado, passe `--source <diretorio-de-pacotes>`. Uma fonte NuGet.org funciona somente depois que essa versão exata for oficialmente publicada e indexada.
 
 ### Chamadas estão busy, expiram ou retornam dados demais
 

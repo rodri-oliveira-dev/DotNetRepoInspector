@@ -158,7 +158,15 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
   --root /absolute/path/to/repository
 ```
 
-The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment. The package is not yet published to NuGet.org and `dnx` distribution remains roadmap work.
+The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment.
+
+`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The protected release workflow validates local `dnx` and tool execution, but the package is **not yet published to NuGet.org**. After a protected publication, an exact version can be launched with:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.0.0 --yes -- --root /absolute/path/to/repository
+```
+
+<!-- mcp-name: io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp -->
 
 See the [MCP user guide](docs/en/mcp.md) for setup, client configuration, tool schemas, examples, security boundaries, and troubleshooting. The [client compatibility matrix](docs/en/mcp-agent-compatibility.md) records the evidence and pending validations.
 

@@ -75,7 +75,26 @@ Invalid startup arguments return exit code `2`. Exactly one `--root <path>` or `
 
 ### Distribution status and `dnx`
 
-`DotNetRepoInspector.Mcp` currently has `IsPackable=false`. It has no `.mcp/server.json` package manifest and has not been published to NuGet.org. Therefore there is no supported `dnx DotNetRepoInspector.Mcp` command today. NuGet packaging, `McpServer` package metadata, `dnx` smoke tests, and protected publication belong to roadmap issues #135 and #136. Until those are implemented, use the local build command above.
+`DotNetRepoInspector.Mcp` is a framework-dependent .NET Tool with package ID `DotNetRepoInspector.Mcp`, command `dotnet-repo-inspector-mcp`, package types `DotnetTool` and `McpServer`, symbols, and an embedded `.mcp/server.json`. The manifest declares stdio and requires the `--root` filepath; it contains no credential input or value.
+
+The protected workflow packs and validates an exact lockstep product version. From a controlled local package source:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.0.0 \
+  --source /absolute/path/to/packages \
+  --yes -- \
+  --root /absolute/path/to/repository
+```
+
+The same package can be installed conventionally:
+
+```bash
+dotnet tool install --tool-path ./tools DotNetRepoInspector.Mcp \
+  --version 1.0.0 --add-source /absolute/path/to/packages
+./tools/dotnet-repo-inspector-mcp --root /absolute/path/to/repository
+```
+
+The package has not yet been published to NuGet.org. The public `dnx` command becomes consumable only after the protected release workflow publishes that exact version; do not infer publication from a successful local dry-run.
 
 ## Repository root and filesystem boundary
 
@@ -431,7 +450,7 @@ Use absolute paths, verify working-directory assumptions, quote each argument co
 
 ### `dnx` cannot find or run the server
 
-This is currently expected. `DotNetRepoInspector.Mcp` is not packable or published and has no MCP package manifest. Use the local build. Do not configure a NuGet.org package source until roadmap distribution work publishes and validates the package.
+Use .NET SDK 10 or later, pin the package as `DotNetRepoInspector.Mcp@<exact-version>`, and put `dnx` options before `--`; arguments after `--` go to the server. For an unpublished/local package, pass `--source <package-directory>`. A NuGet.org source works only after that exact version has been officially published and indexed.
 
 ### Calls are busy, time out, or return too much data
 
