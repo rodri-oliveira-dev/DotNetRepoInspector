@@ -13,10 +13,11 @@
 - The server uses stdio only and publishes the name `DotNetRepoInspector.Mcp` and the product assembly version during MCP negotiation.
 - The MVP publishes `inspect_repository`, `list_projects`, `get_project_details`, `get_project_reference_graph`, `get_repository_diagnostics`, and `get_sdk_metadata`. Every tool maps options to the existing `RepositoryInspectionRequest`; granular tools only project focused views from the canonical `InspectionReport`.
 - Client cancellation propagates to `IRepositoryInspector.InspectAsync`. Closing stdin ends the server gracefully.
+- Inspections for the configured root execute one at a time with at most eight queued calls and a five-minute server timeout.
 
 ### Non-functional requirements
 
-- stdout is reserved for MCP protocol messages. Generic Host and MCP operational logs use stderr.
+- stdout is reserved for MCP protocol messages. Generic Host and MCP operational logs are structured JSON on stderr.
 - The server and tool are read-only, deterministic for the same repository state/toolchain, model-agnostic, and free of LLM-provider SDKs.
 - Absolute paths, empty paths, and relative paths that resolve outside the configured root are rejected before the Engine is called.
 - Expected errors expose stable codes and sanitized messages, never exception text, stack traces, environment-variable values, or secrets.
@@ -99,7 +100,7 @@ An expected adapter or fatal Engine failure sets MCP `isError` to `true`:
 }
 ```
 
-Current tool error codes are `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large`, and `inspection_failed`. Inputs are bounded to 1,024-character relative paths, 256 exclusions, 256 classification overrides with 128-character values, and 1 MiB configuration files. Successful MCP results are limited to 8 MiB UTF-8. Missing SDKs, malformed projects, unavailable Git metadata, and other recoverable inspection failures remain canonical `InspectionReport` diagnostics. Request cancellation is protocol-native: it propagates as cancellation instead of being converted to a tool envelope.
+Current tool error codes are `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large`, `server_busy`, `inspection_timed_out`, and `inspection_failed`. Inputs are bounded to 1,024-character relative paths, 256 exclusions, 256 classification overrides with 128-character values, and 1 MiB configuration files. Successful MCP results are limited to 8 MiB UTF-8. Missing SDKs, malformed projects, unavailable Git metadata, and other recoverable inspection failures remain canonical `InspectionReport` diagnostics. Request cancellation is protocol-native: it propagates as cancellation instead of being converted to a tool envelope.
 
 The complete security rationale and residual-risk statement are in the [MCP threat model](mcp-threat-model.md). In particular, the root boundary constrains tool arguments but does not sandbox MSBuild imports, property functions, SDK resolvers, child processes, filesystem access, or network access.
 

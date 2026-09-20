@@ -22,6 +22,8 @@ Este documento **não** significa que a `v1.0.0` já foi publicada. Até o workf
 
 A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. Testes do repositório comparam essa baseline com `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
 
+O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como artefato publicável planejado, com controles de stdio, limite de root, read-only, E2E hermético, segurança e performance. Seu projeto permanece intencionalmente com `IsPackable=false`; metadata do pacote e publicação ficam adiadas para a issue #135 e para o trabalho posterior do release protegido.
+
 ## Contrato público incluído na v1
 
 A primeira release estável inclui estas superfícies suportadas:

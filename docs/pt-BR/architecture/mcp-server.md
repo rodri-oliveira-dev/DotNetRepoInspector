@@ -13,10 +13,11 @@
 - O servidor usa somente stdio e publica o nome `DotNetRepoInspector.Mcp` e a versão do assembly do produto durante a negociação MCP.
 - O MVP publica `inspect_repository`, `list_projects`, `get_project_details`, `get_project_reference_graph`, `get_repository_diagnostics` e `get_sdk_metadata`. Cada tool mapeia opções para o `RepositoryInspectionRequest` existente; as tools granulares apenas projetam visões focadas a partir do `InspectionReport` canônico.
 - O cancelamento do cliente é propagado a `IRepositoryInspector.InspectAsync`. Fechar stdin encerra o servidor de forma graciosa.
+- As inspeções da raiz configurada executam uma por vez, com no máximo oito chamadas na fila e timeout de servidor de cinco minutos.
 
 ### Requisitos não funcionais
 
-- stdout é reservado para mensagens do protocolo MCP. Logs operacionais do Generic Host e do MCP usam stderr.
+- stdout é reservado para mensagens do protocolo MCP. Logs operacionais do Generic Host e do MCP usam JSON estruturado no stderr.
 - O servidor e a tool são read-only, determinísticos para o mesmo estado/toolchain do repositório, agnósticos de modelo e livres de SDKs de providers de LLM.
 - Caminhos absolutos, vazios e relativos que resolvam fora do root configurado são rejeitados antes da chamada ao Engine.
 - Erros esperados expõem códigos estáveis e mensagens sanitizadas, nunca texto de exceptions, stack traces, valores de variáveis de ambiente ou secrets.
@@ -99,7 +100,7 @@ Uma falha esperada do adapter ou uma falha fatal do Engine define `isError` do M
 }
 ```
 
-Os códigos atuais de erro da tool são `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large` e `inspection_failed`. Inputs são limitados a paths relativos de 1.024 caracteres, 256 exclusões, 256 classification overrides com valores de 128 caracteres e arquivos de configuração de 1 MiB. Resultados MCP bem-sucedidos são limitados a 8 MiB UTF-8. SDKs ausentes, projetos malformados, metadata Git indisponível e outras falhas recuperáveis de inspeção permanecem diagnósticos canônicos de `InspectionReport`. O cancelamento da requisição é nativo do protocolo: ele é propagado como cancelamento em vez de ser convertido em um envelope da tool.
+Os códigos atuais de erro da tool são `invalid_tool_input`, `path_outside_repository_root`, `path_through_link`, `input_too_large`, `result_too_large`, `server_busy`, `inspection_timed_out` e `inspection_failed`. Inputs são limitados a paths relativos de 1.024 caracteres, 256 exclusões, 256 classification overrides com valores de 128 caracteres e arquivos de configuração de 1 MiB. Resultados MCP bem-sucedidos são limitados a 8 MiB UTF-8. SDKs ausentes, projetos malformados, metadata Git indisponível e outras falhas recuperáveis de inspeção permanecem diagnósticos canônicos de `InspectionReport`. O cancelamento da requisição é nativo do protocolo: ele é propagado como cancelamento em vez de ser convertido em um envelope da tool.
 
 A justificativa completa de segurança e os riscos residuais estão no [threat model MCP](mcp-threat-model.md). Em particular, a fronteira do root limita argumentos das tools, mas não isola imports, property functions, SDK resolvers, processos filhos, acesso ao filesystem ou acesso à rede do MSBuild.
 
