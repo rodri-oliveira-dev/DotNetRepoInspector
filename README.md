@@ -147,6 +147,21 @@ The default `.dotnetrepoinspector.json` file is optional. See [`docs/en/configur
 
 The CLI keeps machine data on stdout/output files and operational logs on stderr. Documented exit codes distinguish report errors, invalid arguments, fatal inspection, output failure, fatal persistence failure, and cancellation. See [`docs/en/cli.md`](docs/en/cli.md).
 
+## MCP server
+
+`DotNetRepoInspector.Mcp` exposes the same deterministic Engine facts to local MCP clients through six read-only tools over stdio. The server is an additional delivery adapter; the CLI, inspection JSON, and the product's primary repository-inspection purpose remain unchanged.
+
+The current development build is started with an explicit repository boundary:
+
+```bash
+dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.dll \
+  --root /absolute/path/to/repository
+```
+
+The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment. The package is not yet published to NuGet.org and `dnx` distribution remains roadmap work.
+
+See the [MCP user guide](docs/en/mcp.md) for setup, client configuration, tool schemas, examples, security boundaries, and troubleshooting. The [client compatibility matrix](docs/en/mcp-agent-compatibility.md) records the evidence and pending validations.
+
 ## GitHub Action
 
 The repository contains a reusable Composite Action that runs the exact .NET Tool version pinned by the Action revision:
@@ -209,6 +224,7 @@ This PR/repository preparation does not itself publish a package, tag, or GitHub
 - [Documentação em Português (Brasil)](docs/pt-BR/README.md)
 - [Inspection schema v1](docs/en/schema/inspection-v1.md)
 - [CLI / .NET Tool](docs/en/cli.md)
+- [MCP server](docs/en/mcp.md)
 - [GitHub Action](docs/en/github-action.md)
 - [Release/versioning](docs/en/releases.md)
 - [v1.0.0 release readiness](docs/en/v1-release-readiness.md)

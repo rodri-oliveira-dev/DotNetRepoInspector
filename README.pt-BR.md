@@ -147,6 +147,21 @@ O arquivo padrão `.dotnetrepoinspector.json` é opcional. Consulte [`docs/pt-BR
 
 A CLI mantém dados de máquina em stdout/arquivos de saída e logs operacionais em stderr. Os códigos de saída documentados distinguem erros no relatório, argumentos inválidos, falha fatal de inspeção, falha de escrita, falha fatal de persistência e cancelamento. Consulte [`docs/pt-BR/cli.md`](docs/pt-BR/cli.md).
 
+## Servidor MCP
+
+`DotNetRepoInspector.Mcp` expõe os mesmos fatos determinísticos da Engine para clientes MCP locais por meio de seis tools read-only sobre stdio. O servidor é um adapter de delivery adicional; a CLI, o JSON de inspeção e o propósito principal de inspeção de repositórios do produto permanecem inalterados.
+
+O build de desenvolvimento atual é iniciado com uma fronteira explícita de repositório:
+
+```bash
+dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.dll \
+  --root /caminho/absoluto/para/o/repositorio
+```
+
+O servidor não chama uma LLM nem inclui SDKs de providers. O OpenAI Codex CLI concluiu um smoke test com cliente real; as configurações de Claude Code e Gemini CLI estão documentadas, mas permanecem não validadas no ambiente deste projeto. O pacote ainda não foi publicado no NuGet.org e a distribuição via `dnx` permanece trabalho do roadmap.
+
+Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de clientes, schemas das tools, exemplos, limites de segurança e troubleshooting. A [matriz de compatibilidade de clientes](docs/pt-BR/mcp-agent-compatibility.md) registra as evidências e validações pendentes.
+
 ## GitHub Action
 
 O repositório contém uma Composite Action reutilizável que executa exatamente a versão da .NET Tool fixada pela revisão da Action:
@@ -209,6 +224,7 @@ Esta preparação do repositório não publica, por si só, pacote, tag ou GitHu
 - [English documentation](docs/en/README.md)
 - [Schema de inspeção v1](docs/pt-BR/schema/inspection-v1.md)
 - [CLI / .NET Tool](docs/pt-BR/cli.md)
+- [Servidor MCP](docs/pt-BR/mcp.md)
 - [GitHub Action](docs/pt-BR/github-action.md)
 - [Releases/versionamento](docs/pt-BR/releases.md)
 - [Readiness da release v1.0.0](docs/pt-BR/v1-release-readiness.md)
