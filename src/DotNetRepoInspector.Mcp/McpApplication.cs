@@ -32,7 +32,8 @@ public static class McpApplication
 
         var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
         {
-            Args = Array.Empty<string>()
+            Args = Array.Empty<string>(),
+            ContentRootPath = AppContext.BaseDirectory
         });
 
         builder.Logging.ClearProviders();

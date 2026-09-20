@@ -45,6 +45,15 @@ internal static class Program
         Console.WriteLine($"JSON report: {jsonPath}");
         Console.WriteLine($"Markdown report: {markdownPath}");
         Console.WriteLine($"Completed {run.Summary.CompletedCases}/{run.Summary.TotalCases} eval cases.");
+        foreach (var failedCase in run.Cases.Where(static result => !result.Completed))
+        {
+            Console.Error.WriteLine($"Eval case '{failedCase.Id}' failed: {failedCase.Failure}");
+            foreach (var failedAssertion in failedCase.Assertions.Where(static assertion => !assertion.Passed))
+            {
+                Console.Error.WriteLine(
+                    $"  Assertion '{failedAssertion.Kind}' failed: {failedAssertion.Failure}");
+            }
+        }
 
         return run.Summary.FailedCases == 0 ? 0 : 1;
     }
@@ -133,7 +142,7 @@ internal static class Program
                 Name = "DotNetRepoInspector MCP eval runner",
                 Command = options.ServerPath,
                 Arguments = [.. options.ServerArguments, "--root", fixtureRoot],
-                WorkingDirectory = fixtureRoot,
+                WorkingDirectory = Environment.CurrentDirectory,
                 ShutdownTimeout = TimeSpan.FromSeconds(10),
                 StandardErrorLines = stderr.Enqueue
             });

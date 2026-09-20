@@ -402,6 +402,32 @@ public sealed class McpStdioIntegrationTests
     }
 
     [Fact]
+    public async Task Server_IgnoresRepositoryLocalHostConfiguration()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory(
+            "DotNetRepoInspector-McpHostConfig-").FullName;
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(repositoryRoot, "appsettings.json"),
+                "{ malformed",
+                TestContext.Current.CancellationToken);
+
+            await using var client = await CreateClientAsync(
+                repositoryRoot,
+                new ConcurrentQueue<string>(),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(6, (await client.ListToolsAsync(
+                cancellationToken: TestContext.Current.CancellationToken)).Count);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Server_ExitsGracefullyWhenStdinCloses()
     {
         using var process = StartServerProcess(FixturePath("EmptyRepository"));
