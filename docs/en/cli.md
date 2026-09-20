@@ -12,7 +12,7 @@ dotnet repo-inspect .
 
 The direct command `dotnet-repo-inspect .` is also valid for a globally installed tool.
 
-> The repository is configured and CI-validated for .NET Tool packaging, but the package is not published to NuGet.org yet. Until a release is published, use the local-package flow below when validating distribution.
+> The package is published on NuGet.org. Pin an exact version for reproducible use; the local-package flow below remains the validation path for unreleased changes.
 
 ## Install as a .NET Tool
 
@@ -20,10 +20,10 @@ The current tool targets .NET 10 and therefore requires a compatible .NET runtim
 
 ### Global installation
 
-After the package is published to a NuGet feed:
+Install the exact current public version:
 
 ```bash
-dotnet tool install --global DotNetRepoInspector
+dotnet tool install --global DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect --help
 ```
 
@@ -45,7 +45,7 @@ A repository can pin the tool in a tool manifest:
 
 ```bash
 dotnet new tool-manifest
-dotnet tool install DotNetRepoInspector
+dotnet tool install DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect .
 ```
 

@@ -2,17 +2,17 @@
   "schemaVersion": 1,
   "scenario": "project-kinds",
   "observed": {
-    "processLaunchMilliseconds": 79.1879,
-    "startupAndHandshakeMilliseconds": 935.3634,
-    "engineInspectionMilliseconds": 10200.324,
-    "cliInspectionMilliseconds": 10874.5867,
+    "processLaunchMilliseconds": 68.2765,
+    "startupAndHandshakeMilliseconds": 968.1539,
+    "engineInspectionMilliseconds": 11428.9935,
+    "cliInspectionMilliseconds": 11751.9648,
     "toolMilliseconds": {
-      "inspect_repository": 10581.8702,
-      "list_projects": 10168.5956,
-      "get_project_reference_graph": 10243.8191,
-      "get_repository_diagnostics": 10246.3848,
-      "get_sdk_metadata": 10158.6527,
-      "get_project_details": 11192.2814
+      "inspect_repository": 10981.2745,
+      "list_projects": 11215.0741,
+      "get_project_reference_graph": 10846.362,
+      "get_repository_diagnostics": 10384.9214,
+      "get_sdk_metadata": 10755.5623,
+      "get_project_details": 11096.7352
     }
   },
   "limits": {

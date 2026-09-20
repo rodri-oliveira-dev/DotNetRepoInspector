@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Mcp` is a local, read-only Model Context Protocol server for querying the deterministic facts already produced by DotNetRepoInspector. It is intended for developers, repository maintainers, platform teams, and agent-client integrators who need project inventory, SDK, diagnostic, and reference-graph facts without parsing CLI output themselves.
 
-This guide documents the implementation currently in the repository. It does not describe remote HTTP, repository writes, RAG, or a published NuGet package because those capabilities do not exist yet.
+This guide documents the implementation currently in the repository. It does not describe remote HTTP, repository writes, or RAG because those capabilities do not exist. The NuGet package is implemented and validated from controlled feeds, but it is not published.
 
 ## Specification
 
@@ -80,7 +80,7 @@ Invalid startup arguments return exit code `2`. Exactly one `--root <path>` or `
 The protected workflow packs and validates an exact lockstep product version. From a controlled local package source:
 
 ```bash
-dnx DotNetRepoInspector.Mcp@1.0.0 \
+dnx DotNetRepoInspector.Mcp@1.2.0 \
   --source /absolute/path/to/packages \
   --yes -- \
   --root /absolute/path/to/repository
@@ -90,7 +90,7 @@ The same package can be installed conventionally:
 
 ```bash
 dotnet tool install --tool-path ./tools DotNetRepoInspector.Mcp \
-  --version 1.0.0 --add-source /absolute/path/to/packages
+  --version 1.2.0 --add-source /absolute/path/to/packages
 ./tools/dotnet-repo-inspector-mcp --root /absolute/path/to/repository
 ```
 

@@ -101,12 +101,12 @@ Invocação pública suportada: `dotnet repo-inspect`
 
 O pacote tem como alvo .NET 10 e requer runtime/SDK .NET compatível para execução.
 
-> O pacote é gerado e validado por smoke test de instalação no CI. Até a primeira publicação protegida terminar, comandos que resolvem pelo NuGet.org podem ainda não estar disponíveis publicamente.
+> O pacote da CLI está publicado no NuGet.org. A versão `1.1.0` é a release pública mais recente verificada no momento desta atualização; fixe versões exatas para automação reproduzível.
 
 Depois da publicação:
 
 ```bash
-dotnet tool install --global DotNetRepoInspector --version 1.0.0
+dotnet tool install --global DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect --version
 dotnet repo-inspect .
 ```
@@ -115,7 +115,7 @@ Também é possível fixar a Tool em um manifest local:
 
 ```bash
 dotnet new tool-manifest
-dotnet tool install DotNetRepoInspector --version 1.0.0
+dotnet tool install DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect .
 ```
 
@@ -160,15 +160,15 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
 
 O servidor não chama uma LLM nem inclui SDKs de providers. O OpenAI Codex CLI concluiu um smoke test com cliente real; as configurações de Claude Code e Gemini CLI estão documentadas, mas permanecem não validadas no ambiente deste projeto.
 
-`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. O workflow protegido de release valida execução local via `dnx` e tool, mas o pacote **ainda não foi publicado no NuGet.org**. Depois de uma publicação protegida, uma versão exata poderá ser iniciada com:
+`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. A primeira versão estável planejada do pacote é `1.2.0`. Ela passou pelos gates de empacotamento e protocolo em feed controlado, mas **não foi publicada no NuGet.org**, e o GA permanece bloqueado pelos gates documentados de multi-provider e aprovação de release. Depois de uma publicação protegida, a versão estável exata poderá ser iniciada com:
 
 ```bash
-dnx DotNetRepoInspector.Mcp@1.0.0 --yes -- --root /caminho/absoluto/para/o/repositorio
+dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /caminho/absoluto/para/o/repositorio
 ```
 
 <!-- mcp-name: io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp -->
 
-Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de clientes, schemas das tools, exemplos, limites de segurança e troubleshooting. A [matriz de compatibilidade de clientes](docs/pt-BR/mcp-agent-compatibility.md) registra as evidências e validações pendentes.
+Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de clientes, schemas das tools, exemplos, limites de segurança e troubleshooting. A [matriz de compatibilidade de clientes](docs/pt-BR/mcp-agent-compatibility.md) registra as evidências e validações pendentes; o documento de [readiness do GA](docs/pt-BR/mcp-ga-readiness.md) é a fonte da verdade sobre o estado da publicação.
 
 ## GitHub Action
 

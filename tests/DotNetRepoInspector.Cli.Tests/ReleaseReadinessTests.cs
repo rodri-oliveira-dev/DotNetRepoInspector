@@ -161,6 +161,53 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void McpGeneralAvailability_FreezesContractAndRemainsBlockedByRequiredEvidence()
+    {
+        JsonElement generalAvailability = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("generalAvailability");
+
+        Assert.Equal("1.2.0", RequiredString(generalAvailability, "version"));
+        Assert.Equal("blocked", RequiredString(generalAvailability, "status"));
+        Assert.Equal(138, generalAvailability.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            ".github/mcp-performance-baseline.json",
+            RequiredString(generalAvailability, "performanceBaseline"));
+
+        string[] tools = generalAvailability
+            .GetProperty("frozenTools")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                "inspect_repository",
+                "list_projects",
+                "get_project_details",
+                "get_project_reference_graph",
+                "get_repository_diagnostics",
+                "get_sdk_metadata",
+            ],
+            tools);
+
+        int[] blockingIssues = generalAvailability
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Equal([106, 133, 137, 139], blockingIssues);
+
+        string[] externalBlockers = generalAvailability
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+        Assert.Contains("protected-release-approval", externalBlockers);
+        Assert.Contains("merge-to-allowed-release-ref", externalBlockers);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
