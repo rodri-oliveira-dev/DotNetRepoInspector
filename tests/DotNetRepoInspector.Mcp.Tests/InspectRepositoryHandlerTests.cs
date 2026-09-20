@@ -176,27 +176,34 @@ public sealed class InspectRepositoryHandlerTests
     [Fact]
     public async Task ExecuteAsync_PropagatesCancellationToEngineAndCaller()
     {
-        CancellationToken observedToken = default;
-        var inspector = new StubInspector((_, cancellationToken) =>
+        var tokenObserved = new TaskCompletionSource<CancellationToken>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var inspector = new StubInspector(async (_, cancellationToken) =>
         {
-            observedToken = cancellationToken;
-            return Task.FromCanceled<InspectionReport>(cancellationToken);
+            tokenObserved.SetResult(cancellationToken);
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return CreateReport();
         });
         var handler = CreateHandler(
             inspector,
             new RepositoryRoot(Path.GetFullPath(".")));
         using var cancellationSource = new CancellationTokenSource();
+        var execution = handler.ExecuteAsync(
+            null,
+            disableConfigurationFile: false,
+            excludedPaths: null,
+            classificationOverrides: null,
+            cancellationSource.Token);
+        var observedToken = await tokenObserved.Task.WaitAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.False(observedToken.IsCancellationRequested);
         await cancellationSource.CancelAsync();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(
-            () => handler.ExecuteAsync(
-                null,
-                disableConfigurationFile: false,
-                excludedPaths: null,
-                classificationOverrides: null,
-                cancellationSource.Token));
+            () => execution);
 
-        Assert.Equal(cancellationSource.Token, observedToken);
+        Assert.True(observedToken.IsCancellationRequested);
     }
 
     [Fact]

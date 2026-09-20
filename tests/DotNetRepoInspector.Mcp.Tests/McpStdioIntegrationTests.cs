@@ -139,9 +139,10 @@ public sealed class McpStdioIntegrationTests
     [Fact]
     public async Task GetProjectDetails_ReturnsPredictableErrorsForMissingAndOutsideProjects()
     {
+        var standardError = new ConcurrentQueue<string>();
         await using var client = await CreateClientAsync(
             FixturePath("ProjectKinds"),
-            new ConcurrentQueue<string>(),
+            standardError,
             TestContext.Current.CancellationToken);
 
         var missing = await client.CallToolAsync(
@@ -155,6 +156,14 @@ public sealed class McpStdioIntegrationTests
             new Dictionary<string, object?> { ["projectPath"] = "../Outside.csproj" },
             cancellationToken: TestContext.Current.CancellationToken);
         AssertToolError(outside, "path_outside_repository_root");
+        var errorLogs = standardError.Where(static line =>
+            line.Contains("\"Tool\":\"get_project_details\"", StringComparison.Ordinal) &&
+            line.Contains("\"Status\":\"error\"", StringComparison.Ordinal)).ToArray();
+        Assert.Equal(2, errorLogs.Length);
+        Assert.All(errorLogs, line => Assert.DoesNotContain(
+            FixturePath("ProjectKinds"),
+            line,
+            StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -258,6 +267,11 @@ public sealed class McpStdioIntegrationTests
         Assert.DoesNotContain(
             standardError,
             line => line.Contains(secret, StringComparison.Ordinal));
+        Assert.Contains(standardError, static line =>
+            line.Contains("\"Tool\":\"inspect_repository\"", StringComparison.Ordinal) &&
+            line.Contains("\"Status\":\"success\"", StringComparison.Ordinal) &&
+            line.Contains("\"CorrelationId\":", StringComparison.Ordinal) &&
+            line.Contains("\"DurationMs\":", StringComparison.Ordinal));
     }
 
     [Theory]

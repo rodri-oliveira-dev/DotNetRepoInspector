@@ -38,6 +38,7 @@ public static class McpApplication
         builder.Logging.ClearProviders();
         builder.Logging.AddConsole(options =>
         {
+            options.FormatterName = "json";
             options.LogToStandardErrorThreshold = LogLevel.Trace;
         });
 
