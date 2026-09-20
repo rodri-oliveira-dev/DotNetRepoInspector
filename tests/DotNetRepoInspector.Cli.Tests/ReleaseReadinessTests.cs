@@ -100,7 +100,7 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
-    public void V1Baseline_RecognizesMcpAsPlannedPublishableArtifact()
+    public void V1Baseline_RecognizesMcpAsReleaseReadyPackage()
     {
         JsonElement mcp = LoadBaseline().GetProperty("mcp");
         string projectPath = RequiredString(mcp, "project");
@@ -111,11 +111,16 @@ public sealed class ReleaseReadinessTests
         Assert.Equal("DotNetRepoInspector.Mcp", RequiredString(mcp, "packageId"));
         Assert.Equal(RequiredString(mcp, "packageId"), ProjectProperty(project, "PackageId"));
         Assert.Equal("net10.0", ProjectProperty(project, "TargetFramework"));
-        Assert.Equal("false", ProjectProperty(project, "IsPackable"));
+        Assert.Equal("true", ProjectProperty(project, "IsPackable"));
+        Assert.Equal("true", ProjectProperty(project, "PackAsTool"));
         Assert.Equal("dotnet-repo-inspector-mcp", RequiredString(mcp, "toolCommandName"));
+        Assert.Equal("McpServer", RequiredString(mcp, "packageType"));
+        Assert.Equal("McpServer", ProjectProperty(project, "PackageType"));
+        Assert.Equal(".mcp/server.json", RequiredString(mcp, "manifest"));
+        Assert.Equal("framework-dependent", RequiredString(mcp, "distribution"));
         Assert.Equal("stdio", RequiredString(mcp, "transport"));
-        Assert.Equal("planned", RequiredString(mcp, "publicationStatus"));
-        Assert.Equal(135, mcp.GetProperty("publicationIssue").GetInt32());
+        Assert.Equal("release-ready", RequiredString(mcp, "publicationStatus"));
+        Assert.Equal(136, mcp.GetProperty("publicationIssue").GetInt32());
 
         var controls = mcp.GetProperty("requiredControls")
             .EnumerateArray()
@@ -158,6 +163,31 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("Trusted Publishing", portugueseReadiness, StringComparison.Ordinal);
         Assert.Contains("publish=false", portugueseReadiness, StringComparison.Ordinal);
         Assert.Contains("publish=true", portugueseReadiness, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_ProtectsMcpPackagingAndTrustedPublication()
+    {
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+
+        Assert.Contains("validate_mcp_package.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("invoke_mcp_package_smoke.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("id-token: write", workflow, StringComparison.Ordinal);
+        Assert.Contains("NuGet/login@", workflow, StringComparison.Ordinal);
+        Assert.Contains("environment: release", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
+
+        int smokeIndex = workflow.IndexOf(
+            "Smoke exact MCP package version from NuGet.org",
+            StringComparison.Ordinal);
+        int releaseIndex = workflow.IndexOf("Publish GitHub Release", StringComparison.Ordinal);
+        Assert.True(smokeIndex >= 0 && releaseIndex > smokeIndex);
     }
 
     private static string RepositoryRoot { get; } = FindRepositoryRoot();

@@ -22,7 +22,7 @@ internal static class Program
         if (!options.IsValid)
         {
             Console.Error.WriteLine(options.Error);
-            Console.Error.WriteLine("Usage: dotnet run --project evals/DotNetRepoInspector.Mcp.Evals -- --server <path> --fixtures <path> [--dataset <path>] [--output <dir>] [--client <name>] [--provider <name>] [--model <name>] [--client-version <version>]");
+            Console.Error.WriteLine("Usage: dotnet run --project evals/DotNetRepoInspector.Mcp.Evals -- --server <command-or-path> --fixtures <path> [--server-arguments-json <json-array> | --server-arguments-file <path>] [--dataset <path>] [--output <dir>] [--client <name>] [--provider <name>] [--model <name>] [--client-version <version>]");
             return 2;
         }
 
@@ -131,7 +131,7 @@ internal static class Program
             {
                 Name = "DotNetRepoInspector MCP eval runner",
                 Command = options.ServerPath,
-                Arguments = ["--root", fixtureRoot],
+                Arguments = [.. options.ServerArguments, "--root", fixtureRoot],
                 WorkingDirectory = fixtureRoot,
                 ShutdownTimeout = TimeSpan.FromSeconds(10),
                 StandardErrorLines = stderr.Enqueue
@@ -371,6 +371,7 @@ internal static class Program
 
 internal sealed record EvalOptions(
     string ServerPath,
+    IReadOnlyList<string> ServerArguments,
     string FixturesDirectory,
     string DatasetPath,
     string OutputDirectory,
@@ -405,6 +406,8 @@ internal sealed record EvalOptions(
             : Path.Combine("artifacts", "mcp-evals");
 
         values.TryGetValue("server", out var server);
+        values.TryGetValue("server-arguments-json", out var serverArgumentsJson);
+        values.TryGetValue("server-arguments-file", out var serverArgumentsFile);
         values.TryGetValue("fixtures", out var fixtures);
         values.TryGetValue("client", out var client);
         values.TryGetValue("provider", out var provider);
@@ -421,15 +424,29 @@ internal sealed record EvalOptions(
             return Invalid("Missing required --fixtures path.");
         }
 
-        server = Path.GetFullPath(server);
+        if (!string.IsNullOrWhiteSpace(serverArgumentsFile))
+        {
+            if (!File.Exists(serverArgumentsFile))
+            {
+                return Invalid($"Server arguments file does not exist: {serverArgumentsFile}");
+            }
+
+            serverArgumentsJson = File.ReadAllText(serverArgumentsFile);
+        }
+
+        var serverArguments = ParseServerArguments(serverArgumentsJson);
+        if (serverArguments is null)
+        {
+            return Invalid("--server-arguments-json must be a JSON array of strings.");
+        }
+
+        if (File.Exists(server))
+        {
+            server = Path.GetFullPath(server);
+        }
         fixtures = Path.GetFullPath(fixtures);
         dataset = Path.GetFullPath(dataset);
         output = Path.GetFullPath(output);
-
-        if (!File.Exists(server))
-        {
-            return Invalid($"Server executable does not exist: {server}");
-        }
 
         if (!Directory.Exists(fixtures))
         {
@@ -443,6 +460,7 @@ internal sealed record EvalOptions(
 
         return new EvalOptions(
             server,
+            serverArguments,
             fixtures,
             dataset,
             output,
@@ -455,6 +473,7 @@ internal sealed record EvalOptions(
         static EvalOptions Invalid(string error) =>
             new(
                 string.Empty,
+                [],
                 string.Empty,
                 string.Empty,
                 string.Empty,
@@ -463,6 +482,23 @@ internal sealed record EvalOptions(
                 null,
                 null,
                 error);
+
+        static IReadOnlyList<string>? ParseServerArguments(string? json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return [];
+            }
+
+            try
+            {
+                return JsonSerializer.Deserialize<string[]>(json);
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
     }
 }
 
