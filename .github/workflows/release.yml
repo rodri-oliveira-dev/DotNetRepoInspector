@@ -19,6 +19,8 @@ on:
       - .github/scripts/coverage_summary.py
       - .github/scripts/release_metadata.py
       - .github/scripts/validate_tool_package.ps1
+      - .github/scripts/validate_mcp_package.ps1
+      - .github/scripts/invoke_mcp_package_smoke.ps1
       - action.yml
       - README.md
       - README.pt-BR.md
@@ -230,6 +232,20 @@ jobs:
           -p:TreatWarningsAsErrors=true
           -p:RunAnalyzers=true
 
+      - name: Pack exact MCP server version
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          dotnet pack ./src/DotNetRepoInspector.Mcp/DotNetRepoInspector.Mcp.csproj
+          --configuration Release
+          --no-restore
+          --output ./artifacts/release
+          -p:Version=${RELEASE_VERSION}
+          -p:RepositoryCommit=${GITHUB_SHA}
+          -p:ContinuousIntegrationBuild=true
+          -p:TreatWarningsAsErrors=true
+          -p:RunAnalyzers=true
+
       - name: Validate packaged .NET Tool
         shell: pwsh
         env:
@@ -241,6 +257,17 @@ jobs:
           -FixturePath ./tests/Fixtures/ProjectKinds
           -ArtifactsDirectory ./artifacts/release-smoke
 
+      - name: Validate packaged MCP server
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          ./.github/scripts/validate_mcp_package.ps1
+          -PackageDirectory ./artifacts/release
+          -Version $env:RELEASE_VERSION
+          -FixturePath ./tests/Fixtures/ProjectKinds
+          -ArtifactsDirectory ./artifacts/mcp-release-smoke
+
       - name: Generate release manifest and checksums
         env:
           RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
@@ -249,6 +276,8 @@ jobs:
           --version "${RELEASE_VERSION}"
           --commit "${GITHUB_SHA}"
           --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+          --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg"
           --inspection-report ./artifacts/release-smoke/global-inspection.json
           --output ./artifacts/release/release-manifest.json
           --checksums-output ./artifacts/release/SHA256SUMS
@@ -301,6 +330,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Setup .NET SDK for publication verification
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
       - name: Download validated release candidate
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
@@ -316,7 +350,9 @@ jobs:
             --version "${RELEASE_VERSION}" \
             --commit "${GITHUB_SHA}" \
             --manifest ./artifacts/release/release-manifest.json \
-            --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+            --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg" \
+            --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg" \
+            --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg"
           python ./.github/scripts/release_metadata.py verify-container-plan \
             --version "${RELEASE_VERSION}" \
             --commit "${GITHUB_SHA}" \
@@ -327,6 +363,8 @@ jobs:
         with:
           subject-path: |
             artifacts/release/DotNetRepoInspector.${{ needs.build.outputs.version }}.nupkg
+            artifacts/release/DotNetRepoInspector.Mcp.${{ needs.build.outputs.version }}.nupkg
+            artifacts/release/DotNetRepoInspector.Mcp.${{ needs.build.outputs.version }}.snupkg
             artifacts/release/release-manifest.json
             artifacts/release/SHA256SUMS
             artifacts/release/container-release-plan.json
@@ -388,6 +426,17 @@ jobs:
           --api-key "${NUGET_API_KEY}"
           --skip-duplicate
 
+      - name: Publish MCP server package
+        env:
+          NUGET_API_KEY: "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          dotnet nuget push
+          "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --source https://api.nuget.org/v3/index.json
+          --api-key "${NUGET_API_KEY}"
+          --skip-duplicate
+
       - name: Configure GitHub Packages source
         env:
           GITHUB_TOKEN: "${{ github.token }}"
@@ -409,6 +458,37 @@ jobs:
           --source github
           --api-key "${GITHUB_TOKEN}"
           --skip-duplicate
+
+      - name: Publish MCP server package to GitHub Packages
+        env:
+          GITHUB_TOKEN: "${{ github.token }}"
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          dotnet nuget push
+          "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --source github
+          --api-key "${GITHUB_TOKEN}"
+          --no-symbols
+          --skip-duplicate
+
+      - name: Build MCP package smoke harness
+        run: >-
+          dotnet build
+          ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj
+          --configuration Release
+
+      - name: Smoke exact MCP package version from NuGet.org
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          ./.github/scripts/invoke_mcp_package_smoke.ps1
+          -PackageSource https://api.nuget.org/v3/index.json
+          -Version $env:RELEASE_VERSION
+          -FixturePath ./tests/Fixtures/ProjectKinds
+          -ArtifactsDirectory ./artifacts/published-mcp-smoke
+          -MaxAttempts 10
+          -RetryDelaySeconds 30
 
       - name: Validate Docker Hub publication credential
         env:

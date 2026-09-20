@@ -339,16 +339,22 @@ def _verify_container_distribution(args: argparse.Namespace) -> int:
 def _manifest(args: argparse.Namespace) -> int:
     version = ProductVersion.parse(args.version)
     commit = _validate_commit(args.commit)
-    package = args.package.resolve()
+    packages = [package.resolve() for package in args.package]
     report = args.inspection_report.resolve()
 
-    expected_package_name = f"DotNetRepoInspector.{version.text}.nupkg"
-    if package.name != expected_package_name:
+    expected_package_names = {
+        f"DotNetRepoInspector.{version.text}.nupkg",
+        f"DotNetRepoInspector.Mcp.{version.text}.nupkg",
+        f"DotNetRepoInspector.Mcp.{version.text}.snupkg",
+    }
+    actual_package_names = {package.name for package in packages}
+    if actual_package_names != expected_package_names or len(packages) != len(expected_package_names):
         raise ValueError(
-            f"Expected package '{expected_package_name}', actual '{package.name}'."
+            f"Expected release packages {sorted(expected_package_names)}, actual {sorted(actual_package_names)}."
         )
-    if not package.is_file():
-        raise ValueError(f"Release package '{package}' does not exist.")
+    for package in packages:
+        if not package.is_file():
+            raise ValueError(f"Release package '{package}' does not exist.")
     if not report.is_file():
         raise ValueError(f"Inspection smoke report '{report}' does not exist.")
 
@@ -357,7 +363,10 @@ def _manifest(args: argparse.Namespace) -> int:
     if not schema_version:
         raise ValueError("Inspection smoke report does not contain schemaVersion.")
 
-    package_sha256 = _sha256(package)
+    artifacts = [
+        {"name": package.name, "sha256": _sha256(package)}
+        for package in sorted(packages, key=lambda item: item.name)
+    ]
     manifest = {
         "manifestVersion": 1,
         "product": "DotNetRepoInspector",
@@ -365,12 +374,7 @@ def _manifest(args: argparse.Namespace) -> int:
         "tag": version.tag,
         "sourceCommit": commit,
         "schemaVersion": schema_version,
-        "artifacts": [
-            {
-                "name": package.name,
-                "sha256": package_sha256,
-            }
-        ],
+        "artifacts": artifacts,
         "githubAction": {
             "immutableTag": version.tag,
             "movingAliases": list(version.aliases),
@@ -384,7 +388,7 @@ def _manifest(args: argparse.Namespace) -> int:
         newline="\n",
     )
     args.checksums_output.write_text(
-        f"{package_sha256}  {package.name}\n",
+        "".join(f"{artifact['sha256']}  {artifact['name']}\n" for artifact in artifacts),
         encoding="utf-8",
         newline="\n",
     )
@@ -396,7 +400,7 @@ def _verify(args: argparse.Namespace) -> int:
     version = ProductVersion.parse(args.version)
     commit = _validate_commit(args.commit)
     manifest_path = args.manifest.resolve()
-    package = args.package.resolve()
+    packages = [package.resolve() for package in args.package]
 
     document = json.loads(manifest_path.read_text(encoding="utf-8"))
     expected = {
@@ -412,18 +416,24 @@ def _verify(args: argparse.Namespace) -> int:
             )
 
     artifacts = document.get("artifacts")
-    if not isinstance(artifacts, list) or len(artifacts) != 1:
-        raise ValueError("Release manifest must describe exactly one packaged artifact.")
+    if not isinstance(artifacts, list) or len(artifacts) != len(packages):
+        raise ValueError("Release manifest packaged artifact count is invalid.")
 
-    artifact = artifacts[0]
-    expected_package_name = f"DotNetRepoInspector.{version.text}.nupkg"
-    if artifact.get("name") != expected_package_name or package.name != expected_package_name:
-        raise ValueError("Release package name does not match the manifest/product version.")
+    artifact_by_name = {str(artifact.get("name", "")): artifact for artifact in artifacts}
+    package_by_name = {package.name: package for package in packages}
+    expected_names = {
+        f"DotNetRepoInspector.{version.text}.nupkg",
+        f"DotNetRepoInspector.Mcp.{version.text}.nupkg",
+        f"DotNetRepoInspector.Mcp.{version.text}.snupkg",
+    }
+    if set(artifact_by_name) != expected_names or set(package_by_name) != expected_names:
+        raise ValueError("Release package names do not match the CLI/MCP version contract.")
 
-    expected_digest = str(artifact.get("sha256", "")).lower()
-    actual_digest = _sha256(package)
-    if expected_digest != actual_digest:
-        raise ValueError("Release package SHA-256 does not match the release manifest.")
+    for name in sorted(expected_names):
+        expected_digest = str(artifact_by_name[name].get("sha256", "")).lower()
+        actual_digest = _sha256(package_by_name[name])
+        if expected_digest != actual_digest:
+            raise ValueError(f"Release artifact '{name}' SHA-256 does not match the manifest.")
 
     aliases = document.get("githubAction", {}).get("movingAliases", [])
     if aliases != list(version.aliases):
@@ -431,7 +441,7 @@ def _verify(args: argparse.Namespace) -> int:
 
     print(
         f"Verified release manifest for {version.tag} at {commit} "
-        f"with package SHA-256 {actual_digest}."
+        f"with {len(expected_names)} verified package artifacts."
     )
     return 0
 
@@ -493,7 +503,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     manifest.add_argument("--version", required=True)
     manifest.add_argument("--commit", required=True)
-    manifest.add_argument("--package", type=Path, required=True)
+    manifest.add_argument("--package", type=Path, required=True, action="append")
     manifest.add_argument("--inspection-report", type=Path, required=True)
     manifest.add_argument("--output", type=Path, required=True)
     manifest.add_argument("--checksums-output", type=Path, required=True)
@@ -505,7 +515,7 @@ def _build_parser() -> argparse.ArgumentParser:
     verify.add_argument("--version", required=True)
     verify.add_argument("--commit", required=True)
     verify.add_argument("--manifest", type=Path, required=True)
-    verify.add_argument("--package", type=Path, required=True)
+    verify.add_argument("--package", type=Path, required=True, action="append")
     verify.set_defaults(handler=_verify)
 
     return parser
