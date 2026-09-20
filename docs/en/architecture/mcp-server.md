@@ -41,7 +41,7 @@ Tests are split into fast parser/handler tests and process-level protocol tests.
 
 ## Implementation
 
-The host uses `ModelContextProtocol` 2.2.0 and `Microsoft.Extensions.Hosting` 10.0.12 through Central Package Management. The MCP project references Core and Engine, while Core and Engine have no MCP dependency. The protocol suite uses the official SDK client to launch the server executable and requires no network, credentials, or LLM. Packaging and publication remain deferred to the distribution roadmap items.
+The host uses `ModelContextProtocol` 2.2.0 and `Microsoft.Extensions.Hosting` 10.0.12 through Central Package Management. The MCP project references Core and Engine, while Core and Engine have no MCP dependency. The protocol suite uses the official SDK client to launch the server executable and requires no network, credentials, or LLM. Framework-dependent NuGet/.NET Tool packaging is implemented and validated against controlled local feeds; public publication and GA approval remain deferred to the protected release process.
 
 Start the unpackaged host from the repository build output with an explicit root:
 

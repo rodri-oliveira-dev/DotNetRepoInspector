@@ -70,7 +70,7 @@ public sealed class McpStartupOptionsTests
 
             Assert.True(result.Succeeded);
             Assert.Equal(
-                Path.TrimEndingDirectorySeparator(Path.GetFullPath(target)),
+                RepositoryRootCanonicalizer.NormalizeExistingDirectory(target),
                 result.Options!.RepositoryRoot.FullPath);
         }
         finally

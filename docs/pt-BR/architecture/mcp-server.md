@@ -41,7 +41,7 @@ Os testes são divididos em testes rápidos do parser/handler e testes de protoc
 
 ## Implementation
 
-O host usa `ModelContextProtocol` 2.2.0 e `Microsoft.Extensions.Hosting` 10.0.12 por meio do Central Package Management. O projeto MCP referencia Core e Engine, enquanto Core e Engine não possuem dependência de MCP. A suíte de protocolo usa o cliente do SDK oficial para iniciar o executável do servidor e não exige rede, credenciais ou LLM. Empacotamento e publicação continuam adiados para os itens de distribuição do roadmap.
+O host usa `ModelContextProtocol` 2.2.0 e `Microsoft.Extensions.Hosting` 10.0.12 por meio do Central Package Management. O projeto MCP referencia Core e Engine, enquanto Core e Engine não possuem dependência de MCP. A suíte de protocolo usa o cliente do SDK oficial para iniciar o executável do servidor e não exige rede, credenciais ou LLM. O empacotamento framework-dependent como NuGet/.NET Tool está implementado e validado em feeds locais controlados; a publicação pública e a aprovação de GA permanecem adiadas para o processo protegido de release.
 
 Inicie o host ainda não empacotado a partir do output de build do repositório com um root explícito:
 

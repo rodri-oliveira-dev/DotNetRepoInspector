@@ -109,6 +109,7 @@ internal static class Program
         EvalCase evalCase,
         string fixtureRoot)
     {
+        using var caseTimeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
         var stopwatch = Stopwatch.StartNew();
         var stderr = new ConcurrentQueue<string>();
         var calledTools = new List<string>();
@@ -137,8 +138,10 @@ internal static class Program
                 StandardErrorLines = stderr.Enqueue
             });
 
-            await using var client = await McpClient.CreateAsync(transport);
-            var tools = await client.ListToolsAsync();
+            await using var client = await McpClient.CreateAsync(
+                transport,
+                cancellationToken: caseTimeout.Token);
+            var tools = await client.ListToolsAsync(cancellationToken: caseTimeout.Token);
             var discoveredTools = tools.Select(static tool => tool.Name)
                 .Order(StringComparer.Ordinal)
                 .ToArray();
@@ -160,7 +163,7 @@ internal static class Program
             var result = await client.CallToolAsync(
                 evalCase.ExpectedTool,
                 new Dictionary<string, object?>(),
-                cancellationToken: CancellationToken.None);
+                cancellationToken: caseTimeout.Token);
 
             if (result.IsError == true || !result.StructuredContent.HasValue)
             {
@@ -190,7 +193,22 @@ internal static class Program
                 client.ServerInfo.Name,
                 client.ServerInfo.Version);
         }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or TimeoutException or JsonException)
+        catch (OperationCanceledException) when (caseTimeout.IsCancellationRequested)
+        {
+            return EvalCaseResult.Failed(
+                evalCase,
+                stopwatch.ElapsedMilliseconds,
+                "Evaluation case timed out after two minutes.",
+                [],
+                calledTools,
+                assertionResults);
+        }
+        catch (Exception exception) when (
+            exception is IOException or
+            InvalidOperationException or
+            TimeoutException or
+            JsonException or
+            global::ModelContextProtocol.McpException)
         {
             return EvalCaseResult.Failed(
                 evalCase,

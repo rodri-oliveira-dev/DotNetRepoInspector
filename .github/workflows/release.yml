@@ -269,6 +269,17 @@ jobs:
           -FixturePath ./tests/Fixtures/ProjectKinds
           -ArtifactsDirectory ./artifacts/mcp-release-smoke
 
+      - name: Validate MCP release candidate
+        if: "${{ steps.release-metadata.outputs.is_prerelease == 'true' }}"
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          ./.github/scripts/validate_mcp_rc.ps1
+          -PackageDirectory ./artifacts/release
+          -Version $env:RELEASE_VERSION
+          -ArtifactsDirectory ./artifacts/mcp-rc-validation
+
       - name: Generate release manifest and checksums
         env:
           RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
@@ -425,7 +436,6 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
           --source https://api.nuget.org/v3/index.json
           --api-key "${NUGET_API_KEY}"
-          --skip-duplicate
 
       - name: Publish MCP server package
         env:
@@ -436,7 +446,6 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
           --source https://api.nuget.org/v3/index.json
           --api-key "${NUGET_API_KEY}"
-          --skip-duplicate
 
       - name: Configure GitHub Packages source
         env:
@@ -458,7 +467,6 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
           --source github
           --api-key "${GITHUB_TOKEN}"
-          --skip-duplicate
 
       - name: Publish MCP server package to GitHub Packages
         env:
@@ -470,7 +478,6 @@ jobs:
           --source github
           --api-key "${GITHUB_TOKEN}"
           --no-symbols
-          --skip-duplicate
 
       - name: Build MCP package smoke harness
         run: >-

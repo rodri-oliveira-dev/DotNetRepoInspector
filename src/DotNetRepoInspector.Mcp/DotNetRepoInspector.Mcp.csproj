@@ -49,7 +49,7 @@
   <Target Name="GenerateMcpServerManifest" BeforeTargets="GenerateNuspec">
     <ItemGroup>
       <_McpManifestLine Include="{" />
-      <_McpManifestLine Include="  &quot;$$schema&quot;: &quot;https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json&quot;," />
+      <_McpManifestLine Include="  &quot;%24schema&quot;: &quot;https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json&quot;," />
       <_McpManifestLine Include="  &quot;name&quot;: &quot;io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp&quot;," />
       <_McpManifestLine Include="  &quot;title&quot;: &quot;DotNetRepoInspector&quot;," />
       <_McpManifestLine Include="  &quot;description&quot;: &quot;Read-only deterministic inspection of .NET repository metadata.&quot;," />

@@ -120,7 +120,6 @@ Depois que o workflow terminar com sucesso, valide independentemente:
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.0.0
 dotnet repo-inspect --version
-dnx DotNetRepoInspector.Mcp@1.0.0 --yes -- --root /caminho/absoluto/para/o/repositorio
 ```
 
 A versão exibida deve ser `1.0.0`.

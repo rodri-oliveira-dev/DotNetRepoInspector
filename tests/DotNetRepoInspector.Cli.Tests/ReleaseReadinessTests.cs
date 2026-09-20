@@ -251,7 +251,7 @@ public sealed class ReleaseReadinessTests
             "release.yml"));
 
         Assert.Contains("validate_mcp_package.ps1", workflow, StringComparison.Ordinal);
-        Assert.Contains("validate_mcp_rc.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("./.github/scripts/validate_mcp_rc.ps1", workflow, StringComparison.Ordinal);
         Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg", workflow, StringComparison.Ordinal);
         Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg", workflow, StringComparison.Ordinal);
         Assert.Contains("invoke_mcp_package_smoke.ps1", workflow, StringComparison.Ordinal);
@@ -259,6 +259,7 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("NuGet/login@", workflow, StringComparison.Ordinal);
         Assert.Contains("environment: release", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("--skip-duplicate", workflow, StringComparison.Ordinal);
 
         int smokeIndex = workflow.IndexOf(
             "Smoke exact MCP package version from NuGet.org",

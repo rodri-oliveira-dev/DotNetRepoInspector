@@ -339,7 +339,9 @@ public sealed class McpSecurityHardeningTests
                         outsideRoot);
                 }
 
-                return new LinkedPathFixture(repositoryRoot, outsideRoot);
+                return new LinkedPathFixture(
+                    RepositoryRootCanonicalizer.NormalizeExistingDirectory(repositoryRoot),
+                    RepositoryRootCanonicalizer.NormalizeExistingDirectory(outsideRoot));
             }
             catch (Exception exception) when (
                 exception is IOException or UnauthorizedAccessException or NotSupportedException)

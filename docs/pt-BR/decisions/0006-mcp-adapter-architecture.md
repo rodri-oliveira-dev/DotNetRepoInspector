@@ -93,7 +93,6 @@ Códigos de erro esperados para o MVP:
 | `repository_root_not_found` | O root configurado não existe ou não é um diretório. |
 | `path_outside_repository_root` | Um caminho relativo informado foi resolvido fora do root de startup. |
 | `invalid_tool_input` | O JSON de entrada é malformado ou viola o schema da tool. |
-| `inspection_cancelled` | A requisição MCP ou o shutdown do processo cancelou a inspeção. |
 | `inspection_failed` | O engine falhou antes que um `InspectionReport` pudesse ser produzido. |
 | `project_not_found` | Uma tool específica de projeto não encontrou o caminho de projeto relativo ao repositório. |
 

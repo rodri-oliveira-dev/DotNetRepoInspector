@@ -120,7 +120,6 @@ After the workflow succeeds, verify independently:
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.0.0
 dotnet repo-inspect --version
-dnx DotNetRepoInspector.Mcp@1.0.0 --yes -- --root /absolute/path/to/repository
 ```
 
 The reported version must be `1.0.0`.

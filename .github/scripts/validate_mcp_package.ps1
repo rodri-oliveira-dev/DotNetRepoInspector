@@ -101,6 +101,7 @@ try {
     $manifestEntry = $archive.GetEntry(".mcp/server.json")
     $manifestReader = [IO.StreamReader]::new($manifestEntry.Open())
     try { $manifest = $manifestReader.ReadToEnd() | ConvertFrom-Json } finally { $manifestReader.Dispose() }
+    Assert-Equal "MCP schema" "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json" $manifest.'$schema'
     Assert-Equal "MCP name" "io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp" $manifest.name
     Assert-Equal "MCP version" $Version $manifest.version
     if (@($manifest.packages).Count -ne 1) { throw "MCP manifest must contain one package." }

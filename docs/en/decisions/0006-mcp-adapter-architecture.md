@@ -93,7 +93,6 @@ Expected MVP error codes:
 | `repository_root_not_found` | The configured root does not exist or is not a directory. |
 | `path_outside_repository_root` | A supplied relative path resolves outside the startup root. |
 | `invalid_tool_input` | Input JSON is malformed or violates the tool schema. |
-| `inspection_cancelled` | The MCP request or process shutdown cancelled inspection. |
 | `inspection_failed` | The engine failed before an `InspectionReport` could be produced. |
 | `project_not_found` | A project-specific tool could not find the requested repository-relative project path. |
 
