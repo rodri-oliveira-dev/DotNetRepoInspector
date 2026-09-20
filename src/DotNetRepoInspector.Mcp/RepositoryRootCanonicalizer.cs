@@ -19,14 +19,22 @@ internal static class RepositoryRootCanonicalizer
         }
 
         var currentPath = pathRoot;
-        var relativePath = fullPath[pathRoot.Length..];
-        foreach (var segment in relativePath.Split(
-                     [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
-                     StringSplitOptions.RemoveEmptyEntries))
+        var segments = fullPath[pathRoot.Length..].Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        for (var index = 0; index < segments.Length; index++)
         {
-            var candidatePath = Path.Combine(currentPath, segment);
+            var candidatePath = Path.Combine(currentPath, segments[index]);
             var target = new DirectoryInfo(candidatePath).ResolveLinkTarget(returnFinalTarget: true);
-            currentPath = target?.FullName ?? candidatePath;
+            if (target is null)
+            {
+                currentPath = candidatePath;
+                continue;
+            }
+
+            var targetWithRemainder = segments[(index + 1)..]
+                .Aggregate(target.FullName, Path.Combine);
+            return NormalizeExistingDirectory(targetWithRemainder);
         }
 
         var canonicalPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(currentPath));
