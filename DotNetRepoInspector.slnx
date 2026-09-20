@@ -21,5 +21,6 @@
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/DotNetRepoInspector.Performance/DotNetRepoInspector.Performance.csproj" />
+    <Project Path="benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj" />
   </Folder>
 </Solution>
