@@ -151,7 +151,33 @@ Smoke histórico com Codex em 2026-09-20 (executável local de desenvolvimento; 
 - a resposta final registrou `{"tool_used":"mcp__dri.list_projects","project_count":6}`;
 - a configuração MCP global temporária foi removida após a validação.
 
-Depois que o pacote `1.2.0-rc.1` for **publicado no NuGet.org**, repita esse smoke registrando `dnx DotNetRepoInspector.Mcp@1.2.0-rc.1 --yes -- --root <caminho-absoluto-da-fixture>` como comando do servidor stdio no Codex. Registre a versão/fonte do pacote resolvido, o evento `mcp_tool_call` e o resultado factual. Esse **smoke do Codex pós-publicação do RC está pendente**; ele não integra o resultado histórico acima.
+Depois que o pacote `1.2.0-rc.1` for **publicado no NuGet.org**, repita esse smoke em um ambiente NuGet isolado para impedir a reutilização do pacote validado anteriormente no feed local controlado.
+
+Use um diretório temporário e inicialmente vazio em `NUGET_PACKAGES` e um `NuGet.Config` temporário contendo somente:
+
+```xml
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+</configuration>
+```
+
+Depois registre o servidor stdio no Codex com o pacote e a origem exatos, por exemplo:
+
+```bash
+export NUGET_PACKAGES="$(mktemp -d)"
+codex mcp add dri -- \
+  dnx DotNetRepoInspector.Mcp@1.2.0-rc.1 \
+  --configfile /caminho/absoluto/NuGet.Config \
+  --source https://api.nuget.org/v3/index.json \
+  --no-http-cache \
+  --yes -- \
+  --root <caminho-absoluto-da-fixture>
+```
+
+O workflow protegido de release aplica o mesmo isolamento em `.github/scripts/invoke_mcp_package_smoke.ps1`: a origem configurada é exclusiva, `NUGET_PACKAGES` é recriado vazio a cada tentativa e o cache HTTP é desabilitado. Registre a versão/fonte do pacote resolvido, o evento `mcp_tool_call` e o resultado factual. Esse **smoke do Codex pós-publicação do RC está pendente**; ele não integra o resultado histórico acima.
 
 ### Claude Code
 
