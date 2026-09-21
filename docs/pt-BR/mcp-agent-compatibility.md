@@ -98,7 +98,7 @@ dotnet run --project evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp
 
 No Linux/macOS, use o caminho do executável sem extensão no mesmo diretório `bin/Release/net10.0/`.
 
-Última execução determinística nesta branch:
+Execução determinística histórica com binário de desenvolvimento (não o RC empacotado):
 
 - timestamp UTC: `2026-09-20T08:25:59.7270206+00:00`
 - OS/runtime: Windows `10.0.26200.0`, `.NET 10.0.12`, x64
