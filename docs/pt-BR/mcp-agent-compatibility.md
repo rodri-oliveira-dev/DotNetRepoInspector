@@ -177,7 +177,7 @@ codex mcp add dri -- \
   --root <caminho-absoluto-da-fixture>
 ```
 
-O workflow protegido de release aplica o mesmo isolamento em `.github/scripts/invoke_mcp_package_smoke.ps1`: a origem configurada é exclusiva, `NUGET_PACKAGES` é recriado vazio a cada tentativa e o cache HTTP é desabilitado. Registre a versão/fonte do pacote resolvido, o evento `mcp_tool_call` e o resultado factual. Esse **smoke do Codex pós-publicação do RC está pendente**; ele não integra o resultado histórico acima.
+O workflow protegido de release aplica o mesmo isolamento em `.github/scripts/invoke_mcp_package_smoke.ps1`: a origem configurada é exclusiva, `NUGET_PACKAGES` é recriado vazio a cada tentativa e o cache HTTP é desabilitado. O script também grava `package-source-evidence.json` com PackageId, versão exata, source, caminho do cache e modo de isolamento. Registre essa evidência junto com o evento `mcp_tool_call` e o resultado factual. Esse **smoke do Codex pós-publicação do RC está pendente**; ele não integra o resultado histórico acima.
 
 ### Claude Code
 
