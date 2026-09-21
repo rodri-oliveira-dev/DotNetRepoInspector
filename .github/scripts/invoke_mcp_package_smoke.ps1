@@ -37,6 +37,16 @@ $escapedPackageSource = [Security.SecurityElement]::Escape($PackageSource)
 </configuration>
 "@ | Set-Content -LiteralPath $nugetConfigPath -Encoding utf8
 
+@{
+    packageId = "DotNetRepoInspector.Mcp"
+    version = $Version
+    packageSource = $PackageSource
+    nugetConfig = $nugetConfigPath
+    nugetPackages = $nugetPackagesPath
+    noHttpCache = $true
+    sourceIsolation = "exclusive"
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $artifactsFullPath "package-source-evidence.json") -Encoding utf8
+
 $datasetPath = Join-Path $artifactsFullPath "package-smoke-dataset.json"
 $dataset = @{
     schemaVersion = 1
