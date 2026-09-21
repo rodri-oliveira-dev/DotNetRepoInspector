@@ -8,6 +8,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-yellow.svg)](LICENSE)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-DotNetRepoInspector-181717?logo=github)](https://github.com/marketplace/actions/dotnetrepoinspector)
 
 **Inspecione e classifique projetos .NET usando metadados MSBuild avaliados para CI/CD, automação, governança de arquitetura e evidências históricas opcionais.**
 
@@ -103,7 +104,7 @@ O pacote tem como alvo .NET 10 e requer runtime/SDK .NET compatível para execu�
 
 > O pacote da CLI está publicado no NuGet.org. A versão `1.1.0` é a release pública mais recente verificada no momento desta atualização; fixe versões exatas para automação reproduzível.
 
-Depois da publicação:
+Instale a versão pública atualmente documentada:
 
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.1.0
@@ -160,7 +161,7 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
 
 O servidor não chama uma LLM nem inclui SDKs de providers. O OpenAI Codex CLI concluiu um smoke test com cliente real; as configurações de Claude Code e Gemini CLI estão documentadas, mas permanecem não validadas no ambiente deste projeto.
 
-`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. A primeira versão estável planejada do pacote é `1.2.0`. Ela passou pelos gates de empacotamento e protocolo em feed controlado, mas **não foi publicada no NuGet.org**, e o GA permanece bloqueado pelos gates documentados de multi-provider e aprovação de release. Depois de uma publicação protegida, a versão estável exata poderá ser iniciada com:
+`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. A primeira versão estável planejada do pacote é `1.2.0`. Ela passou pelos gates de empacotamento e protocolo em feed controlado, mas **não foi publicada no NuGet.org**, e o GA permanece bloqueado pelos gates de publicação protegida e aprovação de release. Validações adicionais com Claude Code e Gemini CLI seguem como evidência não bloqueante de interoperabilidade. Depois de uma publicação protegida, a versão estável exata poderá ser iniciada com:
 
 ```bash
 dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /caminho/absoluto/para/o/repositorio
@@ -171,6 +172,8 @@ dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /caminho/absoluto/para/o/repos
 Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de clientes, schemas das tools, exemplos, limites de segurança e troubleshooting. A [matriz de compatibilidade de clientes](docs/pt-BR/mcp-agent-compatibility.md) registra as evidências e validações pendentes; o documento de [readiness do GA](docs/pt-BR/mcp-ga-readiness.md) é a fonte da verdade sobre o estado da publicação.
 
 ## GitHub Action
+
+> **Disponível no GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` para acompanhar releases compatíveis da linha v1 ou uma tag imutável, como `@v1.1.0`, para máxima reprodutibilidade.
 
 O repositório contém uma Composite Action reutilizável que executa exatamente a versão da .NET Tool fixada pela revisão da Action:
 
@@ -188,7 +191,7 @@ O repositório contém uma Composite Action reutilizável que executa exatamente
 
 Os outputs incluem `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action não exige permissão de escrita nem token do GitHub para inspecionar um repositório que já tenha sido feito checkout.
 
-O alias público `@v1` só fica utilizável depois que a primeira release protegida o mover para o commit imutável da `v1.0.0`. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
+O alias público `@v1` já está disponível para uso direto no GitHub Actions. Tags imutáveis como `@v1.0.0` e `@v1.1.0` podem ser usadas quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
 
 ## Persistência HTTP opcional de snapshots
 

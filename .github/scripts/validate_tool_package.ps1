@@ -99,6 +99,7 @@ try {
     Assert-Equal "Package ID" "DotNetRepoInspector" (Get-MetadataNode $metadata "id").InnerText
     Assert-Equal "Package version" $Version (Get-MetadataNode $metadata "version").InnerText
     Assert-Equal "Authors" "Rodrigo de Oliveira" (Get-MetadataNode $metadata "authors").InnerText
+    Assert-Equal "Package icon metadata" "nuget-icon.png" (Get-MetadataNode $metadata "icon").InnerText
 
     $description = (Get-MetadataNode $metadata "description").InnerText
     if ([string]::IsNullOrWhiteSpace($description)) {
@@ -149,6 +150,10 @@ try {
 
     if (-not ($entryNames -contains "README.md")) {
         throw "The package README was not included."
+    }
+
+    if (-not ($entryNames -contains "nuget-icon.png")) {
+        throw "The package icon 'nuget-icon.png' was not included."
     }
 
     if (-not ($entryNames | Where-Object { $_.EndsWith("/DotnetToolSettings.xml", [StringComparison]::Ordinal) })) {

@@ -2,9 +2,9 @@
 
 **Idiomas:** [English](../en/v1-release-readiness.md) | Português (Brasil)
 
-O DotNetRepoInspector está sendo preparado para sua primeira release pública estável como **v1.0.0**. Este documento define a baseline de readiness que deve continuar verdadeira antes que o workflow protegido de publicação possa entregar a release.
+O DotNetRepoInspector **v1.0.0 já foi publicado**. Este documento é mantido como registro histórico da baseline de readiness que definiu os requisitos da primeira release pública estável e continua documentando o contrato da linha v1.
 
-Este documento **não** significa que a `v1.0.0` já foi publicada. Até o workflow protegido de Release terminar com sucesso, o pacote NuGet e as tags públicas da GitHub Action ainda podem não estar disponíveis.
+As refs públicas da GitHub Action criadas a partir dessa linha de release estão disponíveis, incluindo `v1`, `v1.0` e `v1.0.0`. Releases compatíveis posteriores da v1 podem avançar os aliases móveis, enquanto tags imutáveis de versão completa permanecem fixas.
 
 ## Baseline da v1
 
@@ -24,7 +24,7 @@ Este documento **não** significa que a `v1.0.0` já foi publicada. Até o workf
 
 A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. Testes do repositório comparam essa baseline com `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
 
-O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como pacote framework-dependent pronto para release, com controles de stdio, root explícito, read-only, E2E hermético, segurança, performance, `McpServer`, `.mcp/server.json` embutido, símbolos e smoke da tool empacotada. Readiness de release não significa que o pacote já foi publicado.
+O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como pacote framework-dependent pronto para release, com controles de stdio, root explícito, read-only, E2E hermético, segurança, performance, `McpServer`, `.mcp/server.json` embutido, símbolos e smoke da tool empacotada. A release histórica da CLI/Action `v1.0.0` já foi publicada; o pacote separado `DotNetRepoInspector.Mcp` está preparado, mas **ainda não** foi publicado no NuGet.org. Consulte o [readiness do RC do MCP](mcp-release-candidate.md) para seu estado de publicação independente.
 
 ## Contrato público incluído na v1
 
@@ -89,9 +89,9 @@ Antes de iniciar a release oficial, confirme na `main`:
 
 Um dry-run manual seguro pode ser iniciado em **Actions → Release → Run workflow**, versão `1.0.0`, `publish=false`. O job de publicação deve ser ignorado.
 
-## Pré-requisitos administrativos da primeira publicação
+## Pré-requisitos administrativos históricos da primeira publicação
 
-Estes passos ficam intencionalmente fora do código do repositório e devem ser concluídos por um maintainer antes que `publish=true` possa funcionar:
+Na publicação original da v1.0.0, estes pré-requisitos de conta ficaram intencionalmente fora do código do repositório:
 
 1. Criar um GitHub Environment `release` protegido.
 2. Exigir aprovação nesse environment e restringir deployment à `main` conforme apropriado para o repositório.
@@ -101,9 +101,9 @@ Estes passos ficam intencionalmente fora do código do repositório e devem ser 
 
 Nenhuma API key NuGet de longa duração deve ser adicionada ao GitHub Secrets. O workflow usa OIDC/Trusted Publishing.
 
-## Publicando a v1.0.0
+## Procedimento histórico de publicação da v1.0.0
 
-Depois que este trabalho de readiness for mergeado e os pré-requisitos administrativos acima estiverem configurados:
+O procedimento original de publicação protegida foi:
 
 1. abra **Actions → Release → Run workflow** na `main`;
 2. informe a versão `1.0.0`;
@@ -113,9 +113,9 @@ Depois que este trabalho de readiness for mergeado e os pré-requisitos administ
 
 O workflow deriva automaticamente a tag `v1.0.0` da versão `1.0.0`. O workflow protegido é responsável por criar a release/tag imutável `v1.0.0`, publicar o pacote NuGet, publicar a GitHub Release, gerar attestations e somente então mover os aliases estáveis da Action `v1` e `v1.0`.
 
-## Verificação pós-publicação
+## Registro de verificação pós-publicação da v1.0.0
 
-Depois que o workflow terminar com sucesso, valide independentemente:
+A release foi projetada para ser validada independentemente após a conclusão do workflow:
 
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.0.0
