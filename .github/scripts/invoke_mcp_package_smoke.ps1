@@ -24,6 +24,29 @@ $fixtureFullPath = (Resolve-Path -LiteralPath $FixturePath).Path
 $artifactsFullPath = [IO.Path]::GetFullPath($ArtifactsDirectory)
 New-Item -ItemType Directory -Path $artifactsFullPath -Force | Out-Null
 
+$nugetPackagesPath = Join-Path $artifactsFullPath "nuget-packages"
+$nugetConfigPath = Join-Path $artifactsFullPath "NuGet.PackageSmoke.Config"
+$escapedPackageSource = [Security.SecurityElement]::Escape($PackageSource)
+@"
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="package-smoke-source" value="$escapedPackageSource" />
+  </packageSources>
+</configuration>
+"@ | Set-Content -LiteralPath $nugetConfigPath -Encoding utf8
+
+@{
+    packageId = "DotNetRepoInspector.Mcp"
+    version = $Version
+    packageSource = $PackageSource
+    nugetConfig = $nugetConfigPath
+    nugetPackages = $nugetPackagesPath
+    noHttpCache = $true
+    sourceIsolation = "exclusive"
+} | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $artifactsFullPath "package-source-evidence.json") -Encoding utf8
+
 $datasetPath = Join-Path $artifactsFullPath "package-smoke-dataset.json"
 $dataset = @{
     schemaVersion = 1
@@ -50,7 +73,9 @@ $dataset | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $datasetPath -Enc
 $serverArgumentsPath = Join-Path $artifactsFullPath "dnx-server-arguments.json"
 @(
     "DotNetRepoInspector.Mcp@$Version",
+    "--configfile", $nugetConfigPath,
     "--source", $PackageSource,
+    "--no-http-cache",
     "--yes",
     "--"
 ) | ConvertTo-Json | Set-Content -LiteralPath $serverArgumentsPath -Encoding utf8
@@ -72,18 +97,41 @@ $evalArguments = @(
     "--client-version", $Version
 )
 
-for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
-    Write-Host "Packaged MCP smoke attempt $attempt/$MaxAttempts from '$PackageSource'."
-    & dotnet @evalArguments
+$previousNuGetPackages = $env:NUGET_PACKAGES
+$succeeded = $false
 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host "The exact MCP package version completed dnx resolution, stdio handshake, discovery, and inspect_repository."
-        exit 0
+try {
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+        if (Test-Path -LiteralPath $nugetPackagesPath) {
+            Remove-Item -LiteralPath $nugetPackagesPath -Recurse -Force
+        }
+        New-Item -ItemType Directory -Path $nugetPackagesPath -Force | Out-Null
+        $env:NUGET_PACKAGES = $nugetPackagesPath
+
+        Write-Host "Packaged MCP smoke attempt $attempt/$MaxAttempts from exclusive source '$PackageSource' with isolated NuGet package cache '$nugetPackagesPath'."
+        & dotnet @evalArguments
+
+        if ($LASTEXITCODE -eq 0) {
+            $succeeded = $true
+            break
+        }
+
+        if ($attempt -lt $MaxAttempts -and $RetryDelaySeconds -gt 0) {
+            Start-Sleep -Seconds $RetryDelaySeconds
+        }
     }
-
-    if ($attempt -lt $MaxAttempts -and $RetryDelaySeconds -gt 0) {
-        Start-Sleep -Seconds $RetryDelaySeconds
+}
+finally {
+    if ([string]::IsNullOrEmpty($previousNuGetPackages)) {
+        Remove-Item Env:NUGET_PACKAGES -ErrorAction SilentlyContinue
+    }
+    else {
+        $env:NUGET_PACKAGES = $previousNuGetPackages
     }
 }
 
-throw "The exact MCP package version failed its dnx smoke after $MaxAttempts attempt(s)."
+if (-not $succeeded) {
+    throw "The exact MCP package version failed its dnx smoke after $MaxAttempts attempt(s)."
+}
+
+Write-Host "The exact MCP package version completed dnx resolution from the exclusive package source with an isolated cache, stdio handshake, discovery, and inspect_repository."

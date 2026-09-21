@@ -8,6 +8,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-DotNetRepoInspector-181717?logo=github)](https://github.com/marketplace/actions/dotnetrepoinspector)
 
 **Inspect and classify .NET projects using evaluated MSBuild metadata for CI/CD, automation, architecture governance, and optional historical evidence.**
 
@@ -103,7 +104,7 @@ The package targets .NET 10 and requires a compatible .NET runtime/SDK to execut
 
 > The CLI package is published on NuGet.org. Version `1.1.0` is the latest verified public release at the time of this documentation update; pin exact versions for reproducible automation.
 
-After publication:
+Install the current documented public version:
 
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.1.0
@@ -160,7 +161,7 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
 
 The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment.
 
-`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The planned first stable package version is `1.2.0`. It has passed controlled-feed packaging and protocol gates, but it is **not published to NuGet.org** and GA remains blocked by the documented multi-provider and release-approval gates. After a protected publication, the exact stable version can be launched with:
+`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The planned first stable package version is `1.2.0`. It has passed controlled-feed packaging and protocol gates, but it is **not published to NuGet.org** and GA remains blocked by the protected publication and release-approval gates. Additional Claude Code and Gemini CLI validation is tracked as non-blocking interoperability evidence. After a protected publication, the exact stable version can be launched with:
 
 ```bash
 dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /absolute/path/to/repository
@@ -171,6 +172,8 @@ dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /absolute/path/to/repository
 See the [MCP user guide](docs/en/mcp.md) for setup, client configuration, tool schemas, examples, security boundaries, and troubleshooting. The [client compatibility matrix](docs/en/mcp-agent-compatibility.md) records the evidence and pending validations; [GA readiness](docs/en/mcp-ga-readiness.md) is the source of truth for publication status.
 
 ## GitHub Action
+
+> **Available on GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` to follow compatible v1 releases or pin an immutable tag such as `@v1.1.0` for maximum reproducibility.
 
 The repository contains a reusable Composite Action that runs the exact .NET Tool version pinned by the Action revision:
 
@@ -188,7 +191,7 @@ The repository contains a reusable Composite Action that runs the exact .NET Too
 
 Outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action does not require write permissions or a GitHub token for inspection of an already checked-out repository.
 
-The public `@v1` alias becomes usable only after the first protected release moves it to the immutable `v1.0.0` release commit. See [`docs/en/github-action.md`](docs/en/github-action.md).
+The public `@v1` alias is available for direct use in GitHub Actions. Immutable version tags such as `@v1.0.0` and `@v1.1.0` can be used when exact reproducibility is preferred. See [`docs/en/github-action.md`](docs/en/github-action.md).
 
 ## Optional HTTP snapshot persistence
 

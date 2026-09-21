@@ -61,6 +61,7 @@ try {
     Assert-Equal "Package version" $Version (Get-MetadataNode $metadata "version").InnerText
     Assert-Equal "Authors" "Rodrigo de Oliveira" (Get-MetadataNode $metadata "authors").InnerText
     Assert-Equal "License" "MIT" (Get-MetadataNode $metadata "license").InnerText
+    Assert-Equal "Package icon metadata" "nuget-icon.png" (Get-MetadataNode $metadata "icon").InnerText
 
     $repository = Get-MetadataNode $metadata "repository"
     Assert-Equal "Repository URL" "https://github.com/rodri-oliveira-dev/DotNetRepoInspector" $repository.Attributes["url"].Value

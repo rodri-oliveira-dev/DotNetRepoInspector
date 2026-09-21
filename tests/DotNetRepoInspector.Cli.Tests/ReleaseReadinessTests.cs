@@ -77,6 +77,26 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void NuGetPackageIcon_ExistsAndRespectsNuGetSizeLimit()
+    {
+        string iconPath = Path.Combine(RepositoryRoot, "resource", "nuget-icon.png");
+        var icon = new FileInfo(iconPath);
+
+        Assert.True(icon.Exists, "The NuGet package icon was not found.");
+        Assert.InRange(icon.Length, 1, 1_000_000);
+
+        foreach (string projectPath in new[]
+        {
+            Path.Combine("src", "DotNetRepoInspector.Cli", "DotNetRepoInspector.Cli.csproj"),
+            Path.Combine("src", "DotNetRepoInspector.Mcp", "DotNetRepoInspector.Mcp.csproj"),
+        })
+        {
+            XDocument project = XDocument.Load(Path.Combine(RepositoryRoot, projectPath));
+            Assert.Equal("nuget-icon.png", ProjectProperty(project, "PackageIcon"));
+        }
+    }
+
+    [Fact]
     public void V1Baseline_RequiresGovernanceSecurityAndReleaseDocumentation()
     {
         JsonElement baseline = LoadBaseline();
@@ -150,7 +170,7 @@ public sealed class ReleaseReadinessTests
             .EnumerateArray()
             .Select(static item => item.GetInt32())
             .ToArray();
-        Assert.Equal([106, 133, 139], blockingIssues);
+        Assert.Empty(blockingIssues);
 
         string[] externalBlockers = releaseCandidate
             .GetProperty("externalBlockers")
@@ -195,7 +215,7 @@ public sealed class ReleaseReadinessTests
             .EnumerateArray()
             .Select(static item => item.GetInt32())
             .ToArray();
-        Assert.Equal([106, 133, 137, 139], blockingIssues);
+        Assert.Equal([137], blockingIssues);
 
         string[] externalBlockers = generalAvailability
             .GetProperty("externalBlockers")
