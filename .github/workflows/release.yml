@@ -487,6 +487,7 @@ jobs:
           --configuration Release
 
       - name: Wait for MCP package propagation on NuGet.org
+        id: nuget-mcp-propagation
         shell: pwsh
         env:
           RELEASE_VERSION: "${{ needs.build.outputs.version }}"
@@ -497,6 +498,7 @@ jobs:
           $maxAttempts = 10
           $baseDelaySeconds = 30
           $maxDelaySeconds = 120
+          $propagated = $false
 
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             try {
@@ -504,6 +506,7 @@ jobs:
               $index = Invoke-RestMethod -Uri $probeUrl -Method Get -TimeoutSec 30 -Headers @{ "Cache-Control" = "no-cache" }
               $publishedVersion = @($index.versions | Where-Object { $_ -ieq $env:RELEASE_VERSION })
               if ($publishedVersion.Count -gt 0) {
+                $propagated = $true
                 Write-Host "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) is visible in the NuGet.org V3 flat-container index."
                 break
               }
@@ -513,7 +516,16 @@ jobs:
             }
 
             if ($attempt -eq $maxAttempts) {
-              throw "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) did not appear in the NuGet.org V3 index after $maxAttempts attempts."
+              $warning = "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) was accepted for publication but is not yet visible in the NuGet.org V3 flat-container index after $maxAttempts attempts. Verify the package manually on NuGet.org."
+              Write-Host "::warning title=NuGet propagation delayed::$warning"
+              @(
+                "### NuGet propagation warning"
+                ""
+                "$warning"
+                ""
+                "The release workflow will continue without the external NuGet MCP smoke test."
+              ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              break
             }
 
             $delaySeconds = [Math]::Min(
@@ -523,7 +535,10 @@ jobs:
             Start-Sleep -Seconds $delaySeconds
           }
 
+          "propagated=$($propagated.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Smoke exact MCP package version from NuGet.org
+        if: "${{ steps.nuget-mcp-propagation.outputs.propagated == 'true' }}"
         shell: pwsh
         env:
           RELEASE_VERSION: "${{ needs.build.outputs.version }}"
