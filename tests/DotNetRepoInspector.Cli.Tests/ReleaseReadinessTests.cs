@@ -351,10 +351,24 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("name: Publish container images", workflow, StringComparison.Ordinal);
         Assert.Contains("create_github_release:", workflow, StringComparison.Ordinal);
         Assert.Contains("name: Create GitHub Release", workflow, StringComparison.Ordinal);
-        Assert.Contains("needs: [build, create_release_tag]", workflow, StringComparison.Ordinal);
-        Assert.Contains("- publish_nuget", workflow, StringComparison.Ordinal);
-        Assert.Contains("- publish_github_packages", workflow, StringComparison.Ordinal);
-        Assert.Contains("- publish_container", workflow, StringComparison.Ordinal);
+
+        string nugetJob = WorkflowJobBlock(workflow, "publish_nuget");
+        string githubPackagesJob = WorkflowJobBlock(workflow, "publish_github_packages");
+        string containerJob = WorkflowJobBlock(workflow, "publish_container");
+        string githubReleaseJob = WorkflowJobBlock(workflow, "create_github_release");
+
+        foreach (string publicationJob in new[] { nugetJob, githubPackagesJob, containerJob })
+        {
+            Assert.Contains("needs: [build, create_release_tag]", publicationJob, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("- build", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- create_release_tag", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_nuget", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_github_packages", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_container", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("timeout-minutes: 40", nugetJob, StringComparison.Ordinal);
+        Assert.Contains("-TimeoutSec 30", nugetJob, StringComparison.Ordinal);
 
         int tagIndex = workflow.IndexOf("name: Create release tag", StringComparison.Ordinal);
         int nugetIndex = workflow.IndexOf("name: Publish to NuGet.org", StringComparison.Ordinal);
@@ -371,6 +385,31 @@ public sealed class ReleaseReadinessTests
     }
 
     private static string RepositoryRoot { get; } = FindRepositoryRoot();
+
+    private static string WorkflowJobBlock(string workflow, string jobId)
+    {
+        string[] lines = workflow.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        int start = Array.FindIndex(
+            lines,
+            line => string.Equals(line, $"  {jobId}:", StringComparison.Ordinal));
+
+        Assert.True(start >= 0, $"Workflow job '{jobId}' was not found.");
+
+        int end = Array.FindIndex(
+            lines,
+            start + 1,
+            line =>
+                line.StartsWith("  ", StringComparison.Ordinal) &&
+                !line.StartsWith("    ", StringComparison.Ordinal) &&
+                line.EndsWith(':'));
+
+        if (end < 0)
+        {
+            end = lines.Length;
+        }
+
+        return string.Join('\n', lines[start..end]);
+    }
 
     private static JsonElement LoadBaseline()
     {
