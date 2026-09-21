@@ -7,7 +7,9 @@ param(
 
     [string]$FixturePath = "tests/Fixtures/ProjectKinds",
 
-    [string]$ArtifactsDirectory = "artifacts/mcp-package-validation"
+    [string]$ArtifactsDirectory = "artifacts/mcp-package-validation",
+
+    [string]$McpPublisherPath = ""
 )
 
 Set-StrictMode -Version Latest
@@ -100,8 +102,52 @@ try {
     }
 
     $manifestEntry = $archive.GetEntry(".mcp/server.json")
-    $manifestReader = [IO.StreamReader]::new($manifestEntry.Open())
-    try { $manifest = $manifestReader.ReadToEnd() | ConvertFrom-Json } finally { $manifestReader.Dispose() }
+    if ($null -eq $manifestEntry) {
+        throw "The MCP package does not contain .mcp/server.json."
+    }
+
+    $manifestStream = $manifestEntry.Open()
+    $manifestBuffer = [IO.MemoryStream]::new()
+    try {
+        $manifestStream.CopyTo($manifestBuffer)
+        [byte[]]$manifestBytes = $manifestBuffer.ToArray()
+    }
+    finally {
+        $manifestStream.Dispose()
+        $manifestBuffer.Dispose()
+    }
+
+    if ($manifestBytes.Length -eq 0) {
+        throw "The MCP server metadata file cannot be empty."
+    }
+
+    if ($manifestBytes.Length -gt 20000) {
+        throw "The MCP server metadata file exceeds the NuGet.org 20,000-byte limit."
+    }
+
+    if ($manifestBytes.Length -ge 3 -and
+        $manifestBytes[0] -eq 0xEF -and
+        $manifestBytes[1] -eq 0xBB -and
+        $manifestBytes[2] -eq 0xBF) {
+        throw "The MCP server metadata file must be UTF-8 without a BOM; NuGet.org parses the raw UTF-8 bytes as JSON."
+    }
+
+    $strictUtf8 = [Text.UTF8Encoding]::new($false, $true)
+    try {
+        $manifestText = $strictUtf8.GetString($manifestBytes)
+        $manifest = $manifestText | ConvertFrom-Json
+    }
+    catch {
+        throw "The MCP server metadata file is not valid BOM-free UTF-8 JSON: $($_.Exception.Message)"
+    }
+
+    if (-not $manifestText.TrimStart().StartsWith("{", [StringComparison]::Ordinal)) {
+        throw "The MCP server metadata root must be a JSON object."
+    }
+
+    $manifestValidationPath = Join-Path $artifactsFullPath "server.json"
+    [IO.File]::WriteAllText($manifestValidationPath, $manifestText, [Text.UTF8Encoding]::new($false))
+
     Assert-Equal "MCP schema" "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json" $manifest.'$schema'
     Assert-Equal "MCP name" "io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp" $manifest.name
     Assert-Equal "MCP version" $Version $manifest.version
@@ -117,9 +163,18 @@ try {
         throw "MCP manifest must require one explicit --root package argument."
     }
 
-    $manifestText = $manifest | ConvertTo-Json -Depth 10 -Compress
-    if ($manifestText -match '(?i)(api[_-]?key|token|password|secret)') {
+    $normalizedManifestText = $manifest | ConvertTo-Json -Depth 10 -Compress
+    if ($normalizedManifestText -match '(?i)(api[_-]?key|token|password|secret)') {
         throw "MCP manifest contains a secret-like field or value."
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($McpPublisherPath)) {
+        $publisherFullPath = (Resolve-Path -LiteralPath $McpPublisherPath).Path
+        Write-Host "Validating MCP metadata with official mcp-publisher: $publisherFullPath"
+        & $publisherFullPath validate $manifestValidationPath
+        if ($LASTEXITCODE -ne 0) {
+            throw "Official mcp-publisher schema/semantic validation failed with exit code $LASTEXITCODE."
+        }
     }
 }
 finally {
@@ -169,4 +224,11 @@ $installedToolArguments = @(
 & dotnet @installedToolArguments
 if ($LASTEXITCODE -ne 0) { throw "Installed MCP dotnet tool smoke failed." }
 
-Write-Host "MCP package metadata, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."
+$registryValidationSummary = if ([string]::IsNullOrWhiteSpace($McpPublisherPath)) {
+    ""
+}
+else {
+    ", official registry validation"
+}
+
+Write-Host "MCP package metadata, BOM-free NuGet.org JSON compatibility$registryValidationSummary, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."

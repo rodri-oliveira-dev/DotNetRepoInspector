@@ -262,6 +262,51 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void McpPackageMetadata_IsBomFreeAndValidatedBeforePublication()
+    {
+        string projectPath = Path.Combine(
+            RepositoryRoot,
+            "src",
+            "DotNetRepoInspector.Mcp",
+            "DotNetRepoInspector.Mcp.csproj");
+        string projectText = File.ReadAllText(projectPath);
+        XDocument project = XDocument.Load(projectPath);
+
+        XElement? manifestWriter = project
+            .Descendants()
+            .FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "WriteLinesToFile", StringComparison.Ordinal) &&
+                string.Equals(
+                    element.Attribute("File")?.Value,
+                    "$(McpManifestPath)",
+                    StringComparison.Ordinal));
+
+        Assert.NotNull(manifestWriter);
+        Assert.Null(manifestWriter.Attribute("Encoding"));
+        Assert.DoesNotContain("&quot;valueHint&quot;: &quot;repository_root&quot;", projectText, StringComparison.Ordinal);
+
+        string validator = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "scripts",
+            "validate_mcp_package.ps1"));
+
+        Assert.Contains("UTF-8 without a BOM", validator, StringComparison.Ordinal);
+        Assert.Contains("20000", validator, StringComparison.Ordinal);
+        Assert.Contains("mcp-publisher", validator, StringComparison.Ordinal);
+
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+
+        Assert.Contains("MCP_PUBLISHER_VERSION: \"1.8.1\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc", workflow, StringComparison.Ordinal);
+        Assert.Contains("-McpPublisherPath $env:MCP_PUBLISHER_PATH", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ReleaseWorkflow_ProtectsMcpPackagingAndTrustedPublication()
     {
         string workflow = File.ReadAllText(Path.Combine(
