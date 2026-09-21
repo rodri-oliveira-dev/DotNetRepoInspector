@@ -5,6 +5,7 @@
 [![Build & Tests](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml/badge.svg)](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/workflows/validate.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=rodri-oliveira-dev_DotNetRepoInspector&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=rodri-oliveira-dev_DotNetRepoInspector)
 [![NuGet](https://img.shields.io/nuget/v/DotNetRepoInspector.svg)](https://www.nuget.org/packages/DotNetRepoInspector)
+[![MCP NuGet](https://img.shields.io/nuget/v/DotNetRepoInspector.Mcp.svg?label=MCP%20NuGet)](https://www.nuget.org/packages/DotNetRepoInspector.Mcp)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-yellow.svg)](LICENSE)
@@ -12,7 +13,7 @@
 
 **Inspecione e classifique projetos .NET usando metadados MSBuild avaliados para CI/CD, automação, governança de arquitetura e evidências históricas opcionais.**
 
-> Status: **baseline estável v1.0.0**. O contrato público da v1 está definido e validado em CI. Os artefatos oficiais são publicados somente pelo workflow protegido de Release.
+> Status: **contrato v1 estável**. O contrato público da v1 está definido e validado em CI. Os artefatos oficiais são publicados somente pelo workflow protegido de Release.
 
 ## O que a v1 faz
 
@@ -25,13 +26,13 @@ A superfície da v1 inclui:
 - metadados de `global.json` e SDK resolvido;
 - metadados Git de repositório, commit, branch, remote e dirty state quando disponíveis;
 - classificação base determinística: Web, Worker, Console, Library, Test e Unknown;
-- JSON de inspeção versionado (`schemaVersion 1.3` na v1.0.0);
+- JSON de inspeção versionado (`schemaVersion 1.3`);
 - configuração opcional do repositório para exclusões e overrides explícitos de classificação;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
 - diagnósticos estruturados, cancelamento, compatibilidade cross-platform, hardening de segurança, guardrails de performance e validação contra repositórios públicos fixados.
 
-Subtipos de aplicações e a camada opcional de políticas são trabalho pós-v1 e não fazem parte da promessa de compatibilidade da v1.0.0.
+Subtipos de aplicações e a camada opcional de políticas são trabalho pós-v1 e não fazem parte da promessa de compatibilidade da v1.
 
 ## Princípios de design
 
@@ -45,7 +46,7 @@ Subtipos de aplicações e a camada opcional de políticas são trabalho pós-v1
 
 ## Contrato JSON
 
-A baseline da release v1.0.0 usa o schema de inspeção **1.3**. Um payload representativo é:
+O contrato v1 usa atualmente o schema de inspeção **1.3**. Um payload representativo é:
 
 ```json
 {
@@ -102,25 +103,23 @@ Invocação pública suportada: `dotnet repo-inspect`
 
 O pacote tem como alvo .NET 10 e requer runtime/SDK .NET compatível para execução.
 
-> O pacote da CLI está publicado no NuGet.org. A versão `1.1.0` é a release pública mais recente verificada no momento desta atualização; fixe versões exatas para automação reproduzível.
-
-Instale a versão pública atualmente documentada:
+O pacote da CLI é publicado no NuGet.org. A instalação sem `--version` seleciona o pacote estável mais recente disponível nas fontes NuGet configuradas:
 
 ```bash
-dotnet tool install --global DotNetRepoInspector --version 1.1.0
+dotnet tool install --global DotNetRepoInspector
 dotnet repo-inspect --version
 dotnet repo-inspect .
 ```
 
-Também é possível fixar a Tool em um manifest local:
+Também é possível instalar a Tool em um manifest local:
 
 ```bash
 dotnet new tool-manifest
-dotnet tool install DotNetRepoInspector --version 1.1.0
+dotnet tool install DotNetRepoInspector
 dotnet repo-inspect .
 ```
 
-Contribuidores podem gerar e instalar um pacote local ainda não publicado. Consulte [`docs/pt-BR/cli.md`](docs/pt-BR/cli.md).
+Para automação reproduzível, fixe uma versão explícita no seu próprio manifest/pipeline em vez de depender de uma versão de exemplo neste README. Contribuidores podem gerar e instalar um pacote local ainda não publicado. Consulte [`docs/pt-BR/cli.md`](docs/pt-BR/cli.md).
 
 ## Uso da CLI
 
@@ -161,11 +160,13 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
 
 O servidor não chama uma LLM nem inclui SDKs de providers. O OpenAI Codex CLI concluiu um smoke test com cliente real; as configurações de Claude Code e Gemini CLI estão documentadas, mas permanecem não validadas no ambiente deste projeto.
 
-`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. A primeira versão estável planejada do pacote é `1.2.0`. Ela passou pelos gates de empacotamento e protocolo em feed controlado, mas **não foi publicada no NuGet.org**, e o GA permanece bloqueado pelos gates de publicação protegida e aprovação de release. Validações adicionais com Claude Code e Gemini CLI seguem como evidência não bloqueante de interoperabilidade. Depois de uma publicação protegida, a versão estável exata poderá ser iniciada com:
+`DotNetRepoInspector.Mcp` é empacotado como .NET Tool framework-dependent e `McpServer` NuGet, com comando `dotnet-repo-inspector-mcp` e `.mcp/server.json` embutido. A publicação oficial é feita pelo workflow protegido de Release e o pacote é distribuído pelo NuGet.org e GitHub Packages. Com .NET 10 ou superior, o pacote estável mais recente pode ser executado diretamente com `dnx`:
 
 ```bash
-dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /caminho/absoluto/para/o/repositorio
+dnx DotNetRepoInspector.Mcp --yes -- --root /caminho/absoluto/para/o/repositorio
 ```
+
+Para automação reproduzível, use a sintaxe opcional `@<versão>` na sua própria configuração. Validações adicionais com Claude Code e Gemini CLI seguem como evidência não bloqueante de interoperabilidade.
 
 <!-- mcp-name: io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp -->
 
@@ -173,7 +174,7 @@ Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de
 
 ## GitHub Action
 
-> **Disponível no GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` para acompanhar releases compatíveis da linha v1 ou uma tag imutável, como `@v1.1.0`, para máxima reprodutibilidade.
+> **Disponível no GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` para acompanhar releases compatíveis da linha v1. Para máxima reprodutibilidade, fixe uma tag completa imutável ou commit SHA disponível na página de Releases.
 
 O repositório contém uma Composite Action reutilizável que executa exatamente a versão da .NET Tool fixada pela revisão da Action:
 
@@ -191,7 +192,44 @@ O repositório contém uma Composite Action reutilizável que executa exatamente
 
 Os outputs incluem `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action não exige permissão de escrita nem token do GitHub para inspecionar um repositório que já tenha sido feito checkout.
 
-O alias público `@v1` já está disponível para uso direto no GitHub Actions. Tags imutáveis como `@v1.0.0` e `@v1.1.0` podem ser usadas quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
+O alias público `@v1` já está disponível para uso direto no GitHub Actions. Fixe uma tag completa imutável ou commit SHA quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
+
+## Imagens de container
+
+Releases estáveis oficiais publicam a mesma imagem multi-arquitetura no **GHCR** e no **Docker Hub**:
+
+- `ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector`
+- `docker.io/rodrigodotnet/dotnet-repo-inspector`
+
+As imagens têm como alvo `linux/amd64` e `linux/arm64`, executam como non-root, incluem as famílias de SDK .NET suportadas necessárias para avaliação MSBuild e são publicadas com verificação de SBOM/provenance. Uma execução local/offline endurecida pode usar a tag estável móvel:
+
+```bash
+mkdir -p artifacts
+docker run --rm \
+  --read-only \
+  --network none \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges \
+  --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+  --mount type=bind,src="$PWD",dst=/repo,readonly \
+  --mount type=bind,src="$PWD/artifacts",dst=/artifacts \
+  ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest \
+  /repo --output /artifacts/inspection.json
+```
+
+Para deployments reproduzíveis, fixe um digest imutável da imagem na sua própria automação em vez de depender de `:latest`. A execução em container reduz a fronteira operacional, mas **não** transforma avaliação MSBuild em sandbox.
+
+## Canais de distribuição
+
+O workflow protegido de Release valida uma vez e publica por canais independentes:
+
+- pacotes CLI e MCP no **NuGet.org**;
+- pacotes CLI e MCP no **GitHub Packages**;
+- Action reutilizável por **GitHub Marketplace / Git tags**;
+- imagens multi-arquitetura no **GHCR** e **Docker Hub**.
+
+A GitHub Release final só é criada depois que todos os canais obrigatórios de publicação e os gates de verificação pós-publicação concluem com sucesso.
+
 
 ## Persistência HTTP opcional de snapshots
 
@@ -223,7 +261,7 @@ A avaliação MSBuild **não é um sandbox**. Repositórios não confiáveis dev
 
 ## Readiness da release
 
-A baseline da v1.0.0 está em formato legível por máquina em [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) e é protegida por testes do repositório. Ela mantém alinhados versão do produto, versão do schema, alias major da Action, metadados NuGet/.NET Tool, exemplo canônico do schema e arquivos obrigatórios de governança/segurança.
+A baseline de release da v1 está em formato legível por máquina em [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) e é protegida por testes do repositório. Ela mantém alinhados versão do produto, versão do schema, alias major da Action, metadados NuGet/.NET Tool, exemplo canônico do schema e arquivos obrigatórios de governança/segurança.
 
 O checklist da primeira publicação, pré-requisitos externos de GitHub/NuGet, procedimento seguro de dry-run e verificação pós-publicação estão em [`docs/pt-BR/v1-release-readiness.md`](docs/pt-BR/v1-release-readiness.md). As regras gerais de SemVer, artifacts, tags, provenance e recuperação estão em [`docs/pt-BR/releases.md`](docs/pt-BR/releases.md).
 
@@ -238,7 +276,7 @@ Esta preparação do repositório não publica, por si só, pacote, tag ou GitHu
 - [Servidor MCP](docs/pt-BR/mcp.md)
 - [GitHub Action](docs/pt-BR/github-action.md)
 - [Releases/versionamento](docs/pt-BR/releases.md)
-- [Readiness da release v1.0.0](docs/pt-BR/v1-release-readiness.md)
+- [Readiness da release v1](docs/pt-BR/v1-release-readiness.md)
 
 ## Arquitetura
 
@@ -255,7 +293,7 @@ Inspection Engine ----> InspectionReport ----> JSON output
                            v
                     HTTP/webhook
 
-Delivery hosts: CLI / .NET Tool and GitHub Action
+Delivery hosts: CLI / .NET Tool, servidor MCP, GitHub Action e imagens de container
 Pós-v1: sinks adicionais, policy/reporting, subtipos mais ricos
 ```
 
@@ -267,11 +305,9 @@ Contribuições externas são suportadas. Comece por [`CONTRIBUTING.pt-BR.md`](C
 
 Mudanças de classificação exigem fixtures sintéticas reproduzíveis e evidência avaliada; repositórios públicos podem revelar um bug, mas não substituem uma fixture local permanente de regressão.
 
-## Roadmap depois da v1.0.0
+## Roadmap
 
-A fundação da v1 está concluída no código e na automação de release. A publicação permanece uma operação protegida e explícita. O trabalho pós-v1 inclui subtipos mais ricos de aplicações, adapters adicionais de persistência quando justificados e uma camada opcional de políticas sobre o contrato normalizado.
-
-Consulte a issue de tracking #30 para a roadmap da primeira release pública e as issues pós-MVP dedicadas para evolução futura.
+A fundação da v1 e os canais públicos de distribuição estão estabelecidos. A publicação oficial permanece uma operação protegida e explícita. O trabalho contínuo inclui subtipos mais ricos de aplicações, adapters adicionais de persistência quando justificados, uma camada opcional de políticas sobre o contrato normalizado e novas evidências de interoperabilidade.
 
 ## Licença
 
