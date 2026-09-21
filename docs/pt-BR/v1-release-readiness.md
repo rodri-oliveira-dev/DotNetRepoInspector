@@ -91,7 +91,7 @@ Um dry-run manual seguro pode ser iniciado em **Actions → Release → Run work
 
 ## Pré-requisitos administrativos históricos da primeira publicação
 
-Estes passos ficam intencionalmente fora do código do repositório e devem ser concluídos por um maintainer antes que `publish=true` possa funcionar:
+Na publicação original da v1.0.0, estes pré-requisitos de conta ficaram intencionalmente fora do código do repositório:
 
 1. Criar um GitHub Environment `release` protegido.
 2. Exigir aprovação nesse environment e restringir deployment à `main` conforme apropriado para o repositório.
@@ -103,7 +103,7 @@ Nenhuma API key NuGet de longa duração deve ser adicionada ao GitHub Secrets. 
 
 ## Procedimento histórico de publicação da v1.0.0
 
-Depois que este trabalho de readiness for mergeado e os pré-requisitos administrativos acima estiverem configurados:
+O procedimento original de publicação protegida foi:
 
 1. abra **Actions → Release → Run workflow** na `main`;
 2. informe a versão `1.0.0`;
@@ -115,7 +115,7 @@ O workflow deriva automaticamente a tag `v1.0.0` da versão `1.0.0`. O workflow 
 
 ## Registro de verificação pós-publicação da v1.0.0
 
-Depois que o workflow terminar com sucesso, valide independentemente:
+A release foi projetada para ser validada independentemente após a conclusão do workflow:
 
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.0.0
