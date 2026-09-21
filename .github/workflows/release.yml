@@ -79,6 +79,23 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Install pinned MCP publisher validator
+        env:
+          MCP_PUBLISHER_VERSION: "1.8.1"
+          MCP_PUBLISHER_SHA256: "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
+        run: |
+          set -euo pipefail
+
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          url="https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/${archive}"
+
+          curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" "$url" --output "$archive"
+          echo "${MCP_PUBLISHER_SHA256}  ${archive}" | sha256sum --check -
+          tar -xzf "$archive" mcp-publisher
+          install -m 0755 mcp-publisher "${RUNNER_TEMP}/mcp-publisher"
+          "${RUNNER_TEMP}/mcp-publisher" --help >/dev/null
+          echo "MCP_PUBLISHER_PATH=${RUNNER_TEMP}/mcp-publisher" >> "${GITHUB_ENV}"
+
       - name: Resolve release metadata
         id: release-metadata
         env:
@@ -268,6 +285,7 @@ jobs:
           -Version $env:RELEASE_VERSION
           -FixturePath ./tests/Fixtures/ProjectKinds
           -ArtifactsDirectory ./artifacts/mcp-release-smoke
+          -McpPublisherPath $env:MCP_PUBLISHER_PATH
 
       - name: Validate MCP release candidate
         if: "${{ steps.release-metadata.outputs.is_prerelease == 'true' }}"
