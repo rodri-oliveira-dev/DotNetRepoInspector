@@ -224,4 +224,11 @@ $installedToolArguments = @(
 & dotnet @installedToolArguments
 if ($LASTEXITCODE -ne 0) { throw "Installed MCP dotnet tool smoke failed." }
 
-Write-Host "MCP package metadata, BOM-free NuGet.org JSON compatibility, official registry validation, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."
+$registryValidationSummary = if ([string]::IsNullOrWhiteSpace($McpPublisherPath)) {
+    ""
+}
+else {
+    ", official registry validation"
+}
+
+Write-Host "MCP package metadata, BOM-free NuGet.org JSON compatibility$registryValidationSummary, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."
