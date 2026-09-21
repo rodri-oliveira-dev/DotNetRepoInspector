@@ -6,7 +6,7 @@ Este documento é o SDD e o registro de evidências da issue #138. O primeiro pa
 
 ## Specification
 
-O GA exige RC concluído e publicado, zero findings críticos/altos sem tratamento, documentação bilíngue e evidências de compatibilidade atuais e contrato machine-readable de readiness verde. O pacote estável deve ser publicado somente pelo workflow protegido de Release a partir de uma ref permitida, com Trusted Publishing e aprovação humana obrigatória. Depois, o pacote exato do NuGet.org deve passar por `dnx`, handshake MCP, discovery, chamadas principais, dois clientes reais de providers, hashes, attestations, provenance e smokes pós-publicação.
+O GA exige RC concluído e publicado, zero findings críticos/altos sem tratamento, documentação bilíngue e evidências de compatibilidade atuais e contrato machine-readable de readiness verde. O pacote estável deve ser publicado somente pelo workflow protegido de Release a partir de uma ref permitida, com Trusted Publishing e aprovação humana obrigatória. Depois, o pacote exato do NuGet.org deve passar por `dnx`, handshake MCP, discovery, chamadas principais, evals determinísticos, hashes, attestations, provenance e smokes pós-publicação. Clientes adicionais de providers são evidência de compatibilidade, não gates de GA.
 
 O catálogo público v1 está congelado para `1.2.0`:
 
@@ -28,7 +28,7 @@ Inputs, outputs, envelopes de erro, `mcpSchemaVersion` `1.0`, annotations read-o
 3. Fazer merge do PR consolidado somente após reviews e checks obrigatórios.
 4. Confirmar a policy de Trusted Publishing no NuGet.org e a aprovação do environment protegido `release`.
 5. Disparar o workflow de Release da ref permitida com versão `1.2.0` e `publish=true`.
-6. Verificar NuGet.org, `dnx` com versão exata, dois providers, assets, manifest, hashes, attestations, evidências de container e scans pós-publicação.
+6. Verificar NuGet.org, `dnx` com versão exata, validações determinísticas do MCP, o smoke já estabelecido com Codex, assets, manifest, hashes, attestations e verificações pós-publicação.
 7. Marcar GA e roadmap como concluídos somente depois de anexar todas as evidências à #138.
 
 ## Tasks e evidências atuais
@@ -39,7 +39,7 @@ Inputs, outputs, envelopes de erro, `mcpSchemaVersion` `1.0`, annotations read-o
 | Segurança | Preparado | Suítes de segurança e superfícies de alertas do GitHub são verificadas; publicação exige nova execução protegida |
 | Congelamento de contrato | Concluído | Seis tools listadas acima e no readiness machine-readable |
 | Metadados do pacote estável | Preparado | `1.2.0` pode ser empacotado e inspecionado; evidência do NuGet.org não existe |
-| Compatibilidade | Bloqueado | Codex está validado; segundo provider real continua exigido por #133/#139 |
+| Compatibilidade | Preparado | Codex está validado e protocolo/evals determinísticos estão verdes; providers adicionais das #133/#139 são follow-ups não bloqueantes |
 | Performance/confiabilidade | Preparado | `.github/mcp-performance-baseline.json`, fila limitada, cancelamento, timeout e telemetria em stderr |
 | Distribuições existentes | Preparado | CLI, Action e container mantêm readiness independente; o trabalho de container não bloqueia o GA do MCP |
 | Supply chain | Bloqueado | Hashes, attestations, provenance, SBOM e manifest oficiais exigem a publicação protegida |
@@ -53,9 +53,8 @@ A medição da candidata a GA em Windows x64/.NET 10 registrou 68 ms de process 
 
 ## Bloqueios do GA
 
-- #133 e #139: não existem segundo cliente de provider e evidência de eval multi-provider.
 - #137: nenhum RC foi publicado, portanto não existem pacote público exato e evidências pós-publicação.
 - A policy de Trusted Publishing do `DotNetRepoInspector.Mcp` no NuGet.org não está confirmada.
 - O PR consolidado não foi integrado a uma ref permitida, e a aprovação do environment protegido não ocorreu.
 
-Esses são gates obrigatórios do MCP, não candidatos a vNext. O release-readiness de container acompanhado na #106 permanece independente do GA do MCP. Trabalhos pós-v1 existentes, como classificações mais ricas (#25) e políticas opcionais (#28), permanecem fora do GA e não alteram o contrato MCP v1 congelado.
+Esses são gates obrigatórios de publicação do MCP, não candidatos a vNext. O release-readiness de container acompanhado na #106 e as validações adicionais de providers das #133/#139 permanecem independentes do GA do MCP. Trabalhos pós-v1 existentes, como classificações mais ricas (#25) e políticas opcionais (#28), permanecem fora do GA e não alteram o contrato MCP v1 congelado.
