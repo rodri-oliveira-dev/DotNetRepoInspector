@@ -121,7 +121,7 @@ Last deterministic run in this branch:
 | Gemini CLI | Google | not installed in this environment | expected MCP stdio | `settings.json` `mcpServers.dotnetRepoInspector.command` + `args` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
 | MCP SDK deterministic harness | Protocol harness | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | explicit `--root` argument per fixture | validated | validated | validated across all MVP fact categories | Passed deterministic protocol eval |
 
-Important release note: as of this validation, only one external provider client, OpenAI Codex CLI, was actually available and validated in the environment. The #133 and #139 release gate requiring at least two external provider clients remains open until Claude Code or Gemini CLI is validated by maintainers.
+Release note: OpenAI Codex CLI is the external provider client validated in this environment. Claude Code and Gemini CLI configurations are documented but not independently validated here. Those additional validations are tracked by #133 and #139 as non-blocking interoperability evidence; MCP publication relies on deterministic protocol/eval gates plus the established Codex smoke.
 
 ## Reproducible Smoke Tests
 
