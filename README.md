@@ -103,7 +103,7 @@ The package targets .NET 10 and requires a compatible .NET runtime/SDK to execut
 
 > The CLI package is published on NuGet.org. Version `1.1.0` is the latest verified public release at the time of this documentation update; pin exact versions for reproducible automation.
 
-After publication:
+Install the current documented public version:
 
 ```bash
 dotnet tool install --global DotNetRepoInspector --version 1.1.0
