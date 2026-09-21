@@ -102,7 +102,7 @@ Historical deterministic development-binary run (not the packaged RC):
 
 - timestamp UTC: `2026-09-20T08:25:59.7270206+00:00`
 - OS/runtime: Windows `10.0.26200.0`, `.NET 10.0.12`, x64
-- server: `DotNetRepoInspector.Mcp` `1.0.0`
+- server-reported version for this development binary: `DotNetRepoInspector.Mcp` `1.0.0` (not the `1.2.0-rc.1` package identity)
 - discovered tools: all six MVP tools
 - result: 7/7 cases completed
 - task completion: 100%
@@ -112,16 +112,18 @@ Historical deterministic development-binary run (not the packaged RC):
 - unnecessary calls: 0
 - unsupported claims: 0
 
+RC package evidence is recorded separately in [issue #137](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/137#issuecomment-5749538826): the **exact `DotNetRepoInspector.Mcp` package version `1.2.0-rc.1`**, resolved by `dnx` from a **controlled local feed**, passed package/protocol validation, **7/7 deterministic fixture evals**, and **1/1 real-repository smoke**. The [protected release dry-run](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/actions/runs/35507871398) used `publish=false`. This establishes deterministic RC-package evidence, **not** public NuGet.org publication or a Codex smoke against the RC artifact.
+
 ## Compatibility Matrix
 
 | Client | Provider | Version used | MCP protocol | Stdio config | Root config | Handshake | Discovery | Tool execution | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` through `ModelContextProtocol` server | `codex mcp add dri -- <server> --root <root>` | explicit `--root` argument | validated by real client run | validated by `mcp_tool_call` to `list_projects` | validated: `list_projects` returned 6 projects | Passed for Codex smoke |
+| OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` through `ModelContextProtocol` server | `codex mcp add dri -- <server> --root <root>` | explicit `--root` argument | validated by real client run | validated by `mcp_tool_call` to `list_projects` | validated: `list_projects` returned 6 projects | Passed historical local-binary Codex smoke; exact RC artifact not validated |
 | Claude Code | Anthropic | not installed in this environment | expected MCP stdio | `claude mcp add --transport stdio dotnet-repo-inspector -- <server> --root <root>` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
 | Gemini CLI | Google | not installed in this environment | expected MCP stdio | `settings.json` `mcpServers.dotnetRepoInspector.command` + `args` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
 | MCP SDK deterministic harness | Protocol harness | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | explicit `--root` argument per fixture | validated | validated | validated across all MVP fact categories | Passed deterministic protocol eval |
 
-Release note: OpenAI Codex CLI is the external provider client validated in this environment. Claude Code and Gemini CLI configurations are documented but not independently validated here. Those additional validations are tracked by #133 and #139 as non-blocking interoperability evidence; MCP publication relies on deterministic protocol/eval gates plus the established Codex smoke.
+Release note: OpenAI Codex CLI was validated against a local development executable, but its exact artifact/package version was not recorded. Do not treat that historical smoke as validation of `1.2.0-rc.1`. The exact `1.2.0-rc.1` package passed deterministic evals from a controlled local feed as recorded above; a Codex smoke against the **exact published RC package** remains pending until publication and must be recorded before GA promotion. Claude Code and Gemini CLI are not independently validated here; additional-provider runs remain non-blocking interoperability follow-ups in #133/#139.
 
 ## Reproducible Smoke Tests
 
@@ -141,13 +143,15 @@ codex mcp remove dri
 
 Expected evidence: JSONL contains an `mcp_tool_call` item with server `dri`, tool `list_projects`, `status` `completed`, and structured content whose `data.projects` length is 6.
 
-Validated Codex smoke on 2026-09-20:
+Historical Codex smoke on 2026-09-20 (local development executable; exact package version not recorded):
 
 - command accepted stdio config;
 - `codex mcp list` showed server `dri` enabled with stdio command and `--root`;
 - `codex exec --json` emitted a real `mcp_tool_call` for `dri/list_projects`;
 - final answer reported `{"tool_used":"mcp__dri.list_projects","project_count":6}`;
 - temporary global MCP config was removed after validation.
+
+After the `1.2.0-rc.1` package is **published to NuGet.org**, repeat this smoke by registering `dnx DotNetRepoInspector.Mcp@1.2.0-rc.1 --yes -- --root <absolute-fixture-root>` as the Codex stdio server command. Record the resolved package version/source, `mcp_tool_call` event, and factual result. This **post-publication Codex RC smoke is pending**, not part of the historical result above.
 
 ### Claude Code
 
