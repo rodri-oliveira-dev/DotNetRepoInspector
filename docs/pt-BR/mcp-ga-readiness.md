@@ -41,7 +41,7 @@ Inputs, outputs, envelopes de erro, `mcpSchemaVersion` `1.0`, annotations read-o
 | Metadados do pacote estável | Preparado | `1.2.0` pode ser empacotado e inspecionado; evidência do NuGet.org não existe |
 | Compatibilidade | Bloqueado | Codex está validado; segundo provider real continua exigido por #133/#139 |
 | Performance/confiabilidade | Preparado | `.github/mcp-performance-baseline.json`, fila limitada, cancelamento, timeout e telemetria em stderr |
-| Distribuições existentes | Preparado | CLI, Action e container permanecem no workflow protegido em lockstep; #106 não está concluída |
+| Distribuições existentes | Preparado | CLI, Action e container mantêm readiness independente; o trabalho de container não bloqueia o GA do MCP |
 | Supply chain | Bloqueado | Hashes, attestations, provenance, SBOM e manifest oficiais exigem a publicação protegida |
 | Publicação | Bloqueado | Merge/ref permitida, aprovação de environment e policy Trusted Publishing são gates externos |
 
@@ -53,10 +53,9 @@ A medição da candidata a GA em Windows x64/.NET 10 registrou 68 ms de process 
 
 ## Bloqueios do GA
 
-- #106: baseline do release de container em lockstep está incompleto.
 - #133 e #139: não existem segundo cliente de provider e evidência de eval multi-provider.
 - #137: nenhum RC foi publicado, portanto não existem pacote público exato e evidências pós-publicação.
 - A policy de Trusted Publishing do `DotNetRepoInspector.Mcp` no NuGet.org não está confirmada.
 - O PR consolidado não foi integrado a uma ref permitida, e a aprovação do environment protegido não ocorreu.
 
-Esses são gates obrigatórios, não candidatos a vNext. Trabalhos pós-v1 existentes, como classificações mais ricas (#25) e políticas opcionais (#28), permanecem fora do GA e não alteram o contrato MCP v1 congelado.
+Esses são gates obrigatórios do MCP, não candidatos a vNext. O release-readiness de container acompanhado na #106 permanece independente do GA do MCP. Trabalhos pós-v1 existentes, como classificações mais ricas (#25) e políticas opcionais (#28), permanecem fora do GA e não alteram o contrato MCP v1 congelado.
