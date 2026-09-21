@@ -8,6 +8,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![Licença: MIT](https://img.shields.io/badge/Licen%C3%A7a-MIT-yellow.svg)](LICENSE)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-DotNetRepoInspector-181717?logo=github)](https://github.com/marketplace/actions/dotnetrepoinspector)
 
 **Inspecione e classifique projetos .NET usando metadados MSBuild avaliados para CI/CD, automação, governança de arquitetura e evidências históricas opcionais.**
 
@@ -171,6 +172,8 @@ dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /caminho/absoluto/para/o/repos
 Consulte o [guia de uso do MCP](docs/pt-BR/mcp.md) para setup, configuração de clientes, schemas das tools, exemplos, limites de segurança e troubleshooting. A [matriz de compatibilidade de clientes](docs/pt-BR/mcp-agent-compatibility.md) registra as evidências e validações pendentes; o documento de [readiness do GA](docs/pt-BR/mcp-ga-readiness.md) é a fonte da verdade sobre o estado da publicação.
 
 ## GitHub Action
+
+> **Disponível no GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` para acompanhar releases compatíveis da linha v1 ou uma tag imutável, como `@v1.1.0`, para máxima reprodutibilidade.
 
 O repositório contém uma Composite Action reutilizável que executa exatamente a versão da .NET Tool fixada pela revisão da Action:
 
