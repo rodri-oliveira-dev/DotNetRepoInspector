@@ -336,9 +336,14 @@ public sealed class ReleaseReadinessTests
         Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
         Assert.Contains("--skip-duplicate", workflow, StringComparison.Ordinal);
         Assert.Contains("Wait for MCP package propagation on NuGet.org", workflow, StringComparison.Ordinal);
+        Assert.Contains("id: nuget-mcp-propagation", workflow, StringComparison.Ordinal);
         Assert.Contains("v3-flatcontainer/$packageId/index.json", workflow, StringComparison.Ordinal);
         Assert.Contains("$maxAttempts = 10", workflow, StringComparison.Ordinal);
         Assert.Contains("[Math]::Pow(2, $attempt - 1)", workflow, StringComparison.Ordinal);
+        Assert.Contains("::warning title=NuGet propagation delayed::", workflow, StringComparison.Ordinal);
+        Assert.Contains("propagated=$($propagated.ToString().ToLowerInvariant())", workflow, StringComparison.Ordinal);
+        Assert.Contains("steps.nuget-mcp-propagation.outputs.propagated == 'true'", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("did not appear in the NuGet.org V3 index after $maxAttempts attempts", workflow, StringComparison.Ordinal);
 
         Assert.Contains("name: Validate, build, test and pack", workflow, StringComparison.Ordinal);
         Assert.Contains("create_release_tag:", workflow, StringComparison.Ordinal);
