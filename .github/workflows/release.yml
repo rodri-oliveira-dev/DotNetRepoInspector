@@ -428,7 +428,7 @@ jobs:
     name: Publish to NuGet.org
     needs: [build, create_release_tag]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     environment: release
     permissions:
       contents: read
@@ -501,7 +501,7 @@ jobs:
           for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
             try {
               $probeUrl = "$indexUrl?nocache=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
-              $index = Invoke-RestMethod -Uri $probeUrl -Method Get -Headers @{ "Cache-Control" = "no-cache" }
+              $index = Invoke-RestMethod -Uri $probeUrl -Method Get -TimeoutSec 30 -Headers @{ "Cache-Control" = "no-cache" }
               $publishedVersion = @($index.versions | Where-Object { $_ -ieq $env:RELEASE_VERSION })
               if ($publishedVersion.Count -gt 0) {
                 Write-Host "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) is visible in the NuGet.org V3 flat-container index."
@@ -808,7 +808,7 @@ jobs:
           set -euo pipefail
 
           git fetch --force --tags origin
-          existing_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          existing_commit="$(git rev-list -n 1 "${RELEASE_TAG}" 2>/dev/null || true)"
           if [[ -z "${existing_commit}" || "${existing_commit}" != "${GITHUB_SHA}" ]]; then
             echo "Tag ${RELEASE_TAG} must exist and point to ${GITHUB_SHA} before the GitHub Release is created." >&2
             exit 3
