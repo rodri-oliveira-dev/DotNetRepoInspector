@@ -64,14 +64,17 @@
       <_McpManifestLine Include="      &quot;runtimeHint&quot;: &quot;dnx&quot;," />
       <_McpManifestLine Include="      &quot;transport&quot;: { &quot;type&quot;: &quot;stdio&quot; }," />
       <_McpManifestLine Include="      &quot;packageArguments&quot;: [" />
-      <_McpManifestLine Include="        { &quot;type&quot;: &quot;named&quot;, &quot;name&quot;: &quot;--root&quot;, &quot;valueHint&quot;: &quot;repository_root&quot;, &quot;description&quot;: &quot;Existing repository directory to inspect.&quot;, &quot;format&quot;: &quot;filepath&quot;, &quot;isRequired&quot;: true }" />
+      <_McpManifestLine Include="        { &quot;type&quot;: &quot;named&quot;, &quot;name&quot;: &quot;--root&quot;, &quot;description&quot;: &quot;Existing repository directory to inspect.&quot;, &quot;format&quot;: &quot;filepath&quot;, &quot;isRequired&quot;: true }" />
       <_McpManifestLine Include="      ]" />
       <_McpManifestLine Include="    }" />
       <_McpManifestLine Include="  ]" />
       <_McpManifestLine Include="}" />
     </ItemGroup>
     <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(McpManifestPath)'))" />
-    <WriteLinesToFile File="$(McpManifestPath)" Lines="@(_McpManifestLine)" Overwrite="true" Encoding="UTF-8" />
+    <!-- Do not set Encoding here. WriteLinesToFile defaults to UTF-8 without a BOM;
+         Encoding="UTF-8" emits a BOM, which NuGet.org rejects when it parses
+         .mcp/server.json as a JSON object from raw UTF-8 bytes. -->
+    <WriteLinesToFile File="$(McpManifestPath)" Lines="@(_McpManifestLine)" Overwrite="true" />
   </Target>
 
   <Target Name="CopyToolRuntimeDependencies" DependsOnTargets="ResolveReferences">
