@@ -41,7 +41,7 @@ Inputs, outputs, error envelopes, `mcpSchemaVersion` `1.0`, read-only annotation
 | Stable package metadata | Prepared | `1.2.0` can be packed and inspected; NuGet.org evidence does not exist |
 | Compatibility | Blocked | Codex is validated; a second real provider is still required by #133/#139 |
 | Performance/reliability | Prepared | `.github/mcp-performance-baseline.json`, bounded queue, cancellation, timeout, and stderr telemetry |
-| Existing distributions | Prepared | CLI, Action, and container remain in the lockstep protected workflow; #106 is not complete |
+| Existing distributions | Prepared | CLI, Action, and container retain independent readiness tracking; container work does not gate MCP GA |
 | Supply chain | Blocked | Official hashes, attestations, provenance, SBOM, and manifest require the protected publication run |
 | Publication | Blocked | Merge/allowed ref, environment approval, and NuGet.org Trusted Publishing policy are external gates |
 
@@ -53,10 +53,9 @@ The GA-candidate measurement on Windows x64/.NET 10 recorded 68 ms process launc
 
 ## GA blockers
 
-- #106: lockstep container release baseline is incomplete.
 - #133 and #139: the required second provider client and multi-provider eval evidence do not exist.
 - #137: no RC is published, so exact public package and post-publication evidence do not exist.
 - NuGet.org Trusted Publishing policy for `DotNetRepoInspector.Mcp` is not confirmed.
 - The consolidated PR is not merged to an allowed release ref, and protected environment approval has not occurred.
 
-These are mandatory gates, not vNext candidates. Existing post-v1 work such as richer classifications (#25) and optional policies (#28) remains outside GA and does not alter the frozen MCP v1 contract.
+These are mandatory MCP gates, not vNext candidates. Container release-readiness tracked in #106 remains independent of MCP GA. Existing post-v1 work such as richer classifications (#25) and optional policies (#28) remains outside GA and does not alter the frozen MCP v1 contract.
