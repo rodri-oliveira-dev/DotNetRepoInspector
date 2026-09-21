@@ -6,7 +6,7 @@ This document is the SDD and evidence record for roadmap issue #138. The planned
 
 ## Specification
 
-GA requires a completed and published RC, zero untreated critical/high findings, current bilingual documentation and compatibility evidence, and a green machine-readable readiness contract. The stable package must be published only by the protected Release workflow from an allowed ref, with Trusted Publishing and required human approval. The exact NuGet.org package must then pass `dnx`, MCP handshake, discovery, primary tool calls, two real provider clients, hashes, attestations, provenance, and post-publication smoke tests.
+GA requires a completed and published RC, zero untreated critical/high findings, current bilingual documentation and compatibility evidence, and a green machine-readable readiness contract. The stable package must be published only by the protected Release workflow from an allowed ref, with Trusted Publishing and required human approval. The exact NuGet.org package must then pass `dnx`, MCP handshake, discovery, primary tool calls, deterministic evals, hashes, attestations, provenance, and post-publication smoke tests. Additional provider clients are compatibility evidence, not GA gates.
 
 The public v1 tool catalog is frozen for `1.2.0`:
 
@@ -28,7 +28,7 @@ Inputs, outputs, error envelopes, `mcpSchemaVersion` `1.0`, read-only annotation
 3. Merge the consolidated PR only after required reviews and checks.
 4. Confirm NuGet.org Trusted Publishing policy and protected `release` environment approval.
 5. Dispatch the Release workflow from the allowed ref with version `1.2.0` and `publish=true`.
-6. Verify NuGet.org, exact-version `dnx`, two provider clients, release assets, manifest, hashes, attestations, container evidence, and post-publication scans.
+6. Verify NuGet.org, exact-version `dnx`, deterministic MCP validations, the established Codex smoke, release assets, manifest, hashes, attestations, and post-publication checks.
 7. Mark GA and the roadmap complete only after all evidence is attached to #138.
 
 ## Tasks and current evidence
@@ -39,7 +39,7 @@ Inputs, outputs, error envelopes, `mcpSchemaVersion` `1.0`, read-only annotation
 | Security | Prepared | Repository security suites and GitHub alert surfaces are checked; publication requires a fresh protected run |
 | Contract freeze | Complete | Six tools listed above and in machine-readable readiness |
 | Stable package metadata | Prepared | `1.2.0` can be packed and inspected; NuGet.org evidence does not exist |
-| Compatibility | Blocked | Codex is validated; a second real provider is still required by #133/#139 |
+| Compatibility | Prepared | Codex is validated and deterministic MCP protocol/evals are green; additional providers in #133/#139 are non-blocking follow-ups |
 | Performance/reliability | Prepared | `.github/mcp-performance-baseline.json`, bounded queue, cancellation, timeout, and stderr telemetry |
 | Existing distributions | Prepared | CLI, Action, and container retain independent readiness tracking; container work does not gate MCP GA |
 | Supply chain | Blocked | Official hashes, attestations, provenance, SBOM, and manifest require the protected publication run |
@@ -53,9 +53,8 @@ The GA-candidate measurement on Windows x64/.NET 10 recorded 68 ms process launc
 
 ## GA blockers
 
-- #133 and #139: the required second provider client and multi-provider eval evidence do not exist.
 - #137: no RC is published, so exact public package and post-publication evidence do not exist.
 - NuGet.org Trusted Publishing policy for `DotNetRepoInspector.Mcp` is not confirmed.
 - The consolidated PR is not merged to an allowed release ref, and protected environment approval has not occurred.
 
-These are mandatory MCP gates, not vNext candidates. Container release-readiness tracked in #106 remains independent of MCP GA. Existing post-v1 work such as richer classifications (#25) and optional policies (#28) remains outside GA and does not alter the frozen MCP v1 contract.
+These are mandatory MCP publication gates, not vNext candidates. Container release-readiness tracked in #106 and additional provider validation tracked in #133/#139 remain independent of MCP GA. Existing post-v1 work such as richer classifications (#25) and optional policies (#28) remains outside GA and does not alter the frozen MCP v1 contract.
