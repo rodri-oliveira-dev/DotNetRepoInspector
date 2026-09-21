@@ -8,6 +8,8 @@ internal static class SecureProcessEnvironment
     [
         "ACCESSTOKEN",
         "ACCESS_TOKEN",
+        "ACCESSKEY",
+        "ACCESS_KEY",
         "APIKEY",
         "API_KEY",
         "AUTHORIZATION",

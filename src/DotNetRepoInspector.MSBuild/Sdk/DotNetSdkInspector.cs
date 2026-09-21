@@ -188,6 +188,7 @@ public sealed class DotNetSdkInspector : IDotNetSdkInspector
         {
             FileName = _dotNetExecutable,
             WorkingDirectory = workingDirectory,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -202,6 +203,8 @@ public sealed class DotNetSdkInspector : IDotNetSdkInspector
         {
             throw new Win32Exception($"Unable to start '{_dotNetExecutable}'.");
         }
+
+        process.StandardInput.Close();
 
         var standardOutput = process.StandardOutput.ReadToEndAsync(cancellationToken);
         var standardError = process.StandardError.ReadToEndAsync(cancellationToken);

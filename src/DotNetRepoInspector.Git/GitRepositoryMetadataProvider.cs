@@ -122,6 +122,7 @@ public sealed class GitRepositoryMetadataProvider : IGitRepositoryMetadataProvid
         {
             FileName = _gitExecutable,
             WorkingDirectory = workingDirectory,
+            RedirectStandardInput = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
@@ -142,6 +143,8 @@ public sealed class GitRepositoryMetadataProvider : IGitRepositoryMetadataProvid
             {
                 return GitCommandResult.NotStarted;
             }
+
+            process.StandardInput.Close();
         }
         catch (Win32Exception)
         {

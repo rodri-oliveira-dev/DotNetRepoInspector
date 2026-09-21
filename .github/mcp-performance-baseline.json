@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "scenario": "project-kinds",
+  "observed": {
+    "processLaunchMilliseconds": 68.2765,
+    "startupAndHandshakeMilliseconds": 968.1539,
+    "engineInspectionMilliseconds": 11428.9935,
+    "cliInspectionMilliseconds": 11751.9648,
+    "toolMilliseconds": {
+      "inspect_repository": 10981.2745,
+      "list_projects": 11215.0741,
+      "get_project_reference_graph": 10846.362,
+      "get_repository_diagnostics": 10384.9214,
+      "get_sdk_metadata": 10755.5623,
+      "get_project_details": 11096.7352
+    }
+  },
+  "limits": {
+    "maxProcessLaunchMilliseconds": 5000,
+    "maxStartupAndHandshakeMilliseconds": 15000,
+    "maxCliToEngineRatio": 3,
+    "maxToolToEngineRatio": 3,
+    "fixedOverheadMilliseconds": 10000
+  }
+}

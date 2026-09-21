@@ -28,6 +28,8 @@ O DotNetRepoInspector inspeciona metadados MSBuild avaliados. **A avaliação do
 
 O escopo detalhado de coleta, o modelo de confiança do MSBuild, as permissões da GitHub Action, as medidas de hardening do ambiente, as regras de logging e as orientações sobre credenciais dos sinks estão documentados em [`docs/en/security.md`](docs/en/security.md) e [`docs/pt-BR/security.md`](docs/pt-BR/security.md).
 
+Os ativos, limites de confiança, política de paths/links, limites de recursos, mitigações e riscos residuais do servidor MCP local estão documentados no [`threat model MCP`](docs/pt-BR/architecture/mcp-threat-model.md) e em sua [versão em inglês](docs/en/architecture/mcp-threat-model.md).
+
 ## Controles automatizados de segurança do repositório
 
 As mudanças do repositório são avaliadas por controles complementares, sem depender de um único scanner:

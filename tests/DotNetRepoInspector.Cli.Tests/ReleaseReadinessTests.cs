@@ -100,6 +100,114 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void V1Baseline_RecognizesMcpAsReleaseReadyPackage()
+    {
+        JsonElement mcp = LoadBaseline().GetProperty("mcp");
+        string projectPath = RequiredString(mcp, "project");
+        XDocument project = XDocument.Load(Path.Combine(
+            RepositoryRoot,
+            projectPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("DotNetRepoInspector.Mcp", RequiredString(mcp, "packageId"));
+        Assert.Equal(RequiredString(mcp, "packageId"), ProjectProperty(project, "PackageId"));
+        Assert.Equal("net10.0", ProjectProperty(project, "TargetFramework"));
+        Assert.Equal("true", ProjectProperty(project, "IsPackable"));
+        Assert.Equal("true", ProjectProperty(project, "PackAsTool"));
+        Assert.Equal("dotnet-repo-inspector-mcp", RequiredString(mcp, "toolCommandName"));
+        Assert.Equal("McpServer", RequiredString(mcp, "packageType"));
+        Assert.Equal("McpServer", ProjectProperty(project, "PackageType"));
+        Assert.Equal(".mcp/server.json", RequiredString(mcp, "manifest"));
+        Assert.Equal("framework-dependent", RequiredString(mcp, "distribution"));
+        Assert.Equal("stdio", RequiredString(mcp, "transport"));
+        Assert.Equal("release-ready", RequiredString(mcp, "publicationStatus"));
+        Assert.Equal(136, mcp.GetProperty("publicationIssue").GetInt32());
+
+        var controls = mcp.GetProperty("requiredControls")
+            .EnumerateArray()
+            .Select(static item => item.GetString())
+            .ToArray();
+        Assert.Contains("hermetic-e2e", controls);
+        Assert.Contains("security-tests", controls);
+        Assert.Contains("performance-baseline", controls);
+    }
+
+    [Fact]
+    public void McpReleaseCandidate_RecordsVersionAndUnresolvedPromotionGates()
+    {
+        JsonElement releaseCandidate = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("releaseCandidate");
+
+        Assert.Equal("1.2.0-rc.1", RequiredString(releaseCandidate, "version"));
+        Assert.Equal("blocked", RequiredString(releaseCandidate, "status"));
+        Assert.Equal(137, releaseCandidate.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            "docs/en/mcp-release-candidate.md",
+            RequiredString(releaseCandidate, "evidence"));
+
+        int[] blockingIssues = releaseCandidate
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Equal([106, 133, 139], blockingIssues);
+
+        string[] externalBlockers = releaseCandidate
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+    }
+
+    [Fact]
+    public void McpGeneralAvailability_FreezesContractAndRemainsBlockedByRequiredEvidence()
+    {
+        JsonElement generalAvailability = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("generalAvailability");
+
+        Assert.Equal("1.2.0", RequiredString(generalAvailability, "version"));
+        Assert.Equal("blocked", RequiredString(generalAvailability, "status"));
+        Assert.Equal(138, generalAvailability.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            ".github/mcp-performance-baseline.json",
+            RequiredString(generalAvailability, "performanceBaseline"));
+
+        string[] tools = generalAvailability
+            .GetProperty("frozenTools")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                "inspect_repository",
+                "list_projects",
+                "get_project_details",
+                "get_project_reference_graph",
+                "get_repository_diagnostics",
+                "get_sdk_metadata",
+            ],
+            tools);
+
+        int[] blockingIssues = generalAvailability
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Equal([106, 133, 137, 139], blockingIssues);
+
+        string[] externalBlockers = generalAvailability
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+        Assert.Contains("protected-release-approval", externalBlockers);
+        Assert.Contains("merge-to-allowed-release-ref", externalBlockers);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
@@ -131,6 +239,33 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("Trusted Publishing", portugueseReadiness, StringComparison.Ordinal);
         Assert.Contains("publish=false", portugueseReadiness, StringComparison.Ordinal);
         Assert.Contains("publish=true", portugueseReadiness, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_ProtectsMcpPackagingAndTrustedPublication()
+    {
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+
+        Assert.Contains("validate_mcp_package.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("./.github/scripts/validate_mcp_rc.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("invoke_mcp_package_smoke.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("id-token: write", workflow, StringComparison.Ordinal);
+        Assert.Contains("NuGet/login@", workflow, StringComparison.Ordinal);
+        Assert.Contains("environment: release", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("--skip-duplicate", workflow, StringComparison.Ordinal);
+
+        int smokeIndex = workflow.IndexOf(
+            "Smoke exact MCP package version from NuGet.org",
+            StringComparison.Ordinal);
+        int releaseIndex = workflow.IndexOf("Publish GitHub Release", StringComparison.Ordinal);
+        Assert.True(smokeIndex >= 0 && releaseIndex > smokeIndex);
     }
 
     private static string RepositoryRoot { get; } = FindRepositoryRoot();

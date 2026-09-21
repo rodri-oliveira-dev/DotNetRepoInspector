@@ -19,5 +19,8 @@ An ADR should capture:
 - [ADR 0003: Keep snapshot persistence optional behind sink adapters](0003-persistence-sink-architecture.md) — Accepted.
 - [ADR 0004: Define snapshot provenance and idempotency from canonical evidence](0004-snapshot-provenance-idempotency.md) — Accepted.
 - [ADR 0005: Define the container execution and SDK compatibility contract](0005-container-execution-contract.md) — Accepted.
+- [ADR 0006: Define the MCP adapter architecture and MVP contract](0006-mcp-adapter-architecture.md) — Accepted.
+- [ADR 0007: Harden the local MCP trust boundary](0007-mcp-trust-boundary-hardening.md) — Accepted.
+- [ADR 0008: Bound MCP inspection concurrency and operational telemetry](0008-mcp-operational-reliability.md) — Accepted.
 
-Likely next decisions include classification precedence and policy evaluation boundaries.
+Likely next decisions include classification precedence, policy evaluation boundaries, and remote MCP transport if it becomes a supported scenario.

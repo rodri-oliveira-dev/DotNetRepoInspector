@@ -18,6 +18,11 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`releases.md`](releases.md) — Semantic Versioning, compatibilidade de schema, publicação protegida, artifacts, tags e provenance.
 - [`v1-release-readiness.md`](v1-release-readiness.md) — baseline pública da v1.0.0, gate automatizado de readiness, checklist da primeira publicação e verificação pós-release.
 - [`compatibility.md`](compatibility.md) — matriz de compatibilidade suportada entre SDK/TFM do .NET e sistemas operacionais.
+- [`mcp.md`](mcp.md) — instalação do MCP, inicialização stdio, configuração de clientes, catálogo de tools, segurança, exemplos e troubleshooting.
+- [`mcp-agent-compatibility.md`](mcp-agent-compatibility.md) — matriz de compatibilidade de clientes MCP, smoke tests e evals determinísticos.
+- [`mcp-release-candidate.md`](mcp-release-candidate.md) — gates, findings, evidências e bloqueios para GA do release candidate MCP.
+- [`mcp-ga-readiness.md`](mcp-ga-readiness.md) — contrato MCP v1 congelado, versão estável planejada, gates finais e estado da publicação.
+- [`mcp-1.2.0-release-notes.md`](mcp-1.2.0-release-notes.md) — release notes preliminares do primeiro pacote MCP estável planejado.
 - [`performance.md`](performance.md) — baseline sintética para repositórios grandes, hotspots medidos e guardrails de regressão.
 - [`real-repository-validation.md`](real-repository-validation.md) — harness de validação com repositórios públicos fixados por commit e política de reprodução de bugs.
 - [`project-reference-graph.md`](project-reference-graph.md) — semântica normalizada do grafo de `ProjectReference`.

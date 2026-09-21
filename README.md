@@ -101,12 +101,12 @@ Supported public invocation: `dotnet repo-inspect`
 
 The package targets .NET 10 and requires a compatible .NET runtime/SDK to execute.
 
-> The package is fully packed and installation-smoke-tested in CI. Until the first protected publication succeeds, commands that resolve from NuGet.org may not be available publicly.
+> The CLI package is published on NuGet.org. Version `1.1.0` is the latest verified public release at the time of this documentation update; pin exact versions for reproducible automation.
 
 After publication:
 
 ```bash
-dotnet tool install --global DotNetRepoInspector --version 1.0.0
+dotnet tool install --global DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect --version
 dotnet repo-inspect .
 ```
@@ -115,7 +115,7 @@ A repository can also pin the tool in a local tool manifest:
 
 ```bash
 dotnet new tool-manifest
-dotnet tool install DotNetRepoInspector --version 1.0.0
+dotnet tool install DotNetRepoInspector --version 1.1.0
 dotnet repo-inspect .
 ```
 
@@ -146,6 +146,29 @@ dotnet repo-inspect . \
 The default `.dotnetrepoinspector.json` file is optional. See [`docs/en/configuration.md`](docs/en/configuration.md) for its versioned format and precedence rules.
 
 The CLI keeps machine data on stdout/output files and operational logs on stderr. Documented exit codes distinguish report errors, invalid arguments, fatal inspection, output failure, fatal persistence failure, and cancellation. See [`docs/en/cli.md`](docs/en/cli.md).
+
+## MCP server
+
+`DotNetRepoInspector.Mcp` exposes the same deterministic Engine facts to local MCP clients through six read-only tools over stdio. The server is an additional delivery adapter; the CLI, inspection JSON, and the product's primary repository-inspection purpose remain unchanged.
+
+The current development build is started with an explicit repository boundary:
+
+```bash
+dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.dll \
+  --root /absolute/path/to/repository
+```
+
+The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment.
+
+`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The planned first stable package version is `1.2.0`. It has passed controlled-feed packaging and protocol gates, but it is **not published to NuGet.org** and GA remains blocked by the documented multi-provider and release-approval gates. After a protected publication, the exact stable version can be launched with:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /absolute/path/to/repository
+```
+
+<!-- mcp-name: io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp -->
+
+See the [MCP user guide](docs/en/mcp.md) for setup, client configuration, tool schemas, examples, security boundaries, and troubleshooting. The [client compatibility matrix](docs/en/mcp-agent-compatibility.md) records the evidence and pending validations; [GA readiness](docs/en/mcp-ga-readiness.md) is the source of truth for publication status.
 
 ## GitHub Action
 
@@ -209,6 +232,7 @@ This PR/repository preparation does not itself publish a package, tag, or GitHub
 - [Documentação em Português (Brasil)](docs/pt-BR/README.md)
 - [Inspection schema v1](docs/en/schema/inspection-v1.md)
 - [CLI / .NET Tool](docs/en/cli.md)
+- [MCP server](docs/en/mcp.md)
 - [GitHub Action](docs/en/github-action.md)
 - [Release/versioning](docs/en/releases.md)
 - [v1.0.0 release readiness](docs/en/v1-release-readiness.md)

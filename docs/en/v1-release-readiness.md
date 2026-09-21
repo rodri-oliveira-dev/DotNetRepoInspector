@@ -14,6 +14,8 @@ This document does **not** mean that `v1.0.0` has already been published. Until 
 | Inspection schema | `1.3` (schema major `1`) |
 | NuGet package | `DotNetRepoInspector` |
 | .NET Tool command | `dotnet-repo-inspect` / `dotnet repo-inspect` |
+| MCP NuGet package | `DotNetRepoInspector.Mcp` (`DotnetTool`, `McpServer`) |
+| MCP Tool command | `dotnet-repo-inspector-mcp` / `dnx DotNetRepoInspector.Mcp@<version>` |
 | Tool runtime | `net10.0` |
 | GitHub Action stable alias | `v1` |
 | GitHub Action immutable tag | `v1.0.0` |
@@ -21,6 +23,8 @@ This document does **not** mean that `v1.0.0` has already been published. Until 
 | License | MIT |
 
 The machine-readable counterpart of this table is `.github/release-readiness-v1.json`. Repository tests compare that baseline with `action.yml`, `InspectionSchema`, the CLI package metadata, the canonical schema example, and the required governance/security files.
+
+The same manifest recognizes `DotNetRepoInspector.Mcp` as a release-ready, framework-dependent package with stdio, explicit root boundary, read-only, hermetic E2E, security, performance, `McpServer`, embedded `.mcp/server.json`, symbols, and packaged-tool smoke controls. Release readiness does not mean that the package has already been published.
 
 ## Public contract included in v1
 
@@ -64,7 +68,8 @@ The gate verifies:
 4. the CLI project remains a packable .NET Tool with the expected package ID, command, target framework, license, README, and repository URL;
 5. the canonical schema example advertises the same `schemaVersion`;
 6. required license, security, contribution, conduct, issue/PR templates, and release documentation are present;
-7. the public READMEs no longer contain pre-v1 statements that describe the schema as hypothetical or not final.
+7. the MCP project remains a packable .NET Tool and `McpServer` with the expected package identity, command, manifest, and framework-dependent strategy;
+8. the public READMEs no longer contain pre-v1 statements that describe the schema as hypothetical or not final.
 
 This gate does not validate external account configuration on GitHub or NuGet.org; those checks remain administrative prerequisites.
 
@@ -77,6 +82,7 @@ Before starting the official release, confirm on `main`:
 - build/analyzers have zero warnings and errors;
 - the complete test suite passes;
 - package validation installs the exact `DotNetRepoInspector.1.0.0.nupkg` globally and locally and verifies `--help`, `--version`, and a real inspection;
+- MCP validation inspects the exact `.nupkg`/`.snupkg`, installs the tool, resolves it through local-source `dnx`, and performs a real stdio `inspect_repository` call;
 - the release candidate contains `release-manifest.json` and `SHA256SUMS`;
 - the manifest points to the exact release commit and reports schema `1.3`;
 - GitHub Action and compatibility smoke tests are green on Ubuntu, Windows, and macOS.
@@ -90,8 +96,8 @@ These steps are intentionally outside repository code and must be completed by a
 1. Create a protected GitHub Environment `release`.
 2. Require an approval for that environment and restrict deployment to `main` as appropriate for the repository.
 3. Define `NUGET_USER` as a repository/environment variable with the NuGet.org account used for publishing.
-4. On NuGet.org, configure **Trusted Publishing** for package `DotNetRepoInspector`, this GitHub repository, `.github/workflows/release.yml`, and preferably the `release` environment.
-5. Confirm that the package ID is available/owned by the intended NuGet account before the first publication.
+4. On NuGet.org, configure **Trusted Publishing** for both `DotNetRepoInspector` and `DotNetRepoInspector.Mcp`, owner `rodri-oliveira-dev`, repository `DotNetRepoInspector`, workflow file `release.yml`, and preferably environment `release`.
+5. Confirm that both package IDs, especially the new `DotNetRepoInspector.Mcp`, are available/owned by the intended NuGet account before the first publication.
 
 No long-lived NuGet API key should be added to GitHub Secrets. The workflow uses OIDC/Trusted Publishing.
 

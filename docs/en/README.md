@@ -18,6 +18,11 @@ Keep the root [`README.md`](../../README.md) as the project entry point and plac
 - [`releases.md`](releases.md) — Semantic Versioning, schema compatibility, protected publication, release artifacts, tags, and provenance.
 - [`v1-release-readiness.md`](v1-release-readiness.md) — v1.0.0 public baseline, automated readiness gate, first-publication checklist, and post-release verification.
 - [`compatibility.md`](compatibility.md) — supported .NET SDK/TFM and operating-system compatibility matrix.
+- [`mcp.md`](mcp.md) — MCP installation, stdio startup, client setup, tool catalog, security, examples, and troubleshooting.
+- [`mcp-agent-compatibility.md`](mcp-agent-compatibility.md) — MCP client compatibility matrix, smoke tests, and deterministic evals.
+- [`mcp-release-candidate.md`](mcp-release-candidate.md) — MCP release-candidate gates, findings, evidence, and GA blockers.
+- [`mcp-ga-readiness.md`](mcp-ga-readiness.md) — frozen MCP v1 contract, planned stable version, final gates, and publication status.
+- [`mcp-1.2.0-release-notes.md`](mcp-1.2.0-release-notes.md) — draft release notes for the planned first stable MCP package.
 - [`performance.md`](performance.md) — synthetic large-repository baseline, measured hotspots, and regression guardrails.
 - [`real-repository-validation.md`](real-repository-validation.md) — pinned public-repository validation harness and bug-reproduction policy.
 - [`project-reference-graph.md`](project-reference-graph.md) — normalized `ProjectReference` graph semantics.

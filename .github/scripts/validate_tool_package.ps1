@@ -12,6 +12,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Assert-Equal {
     param(
@@ -64,12 +65,12 @@ $fixtureFullPath = (Resolve-Path -LiteralPath $FixturePath).Path
 $artifactsFullPath = [IO.Path]::GetFullPath($ArtifactsDirectory)
 New-Item -ItemType Directory -Path $artifactsFullPath -Force | Out-Null
 
-$packages = @(Get-ChildItem -LiteralPath $packageDirectoryPath -Filter "DotNetRepoInspector.*.nupkg" -File)
-if ($packages.Count -ne 1) {
-    throw "Expected exactly one DotNetRepoInspector .nupkg in '$packageDirectoryPath', found $($packages.Count)."
+$packagePath = Join-Path $packageDirectoryPath "DotNetRepoInspector.$Version.nupkg"
+if (-not (Test-Path -LiteralPath $packagePath -PathType Leaf)) {
+    throw "Expected CLI package '$packagePath' was not found."
 }
 
-$package = $packages[0]
+$package = Get-Item -LiteralPath $packagePath
 Write-Host "Validating package: $($package.FullName)"
 
 $archive = [IO.Compression.ZipFile]::OpenRead($package.FullName)
@@ -197,7 +198,7 @@ try {
 
     $globalHelp = Invoke-DotNetCapture @("repo-inspect", "--help")
     $globalHelp | Set-Content -LiteralPath (Join-Path $artifactsFullPath "global-help.txt") -Encoding utf8
-    if (-not (($globalHelp -join [Environment]::NewLine).Contains("Usage:", [StringComparison]::Ordinal))) {
+    if (($globalHelp -join [Environment]::NewLine).IndexOf("Usage:", [StringComparison]::Ordinal) -lt 0) {
         throw "Global tool --help output does not contain the expected usage section."
     }
 
@@ -233,7 +234,7 @@ try {
 
     $localHelp = Invoke-DotNetCapture @("repo-inspect", "--help")
     $localHelp | Set-Content -LiteralPath (Join-Path $artifactsFullPath "local-help.txt") -Encoding utf8
-    if (-not (($localHelp -join [Environment]::NewLine).Contains("Usage:", [StringComparison]::Ordinal))) {
+    if (($localHelp -join [Environment]::NewLine).IndexOf("Usage:", [StringComparison]::Ordinal) -lt 0) {
         throw "Local tool --help output does not contain the expected usage section."
     }
 

@@ -2,7 +2,7 @@
 
 **Languages:** English | [Português (Brasil)](../pt-BR/releases.md)
 
-DotNetRepoInspector uses one product version for the .NET Tool and the reusable GitHub Action. Official publication is deliberately separate from normal CI and is performed only through the protected `Release` workflow.
+DotNetRepoInspector uses one product version for the CLI .NET Tool, MCP server package, and reusable GitHub Action. Official publication is deliberately separate from normal CI and is performed only through the protected `Release` workflow.
 
 ## Product version
 
@@ -46,6 +46,8 @@ Consumers prioritizing convenience can use `@v1`; consumers prioritizing maximum
 Every release build produces the same validated candidate set before publication:
 
 - `DotNetRepoInspector.<version>.nupkg`;
+- `DotNetRepoInspector.Mcp.<version>.nupkg`;
+- `DotNetRepoInspector.Mcp.<version>.snupkg`;
 - `release-manifest.json`;
 - `SHA256SUMS`.
 
@@ -54,10 +56,10 @@ The manifest records:
 - product version and immutable tag;
 - exact 40-character source commit SHA;
 - `schemaVersion` observed from a real packaged-tool smoke inspection;
-- SHA-256 of the `.nupkg`;
+- SHA-256 of every CLI/MCP package artifact;
 - Action aliases that are eligible to move for the version.
 
-The release build passes the package through the existing .NET Tool validator, including metadata/content checks, global and local installation, `--help`, `--version`, and a real repository inspection. The package is therefore validated before it can enter the publication job.
+The release build passes the CLI through its existing .NET Tool validator. The MCP validator checks both package types, `.mcp/server.json`, metadata, symbols, embedded runtime dependencies, absence of secrets/private project dependencies, isolated tool installation, exact-version `dnx` resolution, stdio handshake, discovery, and a real packaged `inspect_repository` call. Both packages are therefore validated before they can enter the publication job.
 
 ## Normal pull requests
 
@@ -75,7 +77,7 @@ Before the first official release, repository maintainers must configure a GitHu
 2. restrict deployment branches/tags so publication is initiated from `main` only;
 3. define environment/repository variable `NUGET_USER` with the NuGet.org account name used by Trusted Publishing.
 
-NuGet.org must also contain a Trusted Publishing policy for package `DotNetRepoInspector` that trusts this repository, the `release.yml` workflow, and preferably the `release` environment.
+NuGet.org must contain Trusted Publishing policies/scopes for both `DotNetRepoInspector` and `DotNetRepoInspector.Mcp` that trust owner `rodri-oliveira-dev`, repository `DotNetRepoInspector`, workflow file `release.yml`, and preferably environment `release`. A maintainer must confirm that the new package ID is available or owned before publication.
 
 No long-lived NuGet API key belongs in GitHub Secrets. The publication job requests an OIDC identity token and `NuGet/login` exchanges it for a short-lived NuGet API key.
 
@@ -97,12 +99,13 @@ The workflow derives the immutable release tag automatically by prefixing the va
 The protected job intentionally orders irreversible operations:
 
 1. download and re-verify the exact artifact produced by the build job;
-2. create GitHub artifact/SLSA provenance attestations for the package, manifest, and checksum file;
+2. create GitHub artifact/SLSA provenance attestations for CLI/MCP packages, MCP symbols, manifest, and checksum file;
 3. create or resume a **draft** GitHub Release for the immutable full version tag and attach the artifacts;
 4. authenticate to NuGet.org using Trusted Publishing/OIDC;
-5. publish the exact `.nupkg` with duplicate-safe behavior;
-6. publish the GitHub Release;
-7. for stable releases only, move `v<major>` and `v<major>.<minor>` to the release commit.
+5. publish both exact `.nupkg` files with duplicate-safe behavior;
+6. resolve the exact MCP version from NuGet.org through `dnx` and require handshake, discovery, and `inspect_repository` to pass;
+7. publish the GitHub Release;
+8. for stable releases only, move `v<major>` and `v<major>.<minor>` to the release commit.
 
 This ordering prevents a stable moving Action alias from pointing to a release whose NuGet package was not published successfully.
 

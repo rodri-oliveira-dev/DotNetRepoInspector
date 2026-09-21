@@ -107,3 +107,33 @@ dotnet run \
 ```
 
 Run without `--baseline` when collecting exploratory measurements for another project count. Such measurements are useful for investigation but are not directly comparable to the versioned 100-project CI baseline.
+
+## MCP operational baseline
+
+`benchmarks/DotNetRepoInspector.Mcp.Performance` starts the real stdio server through the official MCP client, performs the handshake, calls every v1 tool, and compares the same `ProjectKinds` fixture with direct Engine and CLI execution. The checked-in `.github/mcp-performance-baseline.json` records a Windows development-machine observation from 2026-09-19:
+
+| Measurement | Observed |
+| --- | ---: |
+| Process launch | 79.19 ms |
+| Startup and handshake | 935.36 ms |
+| Engine inspection | 10,200.32 ms |
+| CLI inspection | 10,874.59 ms |
+| MCP tools | 10,158.65-11,192.28 ms |
+
+CI enforces a 5,000 ms launch limit, a 15,000 ms startup/handshake limit, and for CLI or tool calls a relative limit of three times that run's Engine duration plus 10,000 ms. Relative limits account for runner and installed-SDK variation while detecting duplicate evaluation or material adapter overhead. Every tool call must also produce one structured completion event.
+
+The MCP host permits one active inspection and eight queued calls for its single root. The queue and Engine call share a five-minute timeout and propagate client cancellation. No session cache is used because repository, imported build files, SDK selection, and Git state lack a complete invalidation signal. See [ADR 0008](decisions/0008-mcp-operational-reliability.md).
+
+Run the baseline locally with:
+
+```bash
+dotnet run \
+  --project ./benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj \
+  --configuration Release \
+  -- \
+  --repository ./tests/Fixtures/ProjectKinds \
+  --timeout-seconds 300 \
+  --output ./artifacts/performance/mcp-metrics.json \
+  --summary ./artifacts/performance/mcp-summary.md \
+  --baseline ./.github/mcp-performance-baseline.json
+```

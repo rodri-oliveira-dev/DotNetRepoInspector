@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>DotNetRepoInspector.Mcp</RootNamespace>
+    <AssemblyName>DotNetRepoInspector.Mcp</AssemblyName>
+
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dotnet-repo-inspector-mcp</ToolCommandName>
+    <PackageId>DotNetRepoInspector.Mcp</PackageId>
+    <PackageType>McpServer</PackageType>
+    <Title>DotNetRepoInspector MCP Server</Title>
+    <Authors>Rodrigo de Oliveira</Authors>
+    <Description>Local, read-only MCP server for deterministic inspection and classification of .NET repositories using evaluated MSBuild and Git metadata.</Description>
+    <PackageTags>dotnet;tool;dotnet-tool;mcp;mcp-server;stdio;msbuild;inspection;repository;project-metadata;architecture;automation</PackageTags>
+    <PackageProjectUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/rodri-oliveira-dev/DotNetRepoInspector</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>nuget-icon.png</PackageIcon>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyToolRuntimeDependencies</TargetsForTfmSpecificBuildOutput>
+    <McpManifestPath>$(MSBuildProjectDirectory)/obj/$(Configuration)/$(TargetFramework)/mcp/server.json</McpManifestPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="ModelContextProtocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" Link="README.md" />
+    <None Include="../../LICENSE" Pack="true" PackagePath="/" Link="LICENSE" />
+    <None Include="../../resource/nuget-icon.png" Pack="true" PackagePath="/" Link="nuget-icon.png" />
+    <None Include="$(McpManifestPath)" Pack="true" PackagePath=".mcp/server.json" />
+  </ItemGroup>
+
+  <Target Name="GenerateMcpServerManifest" BeforeTargets="GenerateNuspec">
+    <ItemGroup>
+      <_McpManifestLine Include="{" />
+      <_McpManifestLine Include="  &quot;%24schema&quot;: &quot;https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json&quot;," />
+      <_McpManifestLine Include="  &quot;name&quot;: &quot;io.github.rodri-oliveira-dev/dotnet-repo-inspector-mcp&quot;," />
+      <_McpManifestLine Include="  &quot;title&quot;: &quot;DotNetRepoInspector&quot;," />
+      <_McpManifestLine Include="  &quot;description&quot;: &quot;Read-only deterministic inspection of .NET repository metadata.&quot;," />
+      <_McpManifestLine Include="  &quot;version&quot;: &quot;$(PackageVersion)&quot;," />
+      <_McpManifestLine Include="  &quot;repository&quot;: { &quot;url&quot;: &quot;$(RepositoryUrl)&quot;, &quot;source&quot;: &quot;github&quot;, &quot;subfolder&quot;: &quot;src/DotNetRepoInspector.Mcp&quot; }," />
+      <_McpManifestLine Include="  &quot;packages&quot;: [" />
+      <_McpManifestLine Include="    {" />
+      <_McpManifestLine Include="      &quot;registryType&quot;: &quot;nuget&quot;," />
+      <_McpManifestLine Include="      &quot;registryBaseUrl&quot;: &quot;https://api.nuget.org/v3/index.json&quot;," />
+      <_McpManifestLine Include="      &quot;identifier&quot;: &quot;$(PackageId)&quot;," />
+      <_McpManifestLine Include="      &quot;version&quot;: &quot;$(PackageVersion)&quot;," />
+      <_McpManifestLine Include="      &quot;runtimeHint&quot;: &quot;dnx&quot;," />
+      <_McpManifestLine Include="      &quot;transport&quot;: { &quot;type&quot;: &quot;stdio&quot; }," />
+      <_McpManifestLine Include="      &quot;packageArguments&quot;: [" />
+      <_McpManifestLine Include="        { &quot;type&quot;: &quot;named&quot;, &quot;name&quot;: &quot;--root&quot;, &quot;valueHint&quot;: &quot;repository_root&quot;, &quot;description&quot;: &quot;Existing repository directory to inspect.&quot;, &quot;format&quot;: &quot;filepath&quot;, &quot;isRequired&quot;: true }" />
+      <_McpManifestLine Include="      ]" />
+      <_McpManifestLine Include="    }" />
+      <_McpManifestLine Include="  ]" />
+      <_McpManifestLine Include="}" />
+    </ItemGroup>
+    <MakeDir Directories="$([System.IO.Path]::GetDirectoryName('$(McpManifestPath)'))" />
+    <WriteLinesToFile File="$(McpManifestPath)" Lines="@(_McpManifestLine)" Overwrite="true" Encoding="UTF-8" />
+  </Target>
+
+  <Target Name="CopyToolRuntimeDependencies" DependsOnTargets="ResolveReferences">
+    <ItemGroup>
+      <BuildOutputInPackage
+        Include="@(ReferenceCopyLocalPaths)"
+        TargetPath="%(ReferenceCopyLocalPaths.DestinationSubPath)" />
+    </ItemGroup>
+  </Target>
+</Project>
