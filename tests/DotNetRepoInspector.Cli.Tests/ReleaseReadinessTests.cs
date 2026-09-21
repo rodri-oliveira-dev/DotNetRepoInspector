@@ -330,15 +330,34 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("$maxAttempts = 10", workflow, StringComparison.Ordinal);
         Assert.Contains("[Math]::Pow(2, $attempt - 1)", workflow, StringComparison.Ordinal);
 
-        int propagationIndex = workflow.IndexOf(
-            "Wait for MCP package propagation on NuGet.org",
-            StringComparison.Ordinal);
-        int smokeIndex = workflow.IndexOf(
-            "Smoke exact MCP package version from NuGet.org",
-            StringComparison.Ordinal);
-        int releaseIndex = workflow.IndexOf("Publish GitHub Release", StringComparison.Ordinal);
-        Assert.True(propagationIndex >= 0 && smokeIndex > propagationIndex);
-        Assert.True(releaseIndex > smokeIndex);
+        Assert.Contains("name: Validate, build, test and pack", workflow, StringComparison.Ordinal);
+        Assert.Contains("create_release_tag:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Create release tag", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_nuget:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish to NuGet.org", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_github_packages:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish to GitHub Packages", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_container:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish container images", workflow, StringComparison.Ordinal);
+        Assert.Contains("create_github_release:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Create GitHub Release", workflow, StringComparison.Ordinal);
+        Assert.Contains("needs: [build, create_release_tag]", workflow, StringComparison.Ordinal);
+        Assert.Contains("- publish_nuget", workflow, StringComparison.Ordinal);
+        Assert.Contains("- publish_github_packages", workflow, StringComparison.Ordinal);
+        Assert.Contains("- publish_container", workflow, StringComparison.Ordinal);
+
+        int tagIndex = workflow.IndexOf("name: Create release tag", StringComparison.Ordinal);
+        int nugetIndex = workflow.IndexOf("name: Publish to NuGet.org", StringComparison.Ordinal);
+        int packagesIndex = workflow.IndexOf("name: Publish to GitHub Packages", StringComparison.Ordinal);
+        int containerIndex = workflow.IndexOf("name: Publish container images", StringComparison.Ordinal);
+        int releaseIndex = workflow.IndexOf("name: Create GitHub Release", StringComparison.Ordinal);
+        Assert.True(tagIndex >= 0);
+        Assert.True(nugetIndex > tagIndex);
+        Assert.True(packagesIndex > tagIndex);
+        Assert.True(containerIndex > tagIndex);
+        Assert.True(releaseIndex > nugetIndex);
+        Assert.True(releaseIndex > packagesIndex);
+        Assert.True(releaseIndex > containerIndex);
     }
 
     private static string RepositoryRoot { get; } = FindRepositoryRoot();
