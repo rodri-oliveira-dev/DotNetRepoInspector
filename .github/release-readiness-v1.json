@@ -26,10 +26,7 @@
       "status": "blocked",
       "readinessIssue": 137,
       "evidence": "docs/en/mcp-release-candidate.md",
-      "blockingIssues": [
-        133,
-        139
-      ],
+      "blockingIssues": [],
       "externalBlockers": [
         "nuget-trusted-publishing-policy"
       ]
@@ -50,9 +47,7 @@
         "get_sdk_metadata"
       ],
       "blockingIssues": [
-        133,
-        137,
-        139
+        137
       ],
       "externalBlockers": [
         "nuget-trusted-publishing-policy",
