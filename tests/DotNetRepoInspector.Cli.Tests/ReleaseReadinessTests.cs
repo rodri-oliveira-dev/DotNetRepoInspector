@@ -150,7 +150,7 @@ public sealed class ReleaseReadinessTests
             .EnumerateArray()
             .Select(static item => item.GetInt32())
             .ToArray();
-        Assert.Equal([106, 133, 139], blockingIssues);
+        Assert.Equal([133, 139], blockingIssues);
 
         string[] externalBlockers = releaseCandidate
             .GetProperty("externalBlockers")
@@ -195,7 +195,7 @@ public sealed class ReleaseReadinessTests
             .EnumerateArray()
             .Select(static item => item.GetInt32())
             .ToArray();
-        Assert.Equal([106, 133, 137, 139], blockingIssues);
+        Assert.Equal([133, 137, 139], blockingIssues);
 
         string[] externalBlockers = generalAvailability
             .GetProperty("externalBlockers")
