@@ -8,6 +8,7 @@
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-DotNetRepoInspector-181717?logo=github)](https://github.com/marketplace/actions/dotnetrepoinspector)
 
 **Inspect and classify .NET projects using evaluated MSBuild metadata for CI/CD, automation, architecture governance, and optional historical evidence.**
 
@@ -171,6 +172,8 @@ dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /absolute/path/to/repository
 See the [MCP user guide](docs/en/mcp.md) for setup, client configuration, tool schemas, examples, security boundaries, and troubleshooting. The [client compatibility matrix](docs/en/mcp-agent-compatibility.md) records the evidence and pending validations; [GA readiness](docs/en/mcp-ga-readiness.md) is the source of truth for publication status.
 
 ## GitHub Action
+
+> **Available on GitHub Marketplace:** [DotNetRepoInspector](https://github.com/marketplace/actions/dotnetrepoinspector). Use `@v1` to follow compatible v1 releases or pin an immutable tag such as `@v1.1.0` for maximum reproducibility.
 
 The repository contains a reusable Composite Action that runs the exact .NET Tool version pinned by the Action revision:
 
