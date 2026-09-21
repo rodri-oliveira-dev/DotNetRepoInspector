@@ -160,7 +160,7 @@ dotnet src/DotNetRepoInspector.Mcp/bin/Release/net10.0/DotNetRepoInspector.Mcp.d
 
 The server does not call an LLM or include provider SDKs. OpenAI Codex CLI has completed a real client smoke test; Claude Code and Gemini CLI configurations are documented but remain unvalidated in this project environment.
 
-`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The planned first stable package version is `1.2.0`. It has passed controlled-feed packaging and protocol gates, but it is **not published to NuGet.org** and GA remains blocked by the documented multi-provider and release-approval gates. After a protected publication, the exact stable version can be launched with:
+`DotNetRepoInspector.Mcp` is packaged as a framework-dependent .NET Tool and NuGet `McpServer`, with command `dotnet-repo-inspector-mcp` and an embedded `.mcp/server.json`. The planned first stable package version is `1.2.0`. It has passed controlled-feed packaging and protocol gates, but it is **not published to NuGet.org** and GA remains blocked by the protected publication and release-approval gates. Additional Claude Code and Gemini CLI validation is tracked as non-blocking interoperability evidence. After a protected publication, the exact stable version can be launched with:
 
 ```bash
 dnx DotNetRepoInspector.Mcp@1.2.0 --yes -- --root /absolute/path/to/repository
