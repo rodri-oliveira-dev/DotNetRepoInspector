@@ -196,12 +196,12 @@ jobs:
             --plan ./artifacts/release/container-release-plan.json
 
       - name: Setup QEMU for container release validation
-        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: all
 
       - name: Setup Docker Buildx for container release validation
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Validate multi-architecture container release build configuration
         run: bash ./.github/scripts/container_release.sh check ./artifacts/release/container-release-plan.json
@@ -527,12 +527,12 @@ jobs:
           fi
 
       - name: Setup QEMU for multi-architecture publication
-        uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4.3.0
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: all
 
       - name: Setup Docker Buildx for multi-architecture publication
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Authenticate to GHCR and Docker Hub
         env:
