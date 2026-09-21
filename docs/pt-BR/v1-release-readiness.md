@@ -24,7 +24,7 @@ As refs públicas da GitHub Action criadas a partir dessa linha de release estã
 
 A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. Testes do repositório comparam essa baseline com `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
 
-O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como pacote framework-dependent pronto para release, com controles de stdio, root explícito, read-only, E2E hermético, segurança, performance, `McpServer`, `.mcp/server.json` embutido, símbolos e smoke da tool empacotada. Readiness de release não significa que o pacote já foi publicado.
+O mesmo manifesto reconhece `DotNetRepoInspector.Mcp` como pacote framework-dependent pronto para release, com controles de stdio, root explícito, read-only, E2E hermético, segurança, performance, `McpServer`, `.mcp/server.json` embutido, símbolos e smoke da tool empacotada. A release histórica da CLI/Action `v1.0.0` já foi publicada; o pacote separado `DotNetRepoInspector.Mcp` está preparado, mas **ainda não** foi publicado no NuGet.org. Consulte o [readiness do RC do MCP](mcp-release-candidate.md) para seu estado de publicação independente.
 
 ## Contrato público incluído na v1
 
