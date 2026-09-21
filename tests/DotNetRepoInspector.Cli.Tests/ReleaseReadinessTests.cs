@@ -264,15 +264,26 @@ public sealed class ReleaseReadinessTests
     [Fact]
     public void McpPackageMetadata_IsBomFreeAndValidatedBeforePublication()
     {
-        string project = File.ReadAllText(Path.Combine(
+        string projectPath = Path.Combine(
             RepositoryRoot,
             "src",
             "DotNetRepoInspector.Mcp",
-            "DotNetRepoInspector.Mcp.csproj"));
+            "DotNetRepoInspector.Mcp.csproj");
+        string projectText = File.ReadAllText(projectPath);
+        XDocument project = XDocument.Load(projectPath);
 
-        Assert.Contains("WriteLinesToFile", project, StringComparison.Ordinal);
-        Assert.DoesNotContain("Encoding=\"UTF-8\"", project, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("&quot;valueHint&quot;: &quot;repository_root&quot;", project, StringComparison.Ordinal);
+        XElement? manifestWriter = project
+            .Descendants()
+            .FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "WriteLinesToFile", StringComparison.Ordinal) &&
+                string.Equals(
+                    element.Attribute("File")?.Value,
+                    "$(McpManifestPath)",
+                    StringComparison.Ordinal));
+
+        Assert.NotNull(manifestWriter);
+        Assert.Null(manifestWriter.Attribute("Encoding"));
+        Assert.DoesNotContain("&quot;valueHint&quot;: &quot;repository_root&quot;", projectText, StringComparison.Ordinal);
 
         string validator = File.ReadAllText(Path.Combine(
             RepositoryRoot,
