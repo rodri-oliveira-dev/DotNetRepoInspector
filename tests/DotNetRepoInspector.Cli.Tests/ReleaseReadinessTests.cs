@@ -324,13 +324,21 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("NuGet/login@", workflow, StringComparison.Ordinal);
         Assert.Contains("environment: release", workflow, StringComparison.Ordinal);
         Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
-        Assert.DoesNotContain("--skip-duplicate", workflow, StringComparison.Ordinal);
+        Assert.Contains("--skip-duplicate", workflow, StringComparison.Ordinal);
+        Assert.Contains("Wait for MCP package propagation on NuGet.org", workflow, StringComparison.Ordinal);
+        Assert.Contains("v3-flatcontainer/$packageId/index.json", workflow, StringComparison.Ordinal);
+        Assert.Contains("$maxAttempts = 10", workflow, StringComparison.Ordinal);
+        Assert.Contains("[Math]::Pow(2, $attempt - 1)", workflow, StringComparison.Ordinal);
 
+        int propagationIndex = workflow.IndexOf(
+            "Wait for MCP package propagation on NuGet.org",
+            StringComparison.Ordinal);
         int smokeIndex = workflow.IndexOf(
             "Smoke exact MCP package version from NuGet.org",
             StringComparison.Ordinal);
         int releaseIndex = workflow.IndexOf("Publish GitHub Release", StringComparison.Ordinal);
-        Assert.True(smokeIndex >= 0 && releaseIndex > smokeIndex);
+        Assert.True(propagationIndex >= 0 && smokeIndex > propagationIndex);
+        Assert.True(releaseIndex > smokeIndex);
     }
 
     private static string RepositoryRoot { get; } = FindRepositoryRoot();
