@@ -188,7 +188,7 @@ The repository contains a reusable Composite Action that runs the exact .NET Too
 
 Outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action does not require write permissions or a GitHub token for inspection of an already checked-out repository.
 
-The public `@v1` alias becomes usable only after the first protected release moves it to the immutable `v1.0.0` release commit. See [`docs/en/github-action.md`](docs/en/github-action.md).
+The public `@v1` alias is available for direct use in GitHub Actions. Immutable version tags such as `@v1.0.0` and `@v1.1.0` can be used when exact reproducibility is preferred. See [`docs/en/github-action.md`](docs/en/github-action.md).
 
 ## Optional HTTP snapshot persistence
 
