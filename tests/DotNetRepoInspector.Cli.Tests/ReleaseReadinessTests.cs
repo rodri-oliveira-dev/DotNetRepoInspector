@@ -233,14 +233,24 @@ public sealed class ReleaseReadinessTests
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "README.pt-BR.md"));
 
-        Assert.Contains("v1.0.0 stable baseline", english, StringComparison.Ordinal);
+        Assert.Contains("stable v1 contract", english, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": \"1.3\"", english, StringComparison.Ordinal);
+        Assert.Contains("dotnet tool install --global DotNetRepoInspector", english, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", english, StringComparison.Ordinal);
+        Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", english, StringComparison.Ordinal);
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest", english, StringComparison.Ordinal);
+        Assert.Contains("GitHub Packages", english, StringComparison.Ordinal);
         Assert.DoesNotContain("Status: early development", english, StringComparison.Ordinal);
         Assert.DoesNotContain("The exact schema is not final", english, StringComparison.Ordinal);
         Assert.DoesNotContain("release candidate", english, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Contains("baseline estável v1.0.0", portuguese, StringComparison.Ordinal);
+        Assert.Contains("contrato v1 estável", portuguese, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": \"1.3\"", portuguese, StringComparison.Ordinal);
+        Assert.Contains("dotnet tool install --global DotNetRepoInspector", portuguese, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", portuguese, StringComparison.Ordinal);
+        Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", portuguese, StringComparison.Ordinal);
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest", portuguese, StringComparison.Ordinal);
+        Assert.Contains("GitHub Packages", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("Status: desenvolvimento inicial", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("O schema exato ainda não é definitivo", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("candidata à release", portuguese, StringComparison.OrdinalIgnoreCase);
