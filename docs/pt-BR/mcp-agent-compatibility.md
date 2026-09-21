@@ -121,7 +121,7 @@ No Linux/macOS, use o caminho do executável sem extensão no mesmo diretório `
 | Gemini CLI | Google | não instalado neste ambiente | MCP stdio esperado | `settings.json` com `mcpServers.dotnetRepoInspector.command` + `args` | argumento explícito `--root` | pendente | pendente | pendente | Roteiro reproduzível documentado; não validado |
 | Harness determinístico MCP SDK | Harness de protocolo | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | argumento explícito `--root` por fixture | validado | validado | validado em todas as categorias factuais do MVP | Aprovado no eval determinístico de protocolo |
 
-Nota importante de release: nesta validação, somente um cliente externo de provider, OpenAI Codex CLI, estava disponível e foi realmente validado no ambiente. O gate das issues #133 e #139 que exige pelo menos dois clientes externos de providers diferentes permanece aberto até Claude Code ou Gemini CLI ser validado pelos mantenedores.
+Nota de release: nesta validação, o OpenAI Codex CLI é o cliente externo de provider validado no ambiente. As configurações de Claude Code e Gemini CLI estão documentadas, mas não foram validadas de forma independente aqui. Essas validações adicionais seguem acompanhadas pelas #133 e #139 como evidência não bloqueante de interoperabilidade; a publicação MCP se apoia nos gates determinísticos de protocolo/evals e no smoke já estabelecido com Codex.
 
 ## Smoke Tests Reproduzíveis
 
