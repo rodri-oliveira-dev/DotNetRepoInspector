@@ -454,6 +454,7 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
           --source https://api.nuget.org/v3/index.json
           --api-key "${NUGET_API_KEY}"
+          --skip-duplicate
 
       - name: Publish MCP server package
         env:
@@ -464,6 +465,7 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
           --source https://api.nuget.org/v3/index.json
           --api-key "${NUGET_API_KEY}"
+          --skip-duplicate
 
       - name: Configure GitHub Packages source
         env:
@@ -485,6 +487,7 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
           --source github
           --api-key "${GITHUB_TOKEN}"
+          --skip-duplicate
 
       - name: Publish MCP server package to GitHub Packages
         env:
@@ -495,6 +498,7 @@ jobs:
           "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
           --source github
           --api-key "${GITHUB_TOKEN}"
+          --skip-duplicate
           --no-symbols
 
       - name: Build MCP package smoke harness
@@ -503,6 +507,42 @@ jobs:
           ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj
           --configuration Release
 
+      - name: Wait for MCP package propagation on NuGet.org
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageId = "dotnetrepoinspector.mcp"
+          $indexUrl = "https://api.nuget.org/v3-flatcontainer/$packageId/index.json"
+          $maxAttempts = 10
+          $baseDelaySeconds = 30
+          $maxDelaySeconds = 120
+
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              $probeUrl = "$indexUrl?nocache=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+              $index = Invoke-RestMethod -Uri $probeUrl -Method Get -Headers @{ "Cache-Control" = "no-cache" }
+              $publishedVersion = @($index.versions | Where-Object { $_ -ieq $env:RELEASE_VERSION })
+              if ($publishedVersion.Count -gt 0) {
+                Write-Host "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) is visible in the NuGet.org V3 flat-container index."
+                break
+              }
+            }
+            catch {
+              Write-Host "NuGet propagation probe attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
+            }
+
+            if ($attempt -eq $maxAttempts) {
+              throw "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) did not appear in the NuGet.org V3 index after $maxAttempts attempts."
+            }
+
+            $delaySeconds = [Math]::Min(
+              $maxDelaySeconds,
+              [int]($baseDelaySeconds * [Math]::Pow(2, $attempt - 1)))
+            Write-Host "Package version is not visible yet; waiting $delaySeconds second(s) before retrying."
+            Start-Sleep -Seconds $delaySeconds
+          }
       - name: Smoke exact MCP package version from NuGet.org
         shell: pwsh
         env:
