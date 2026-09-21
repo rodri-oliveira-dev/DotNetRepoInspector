@@ -188,7 +188,7 @@ O repositório contém uma Composite Action reutilizável que executa exatamente
 
 Os outputs incluem `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action não exige permissão de escrita nem token do GitHub para inspecionar um repositório que já tenha sido feito checkout.
 
-O alias público `@v1` só fica utilizável depois que a primeira release protegida o mover para o commit imutável da `v1.0.0`. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
+O alias público `@v1` já está disponível para uso direto no GitHub Actions. Tags imutáveis como `@v1.0.0` e `@v1.1.0` podem ser usadas quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
 
 ## Persistência HTTP opcional de snapshots
 
