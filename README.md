@@ -261,7 +261,7 @@ MSBuild evaluation is **not a sandbox**. Untrusted repositories should be inspec
 
 ## Release readiness
 
-The v1 release baseline is machine-readable in [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) and enforced by repository tests. It locks together the product version, schema version, Action major alias, NuGet/.NET Tool metadata, canonical schema example, and required governance/security files.
+The v1 release baseline is machine-readable in [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) and enforced by repository tests. It locks together the product version, schema version, Action major alias, NuGet/.NET Tool metadata, canonical schema example, the published container distribution contract, and required governance/security files.
 
 The first-publication checklist, external GitHub/NuGet prerequisites, safe dry-run procedure, and post-publication verification are documented in [`docs/en/v1-release-readiness.md`](docs/en/v1-release-readiness.md). General SemVer, release artifacts, tags, provenance, and recovery rules are in [`docs/en/releases.md`](docs/en/releases.md).
 
