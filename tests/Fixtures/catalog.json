@@ -178,6 +178,35 @@
         "test-signal-explicit-false-conflict",
         "test-signal-ambiguous"
       ]
+    },
+    {
+      "id": "worker-signal-using-worker-property",
+      "path": "WorkerProjectSignals/UsingWorkerProperty",
+      "proves": [
+        "worker-false-negative-current",
+        "worker-signal-using-worker-property"
+      ]
+    },
+    {
+      "id": "worker-signal-systemd-service",
+      "path": "WorkerProjectSignals/SystemdService",
+      "proves": [
+        "worker-signal-systemd-service"
+      ]
+    },
+    {
+      "id": "worker-signal-hosting-only-ambiguous",
+      "path": "WorkerProjectSignals/HostingOnlyAmbiguous",
+      "proves": [
+        "worker-signal-hosting-only-ambiguous"
+      ]
+    },
+    {
+      "id": "worker-signal-web-conflict",
+      "path": "WorkerProjectSignals/WebConflict",
+      "proves": [
+        "worker-signal-web-conflict"
+      ]
     }
   ]
 }
