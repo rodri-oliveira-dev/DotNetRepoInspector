@@ -45,6 +45,7 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
     {
         ArgumentNullException.ThrowIfNull(facts);
         ArgumentNullException.ThrowIfNull(facts.DeclaredProjectSdks);
+        ArgumentNullException.ThrowIfNull(facts.PackageReferences);
 
         var declaredSdks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var sdk in facts.DeclaredProjectSdks)
