@@ -7,7 +7,7 @@ using Xunit;
 
 namespace DotNetRepoInspector.MSBuild.Tests;
 
-public sealed class TestProjectSignalResearchTests
+public sealed class TestProjectSignalClassificationTests
 {
     private static readonly string[] ResearchProperties =
     [
@@ -19,7 +19,7 @@ public sealed class TestProjectSignalResearchTests
     private static readonly string[] ResearchItems = ["PackageReference"];
 
     [Fact]
-    public async Task MtpApplication_ReproducesCurrentFalseNegativeWithoutIsTestProject()
+    public async Task MtpApplication_ClassifiesAsTestWithoutIsTestProject()
     {
         string projectPath = FixturePath(
             "TestProjectSignals",
@@ -43,15 +43,20 @@ public sealed class TestProjectSignalResearchTests
             factsResult.Error?.Message ?? "Project facts evaluation failed.");
         Assert.NotNull(factsResult.Facts);
         Assert.Null(factsResult.Facts.IsTestProject);
+        Assert.True(factsResult.Facts.IsTestingPlatformApplication is true);
 
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
 
-        Assert.Equal(ProjectClassificationKinds.Console, classification.Kind);
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:IsTestingPlatformApplication=true",
+            Assert.Single(classification.Signals));
     }
 
     [Fact]
-    public async Task TestSdkFallback_ExposesDirectPackageReferenceWhenIsTestProjectIsMissing()
+    public async Task TestSdkFallback_ClassifiesAsTestWhenIsTestProjectIsMissing()
     {
         string projectPath = FixturePath(
             "TestProjectSignals",
@@ -80,11 +85,20 @@ public sealed class TestProjectSignalResearchTests
             factsResult.Succeeded,
             factsResult.Error?.Message ?? "Project facts evaluation failed.");
         Assert.NotNull(factsResult.Facts);
+        Assert.Null(factsResult.Facts.IsTestProject);
+        Assert.Contains(
+            DeterministicProjectClassifier.MicrosoftNetTestSdkPackage,
+            factsResult.Facts.PackageReferences,
+            StringComparer.OrdinalIgnoreCase);
 
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
 
-        Assert.Equal(ProjectClassificationKinds.Library, classification.Kind);
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.NET.Test.Sdk",
+            Assert.Single(classification.Signals));
     }
 
     [Fact]
@@ -106,6 +120,23 @@ public sealed class TestProjectSignalResearchTests
                 item.Identity,
                 "Microsoft.NET.Test.Sdk",
                 StringComparison.OrdinalIgnoreCase));
+
+        var factsEvaluator = new MsBuildProjectFactsEvaluator();
+        MsBuildProjectFactsResult factsResult = await factsEvaluator.EvaluateAsync(
+            projectPath,
+            TestContext.Current.CancellationToken);
+
+        Assert.True(
+            factsResult.Succeeded,
+            factsResult.Error?.Message ?? "Project facts evaluation failed.");
+        Assert.NotNull(factsResult.Facts);
+        Assert.False(factsResult.Facts.IsTestProject is not false);
+
+        ProjectClassification classification =
+            new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
+
+        Assert.Equal(ProjectClassificationKinds.Library, classification.Kind);
+        Assert.Equal("property:OutputType=Library", Assert.Single(classification.Signals));
     }
 
     private static Task<MsBuildEvaluationResult> EvaluateResearchSignalsAsync(string projectPath)
