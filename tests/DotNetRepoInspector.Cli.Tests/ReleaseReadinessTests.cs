@@ -302,15 +302,19 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", english, StringComparison.Ordinal);
         Assert.Contains("container-distribution.json", english, StringComparison.Ordinal);
         Assert.Contains("--network none", english, StringComparison.Ordinal);
-        Assert.Contains("MSBuild", english, StringComparison.Ordinal);
-        Assert.Contains("sandbox", english, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "Containerization does not make MSBuild evaluation a security sandbox",
+            english,
+            StringComparison.Ordinal);
 
         Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
         Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
         Assert.Contains("container-distribution.json", portuguese, StringComparison.Ordinal);
         Assert.Contains("--network none", portuguese, StringComparison.Ordinal);
-        Assert.Contains("MSBuild", portuguese, StringComparison.Ordinal);
-        Assert.Contains("sandbox", portuguese, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "Containerização não transforma avaliação MSBuild em um sandbox de segurança",
+            portuguese,
+            StringComparison.Ordinal);
     }
 
     [Fact]
