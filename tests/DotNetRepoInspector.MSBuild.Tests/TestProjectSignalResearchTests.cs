@@ -87,9 +87,11 @@ public sealed class TestProjectSignalClassificationTests
         Assert.NotNull(factsResult.Facts);
         Assert.Null(factsResult.Facts.IsTestProject);
         Assert.Contains(
-            DeterministicProjectClassifier.MicrosoftNetTestSdkPackage,
             factsResult.Facts.PackageReferences,
-            StringComparer.OrdinalIgnoreCase);
+            package => string.Equals(
+                package,
+                DeterministicProjectClassifier.MicrosoftNetTestSdkPackage,
+                StringComparison.OrdinalIgnoreCase));
 
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
@@ -130,7 +132,7 @@ public sealed class TestProjectSignalClassificationTests
             factsResult.Succeeded,
             factsResult.Error?.Message ?? "Project facts evaluation failed.");
         Assert.NotNull(factsResult.Facts);
-        Assert.False(factsResult.Facts.IsTestProject is not false);
+        Assert.True(factsResult.Facts.IsTestProject is false);
 
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
