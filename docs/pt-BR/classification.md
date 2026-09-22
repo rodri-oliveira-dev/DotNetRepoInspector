@@ -81,3 +81,19 @@ O engine não classifica com base em:
 - propriedades MSBuild arbitrárias e brutas que não tenham sido promovidas a fatos normalizados de classificação.
 
 Novos sinais só devem ser adicionados quando o modelo de inspeção puder coletá-los explicitamente e sua precedência for determinística.
+
+
+## Evolução aprovada dos sinais de Worker
+
+A issue #47 pesquisa falsos negativos de Worker sem alterar as regras de produção acima. A [ADR 0010](decisions/0010-worker-project-detection-signals.md) define os fatos e a precedência que a issue #152 deve implementar.
+
+A direção aprovada é intencionalmente mais restrita que detectar Generic Host:
+
+- `UsingMicrosoftNETSdkWorker == true` efetivo é um sinal Worker de alta confiança, pois é o flag oficial emitido pelo Worker SDK;
+- projetos executáveis com `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` são candidatos Worker de confiança média quando não existe evidência Test/Web mais forte;
+- `Microsoft.Extensions.Hosting` isoladamente permanece apenas evidência de apoio, pois consoles comuns e aplicações Web também podem usar Generic Host;
+- Web SDK mais um sinal Worker forte representa evidência conflitante de workload e deve resultar em `unknown`;
+- sinais Test mantêm a precedência superior já existente;
+- nomes, caminhos, sufixos `.Worker` e análise de código-fonte não são aprovados.
+
+Até o merge da #152, a classificação de produção continua intencionalmente usando somente a regra atual baseada no Worker SDK.
