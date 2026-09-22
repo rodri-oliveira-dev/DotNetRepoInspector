@@ -63,6 +63,38 @@
       "performance-baseline"
     ]
   },
+  "container": {
+    "publicationStatus": "published",
+    "readinessIssue": 106,
+    "registries": [
+      "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector",
+      "docker.io/rodrigodotnet/dotnet-repo-inspector"
+    ],
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ],
+    "stableTagPolicy": [
+      "<version>",
+      "<major>.<minor>",
+      "<major>",
+      "latest"
+    ],
+    "prereleaseTagPolicy": [
+      "<version>"
+    ],
+    "releasePlanArtifact": "container-release-plan.json",
+    "distributionArtifact": "container-distribution.json",
+    "requiredControls": [
+      "non-root",
+      "read-only-compatible",
+      "offline-capable",
+      "digest-pinning",
+      "fixable-high-critical-scan-gate",
+      "sbom",
+      "provenance"
+    ]
+  },
   "schemaExample": "docs/en/schema/examples/inspection-v1.example.json",
   "requiredFiles": [
     "LICENSE",
@@ -81,6 +113,8 @@
     "docs/en/mcp-ga-readiness.md",
     "docs/pt-BR/mcp-ga-readiness.md",
     "docs/en/mcp-1.2.0-release-notes.md",
-    "docs/pt-BR/mcp-1.2.0-release-notes.md"
+    "docs/pt-BR/mcp-1.2.0-release-notes.md",
+    "docs/en/container.md",
+    "docs/pt-BR/container.md"
   ]
 }
