@@ -28,6 +28,45 @@ public sealed class MsBuildProjectClassificationAdapterTests
     }
 
     [Fact]
+    public void Classify_MapsTestingPlatformAndPackageFactsToCoreClassifier()
+    {
+        var mtpFacts = CreateFacts(
+            new[] { new ProjectSdkReference("Microsoft.NET.Sdk") },
+            "Exe",
+            false,
+            NoProperties) with
+        {
+            IsTestingPlatformApplication = true
+        };
+
+        var mtpClassification = _adapter.Classify(mtpFacts);
+
+        Assert.Equal(ProjectClassificationKinds.Test, mtpClassification.Kind);
+        Assert.Equal(
+            "property:IsTestingPlatformApplication=true",
+            Assert.Single(mtpClassification.Signals));
+
+        var packageFacts = CreateFacts(
+            new[] { new ProjectSdkReference("Microsoft.NET.Sdk") },
+            "Library",
+            null,
+            NoProperties) with
+        {
+            PackageReferences = [DeterministicProjectClassifier.MicrosoftNetTestSdkPackage]
+        };
+
+        var packageClassification = _adapter.Classify(packageFacts);
+
+        Assert.Equal(ProjectClassificationKinds.Test, packageClassification.Kind);
+        Assert.Equal(
+            ProjectClassificationConfidence.Medium,
+            packageClassification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.NET.Test.Sdk",
+            Assert.Single(packageClassification.Signals));
+    }
+
+    [Fact]
     public void Classify_DoesNotUseSuggestiveRawPropertiesAsClassificationHeuristics()
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal)
