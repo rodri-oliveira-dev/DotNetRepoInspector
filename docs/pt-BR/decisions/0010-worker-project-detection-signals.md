@@ -10,7 +10,7 @@
 
 O classificador de produção atualmente reconhece `worker` somente quando a raiz do projeto declara `Microsoft.NET.Sdk.Worker`. Essa regra é determinística, mas perde projetos com formato Worker que usam `Microsoft.NET.Sdk` comum, SDKs customizados/compostos ou integração explícita de hosting como serviço.
 
-O Worker SDK oficial define a propriedade MSBuild avaliada `UsingMicrosoftNETSdkWorker=true` em seu `Sdk.props`. Essa propriedade pode sobreviver à composição de SDKs mesmo quando a declaração na raiz do projeto não expõe `Microsoft.NET.Sdk.Worker` diretamente.
+O Worker SDK oficial define a propriedade MSBuild avaliada `UsingMicrosoftNETSdkWorker=true` em seu `Sdk.props`. Porém, a avaliação MSBuild expõe somente o valor efetivo: o DotNetRepoInspector não consegue determinar se ele foi atribuído pelo Worker SDK, por um SDK customizado, por props importados ou pelo próprio projeto. Portanto, a propriedade é tratada como um sinal explícito de opt-in de Worker, e não como proveniência que prove a importação do Worker SDK.
 
 A documentação de Worker da Microsoft também usa `Microsoft.Extensions.Hosting`, mas o Generic Host não é específico de Worker: consoles e aplicações Web podem usá-lo para configuração, injeção de dependência, logging, gerenciamento de lifetime e hosted services. Portanto, a presença isolada do pacote não diferencia um Worker de um console genérico com host.
 
@@ -23,7 +23,7 @@ Pacotes de lifetime de serviço são mais específicos. `Microsoft.Extensions.Ho
 | Força | Sinal estrutural | Decisão |
 | --- | --- | --- |
 | Forte | `Microsoft.NET.Sdk.Worker` declarado | Sinal autoritativo de Worker SDK já existente. |
-| Forte | `UsingMicrosoftNETSdkWorker == true` efetivo | Fallback aprovado. É o flag oficial emitido pelo Worker SDK e pode preservar a semântica Worker em SDKs compostos/customizados. |
+| Forte | `UsingMicrosoftNETSdkWorker == true` efetivo | Opt-in explícito de Worker aprovado. O Worker SDK define essa propriedade, mas o valor efetivo não possui proveniência da atribuição; o projeto pode defini-la manualmente. A confiança alta representa o opt-in explícito, não prova de importação do Worker SDK. |
 | Moderado | `OutputType == Exe` mais `Microsoft.Extensions.Hosting.Systemd` direta/avaliada | Fallback aprovado de lifetime de serviço quando não existe conflito Test/Web mais forte. |
 | Moderado | `OutputType == Exe` mais `Microsoft.Extensions.Hosting.WindowsServices` direta/avaliada | Fallback aprovado de lifetime de serviço sob as mesmas restrições. |
 | Fraco, apenas de apoio | presença do pacote `Microsoft.Extensions.Hosting` | Generic Host é compartilhado por Workers, consoles e outras aplicações baseadas em host; não classificar apenas por isso. |
@@ -37,6 +37,12 @@ O template Worker usa `Microsoft.Extensions.Hosting`, porém esse pacote fornece
 
 A fixture `HostingOnlyAmbiguous` registra essa fronteira.
 
+### Limitação de proveniência de `UsingMicrosoftNETSdkWorker`
+
+A propriedade escalar intencionalmente **não** é interpretada como proveniência do Worker SDK. Um projeto com SDK comum pode definir `UsingMicrosoftNETSdkWorker=true` diretamente e é indistinguível, no nível dos fatos normalizados propostos para a #152, do mesmo valor vindo de um SDK importado/composto. A #152 pode classificar esse valor efetivo como opt-in explícito de alta confiança, mas não deve relatar nem sugerir que `Microsoft.NET.Sdk.Worker` foi importado, a menos que os fatos de SDK declarado provem isso de forma independente.
+
+Essa escolha aceita um risco limitado de falso positivo: um projeto pode definir a propriedade acidental ou deliberadamente sem se comportar como Worker. O trade-off é considerado aceitável para classificação porque o sinal é explícito, exato e específico de Worker no nome; ele não é inferido de comportamento genérico de hosting. Consumidores que precisem de proveniência de SDK devem usar a lista de SDKs declarados, e não essa propriedade.
+
 ### Precedência proposta para a issue #152
 
 A issue #152 deve preservar todas as regras de Test da ADR 0009 antes das decisões Worker/Web e então aplicar:
@@ -45,7 +51,7 @@ A issue #152 deve preservar todas as regras de Test da ADR 0009 antes das decis�
 2. Web SDK mais qualquer sinal Worker **forte** (`Microsoft.NET.Sdk.Worker` ou `UsingMicrosoftNETSdkWorker=true`) -> `unknown` por evidências conflitantes de workload;
 3. `Microsoft.NET.Sdk.Web` -> `web`, confiança alta; pacotes de lifetime de serviço não sobrepõem Web;
 4. `Microsoft.NET.Sdk.Worker` -> `worker`, confiança alta;
-5. `UsingMicrosoftNETSdkWorker == true` -> `worker`, confiança alta;
+5. `UsingMicrosoftNETSdkWorker == true` -> `worker`, confiança alta como opt-in explícito, sem afirmar proveniência do Worker SDK;
 6. `OutputType == Exe` mais `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`, confiança média;
 7. continuar com `OutputType == Exe` -> `console`, `OutputType == Library` -> `library` e depois `unknown`.
 
@@ -57,7 +63,7 @@ A implementação deve coletar ou reutilizar somente:
 
 - nomes existentes dos project SDKs declarados;
 - `OutputType` normalizado existente;
-- novo `bool? UsingMicrosoftNETSdkWorker` efetivo;
+- novo `bool? UsingMicrosoftNETSdkWorker` efetivo, interpretado somente como valor de opt-in explícito e não como proveniência de importação do SDK;
 - identidades normalizadas existentes de `PackageReference`, introduzidas pela #151.
 
 Não é necessária nova coleta de items de pacote. `MsBuildProjectFactsEvaluator` já solicita `PackageReference`; a #152 precisa adicionar somente uma propriedade à avaliação existente por `dotnet msbuild -getProperty`.
@@ -73,7 +79,7 @@ O classificador Core deve continuar recebendo somente valores normalizados e per
 
 ### Sinais avaliados e não selecionados
 
-O Worker SDK também emite a capability de project system `DotNetCoreWorker`. Ela é evidência forte e específica de Worker, mas coletar `ProjectCapability` adicionaria outro conjunto de items avaliados enquanto duplicaria a propriedade mais barata `UsingMicrosoftNETSdkWorker`. Ela não é aprovada para a #152, a menos que evidência futura mostre que a propriedade é insuficiente.
+O Worker SDK também emite a capability de project system `DotNetCoreWorker`. Ela é evidência específica de Worker, mas um item avaliado também não prova sozinho qual import o declarou. Coletar `ProjectCapability` ainda adicionaria outro conjunto de items avaliados enquanto duplicaria em grande parte a propriedade de opt-in mais barata; por isso, não é aprovado para a #152.
 
 `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.Hosting.Abstractions`, propriedades de GC, defaults de cópia de conteúdo e pacotes genéricos de hosting foram avaliados e permanecem não autoritativos.
 
@@ -81,7 +87,7 @@ O Worker SDK também emite a capability de project system `DotNetCoreWorker`. El
 
 As fixtures de pesquisa ficam em `tests/Fixtures/WorkerProjectSignals` para não alterar a baseline de smoke existente em `ProjectKinds` antes da #152:
 
-- `UsingWorkerProperty`: executável com SDK comum e o flag oficial `UsingMicrosoftNETSdkWorker=true`; reproduz o falso negativo atual como `console`;
+- `UsingWorkerProperty`: executável com SDK comum que faz opt-in manual por `UsingMicrosoftNETSdkWorker=true`; comprova tanto o falso negativo atual como `console` quanto a ausência de proveniência da atribuição;
 - `SystemdService`: executável com SDK comum e integração explícita com systemd; representa o fallback moderado aprovado;
 - `HostingOnlyAmbiguous`: executável apenas com `Microsoft.Extensions.Hosting`; permanece `console` e demonstra por que Generic Host sozinho é insuficiente;
 - `WebConflict`: Web SDK mais o flag Worker forte; registra o futuro conflito conservador como `unknown`.
@@ -96,7 +102,7 @@ A detecção de lifetime de serviço reutiliza os items `PackageReference` norma
 
 ## Consequências
 
-A implementação seguinte poderá reconhecer Workers com SDK composto com alta confiança e aplicações de serviço com SDK comum com confiança média, sem criar falsos positivos amplos por Generic Host.
+A implementação seguinte poderá reconhecer projetos que anunciam explicitamente semântica Worker por `UsingMicrosoftNETSdkWorker=true` com alta confiança e aplicações de serviço com SDK comum com confiança média, sem criar falsos positivos amplos por Generic Host. Essa classificação não afirma onde a propriedade foi atribuída.
 
 Alguns Workers reais que usam somente `Microsoft.Extensions.Hosting` e registram `BackgroundService` no código continuarão intencionalmente como `console`. Detectá-los exigiria análise de fonte ou evidência semântica mais rica, fora desta etapa da roadmap.
 
