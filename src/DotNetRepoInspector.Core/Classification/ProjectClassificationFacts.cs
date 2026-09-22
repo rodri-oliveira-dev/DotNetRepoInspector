@@ -7,5 +7,6 @@ public sealed record ProjectClassificationFacts(
 {
     public bool? IsTestingPlatformApplication { get; init; }
 
-    public IReadOnlyList<string> PackageReferences { get; init; } = [];
+    public IReadOnlyList<string> PackageReferences { get; init; } =
+        [];
 }
