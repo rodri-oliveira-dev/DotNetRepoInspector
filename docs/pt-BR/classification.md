@@ -4,39 +4,64 @@
 
 O DotNetRepoInspector classifica projetos a partir de fatos estruturais avaliados, em vez de usar nomes de projetos, nomes de diretórios ou inspeção do código-fonte.
 
-As classificações iniciais são `web`, `worker`, `console`, `library`, `test` e `unknown`.
+As classificações são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
 ## Entradas
 
-Atualmente, o classificador consome apenas fatos que já foram normalizados pelo pipeline de inspeção:
+O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:
 
-- nomes dos SDKs declarados pelo projeto;
+- nomes dos project SDKs declarados;
 - `OutputType` efetivo;
-- `IsTestProject` efetivo.
+- `IsTestProject` efetivo;
+- `IsTestingPlatformApplication` efetivo;
+- identidades avaliadas de `PackageReference` usadas pelas regras de classificação aprovadas.
 
 O classificador do Core não possui dependência de MSBuild. `MsBuildProjectClassificationAdapter` converte `MsBuildProjectFacts` para o modelo de entrada do Core.
+
+O campo público `projects[].isTestProject` mantém o significado original: ele representa o fato MSBuild avaliado `IsTestProject`. Assim, um projeto pode ser classificado como `test` por outro sinal aprovado enquanto `isTestProject` é `false` ou está ausente.
+
+## Sinais de projeto de teste
+
+A detecção de projetos de teste segue a [ADR 0009](decisions/0009-test-project-detection-signals.md):
+
+| Evidência | Sinal | Confiança | Observação |
+| --- | --- | --- | --- |
+| `IsTestingPlatformApplication == true` | `property:IsTestingPlatformApplication=true` | `high` | Sinal autoritativo de aplicação Microsoft.Testing.Platform. |
+| `IsTestProject == true` | `property:IsTestProject=true` | `high` | Sinal autoritativo VSTest já existente. |
+| `MSTest.Sdk` declarado | `sdk:MSTest.Sdk` | `high` | Project SDK explicitamente específico de testes. |
+| pacote `Microsoft.NET.Test.Sdk` avaliado com `IsTestProject` ausente | `package:Microsoft.NET.Test.Sdk` | `medium` | Fallback conservador para lacunas de imports de pacote em avaliação sem restore. |
+
+Um `IsTestProject=false` explícito impede que apenas o fallback de pacote `Microsoft.NET.Test.Sdk` promova o projeto para `test`. Ele não anula sinais fortes independentes, como `IsTestingPlatformApplication=true` ou `MSTest.Sdk` declarado.
+
+Hints MTP baseados apenas em pacote, como `Microsoft.Testing.Platform.MSBuild`, pacotes genéricos de framework de testes, seleção de runner no repositório, nomes e caminhos não são autoritativos isoladamente.
 
 ## Precedência e tratamento de conflitos
 
 As regras são avaliadas nesta ordem:
 
-1. `IsTestProject == true` -> `test`.
-2. presença simultânea de `Microsoft.NET.Sdk.Web` e `Microsoft.NET.Sdk.Worker` -> `unknown`, pois os sinais de SDK especializados entram em conflito.
-3. `Microsoft.NET.Sdk.Web` -> `web`.
-4. `Microsoft.NET.Sdk.Worker` -> `worker`.
-5. `OutputType == Exe` -> `console` quando nenhum SDK especializado correspondeu.
-6. `OutputType == Library` -> `library` quando nenhum SDK especializado correspondeu.
-7. caso contrário -> `unknown`.
+1. `IsTestingPlatformApplication == true` -> `test`.
+2. `IsTestProject == true` -> `test`.
+3. `MSTest.Sdk` declarado -> `test`.
+4. quando `IsTestProject` está ausente, `Microsoft.NET.Test.Sdk` avaliado -> `test`.
+5. presença simultânea de `Microsoft.NET.Sdk.Web` e `Microsoft.NET.Sdk.Worker` -> `unknown`, pois os sinais de SDK especializados entram em conflito.
+6. `Microsoft.NET.Sdk.Web` -> `web`.
+7. `Microsoft.NET.Sdk.Worker` -> `worker`.
+8. `OutputType == Exe` -> `console` quando nenhum sinal mais específico correspondeu.
+9. `OutputType == Library` -> `library` quando nenhum sinal mais específico correspondeu.
+10. caso contrário -> `unknown`.
 
-Portanto, um projeto de teste permanece `test` mesmo que seja executável ou declare um SDK especializado. Declarações conflitantes dos SDKs Web/Worker produzem intencionalmente `unknown`, em vez de depender de uma ordenação arbitrária.
+Portanto, um sinal forte de teste permanece `test` mesmo quando o projeto é executável ou declara um SDK de workload especializado. Declarações conflitantes dos SDKs Web/Worker produzem `unknown` somente quando nenhum sinal aprovado de teste já correspondeu.
 
-`WinExe` não é classificado como `console`, pois pode representar modelos de aplicação desktop que estão fora do vocabulário inicial de classificação.
+`WinExe` não é classificado como `console`, pois pode representar modelos de aplicação desktop fora do vocabulário atual de classificação.
 
 ## Sinais e confiança
 
 | Classificação | Evidência estrutural | Sinal | Confiança |
 | --- | --- | --- | --- |
+| `test` | aplicação MTP | `property:IsTestingPlatformApplication=true` | `high` |
 | `test` | `IsTestProject == true` | `property:IsTestProject=true` | `high` |
+| `test` | `MSTest.Sdk` declarado | `sdk:MSTest.Sdk` | `high` |
+| `test` | fallback `Microsoft.NET.Test.Sdk` com `IsTestProject` ausente | `package:Microsoft.NET.Test.Sdk` | `medium` |
 | `web` | `Microsoft.NET.Sdk.Web` declarado | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | `Microsoft.NET.Sdk.Worker` declarado | `sdk:Microsoft.NET.Sdk.Worker` | `high` |
 | `console` | `OutputType == Exe` efetivo | `property:OutputType=Exe` | `medium` |
@@ -45,28 +70,14 @@ Portanto, um projeto de teste permanece `test` mesmo que seja executável ou dec
 
 ## Heurísticas deliberadamente excluídas
 
-O engine inicial não classifica com base em:
+O engine não classifica com base em:
 
 - sufixos como `.Api`, `.Worker` ou `.Tests`;
 - nomes de projeto ou diretório;
 - apenas a presença de `Microsoft.Extensions.Hosting`;
-- presença de `BackgroundService` ou de outros tipos no código-fonte;
+- apenas a presença de `Microsoft.Testing.Platform.MSBuild` ou de pacotes genéricos de framework de testes;
+- apenas a seleção de test runner no repositório;
+- presença de `BackgroundService`, atributos de teste ou outros tipos no código-fonte;
 - propriedades MSBuild arbitrárias e brutas que não tenham sido promovidas a fatos normalizados de classificação.
 
-Esses sinais só devem ser considerados no futuro se o modelo de inspeção passar a coletá-los explicitamente e se a regra puder ser documentada com precedência determinística.
-
-
-## Evolução aprovada dos sinais de projeto de teste
-
-A issue #96 pesquisou falsos negativos de projetos de teste sem alterar as regras de produção acima. A [ADR 0009](decisions/0009-test-project-detection-signals.md) aprova os fatos e a precedência que a issue #151 deve implementar.
-
-A direção aprovada diferencia VSTest de Microsoft.Testing.Platform (MTP):
-
-- `IsTestProject == true` permanece um sinal VSTest de alta confiança;
-- `IsTestingPlatformApplication == true` é um sinal de alta confiança de aplicação MTP;
-- `MSTest.Sdk` declarado é um sinal de alta confiança de SDK específico de testes;
-- uma referência direta/avaliada a `Microsoft.NET.Test.Sdk` é fallback de confiança média somente quando `IsTestProject` está ausente;
-- a presença do pacote `Microsoft.NET.Test.Sdk` sozinha não sobrepõe `IsTestProject=false` explícito;
-- presença de pacotes MTP, pacotes de framework, seleção de runner no repositório, nomes e caminhos não são autoritativos isoladamente.
-
-Até o merge da #151, o classificador de produção continua intencionalmente consumindo apenas as entradas documentadas na seção **Entradas** atual.
+Novos sinais só devem ser adicionados quando o modelo de inspeção puder coletá-los explicitamente e sua precedência for determinística.
