@@ -12,7 +12,8 @@ public sealed record MsBuildProjectFacts(
 {
     public bool? IsTestingPlatformApplication { get; init; }
 
-    public IReadOnlyList<string> PackageReferences { get; init; } = [];
+    public IReadOnlyList<string> PackageReferences { get; init; } =
+        [];
 
     public IReadOnlyList<MsBuildProjectReference> ProjectReferences { get; init; } = [];
 }
