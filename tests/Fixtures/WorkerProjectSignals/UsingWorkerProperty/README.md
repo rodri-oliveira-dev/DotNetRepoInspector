@@ -1,7 +1,7 @@
-# Explicit Worker SDK property signal
+# Explicit Worker opt-in property signal
 
-This fixture uses the common `Microsoft.NET.Sdk` but exposes `UsingMicrosoftNETSdkWorker=true`.
+This fixture uses the common `Microsoft.NET.Sdk` and manually sets `UsingMicrosoftNETSdkWorker=true`.
 
-The .NET Worker SDK itself sets this evaluated property in its `Sdk.props`, making it an official build-system signal. A custom or composed SDK can therefore preserve Worker semantics even when `Microsoft.NET.Sdk.Worker` is not present in the project root's declared SDK list.
+The .NET Worker SDK also sets this evaluated property in its `Sdk.props`, but an effective MSBuild scalar does not retain assignment provenance. The Inspector therefore cannot distinguish this manual assignment from the same value flowing through an SDK/import.
 
-Issue #47 records this property as a strong Worker signal. Production classification intentionally remains unchanged until #152.
+Issue #47 records the property as a strong **explicit opt-in** Worker signal, not as proof that `Microsoft.NET.Sdk.Worker` was imported. This fixture intentionally demonstrates that trade-off. Production classification remains unchanged until #152.
