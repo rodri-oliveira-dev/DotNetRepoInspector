@@ -39,7 +39,12 @@ public sealed class FixtureMatrixTests
         "test-signal-microsoft-net-test-sdk",
         "test-signal-mtp-application",
         "web-sdk",
-        "worker-sdk"
+        "worker-false-negative-current",
+        "worker-sdk",
+        "worker-signal-hosting-only-ambiguous",
+        "worker-signal-systemd-service",
+        "worker-signal-using-worker-property",
+        "worker-signal-web-conflict"
     ];
 
     [Fact]
@@ -219,26 +224,51 @@ public sealed class FixtureMatrixTests
         string relativePath = Path.GetRelativePath(_fixtureRoot, projectFile)
             .Replace(Path.DirectorySeparatorChar, '/');
 
-        bool allowsTestSdkReference =
-            string.Equals(
+        if (string.Equals(
                 relativePath,
                 "TestProjectSignals/TestSdkFallback/TestSdkFallback.csproj",
                 StringComparison.Ordinal) ||
             string.Equals(
                 relativePath,
                 "TestProjectSignals/ExplicitFalseConflict/ExplicitFalseConflict.csproj",
-                StringComparison.Ordinal);
-
-        if (!allowsTestSdkReference)
+                StringComparison.Ordinal))
         {
-            Assert.Empty(packageReferences);
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal("Microsoft.NET.Test.Sdk", packageReference.Attribute("Include")?.Value);
+            Assert.Equal("18.10.1", packageReference.Attribute("Version")?.Value);
+            Assert.Equal("all", packageReference.Attribute("PrivateAssets")?.Value);
             return;
         }
 
-        XElement packageReference = Assert.Single(packageReferences);
-        Assert.Equal("Microsoft.NET.Test.Sdk", packageReference.Attribute("Include")?.Value);
-        Assert.Equal("18.10.1", packageReference.Attribute("Version")?.Value);
-        Assert.Equal("all", packageReference.Attribute("PrivateAssets")?.Value);
+        if (string.Equals(
+                relativePath,
+                "WorkerProjectSignals/SystemdService/SystemdService.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Extensions.Hosting.Systemd",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
+            Assert.Null(packageReference.Attribute("PrivateAssets"));
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "WorkerProjectSignals/HostingOnlyAmbiguous/HostingOnlyAmbiguous.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Extensions.Hosting",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
+            Assert.Null(packageReference.Attribute("PrivateAssets"));
+            return;
+        }
+
+        Assert.Empty(packageReferences);
     }
 
     private static IEnumerable<string> EnumerateCSharpProjects(string root) =>
