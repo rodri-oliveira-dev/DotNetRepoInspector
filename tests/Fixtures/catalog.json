@@ -155,6 +155,30 @@
       "proves": [
         "empty-repository"
       ]
+    },
+    {
+      "id": "test-signal-mtp-application",
+      "path": "TestProjectSignals/MtpApplication",
+      "proves": [
+        "test-signal-mtp-application",
+        "test-false-negative-current"
+      ]
+    },
+    {
+      "id": "test-signal-test-sdk-fallback",
+      "path": "TestProjectSignals/TestSdkFallback",
+      "proves": [
+        "test-signal-microsoft-net-test-sdk",
+        "test-false-negative-current"
+      ]
+    },
+    {
+      "id": "test-signal-explicit-false-conflict",
+      "path": "TestProjectSignals/ExplicitFalseConflict",
+      "proves": [
+        "test-signal-explicit-false-conflict",
+        "test-signal-ambiguous"
+      ]
     }
   ]
 }
