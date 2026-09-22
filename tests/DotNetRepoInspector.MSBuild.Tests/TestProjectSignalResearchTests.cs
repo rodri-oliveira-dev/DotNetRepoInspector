@@ -1,3 +1,4 @@
+using DotNetRepoInspector.Core.Classification;
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.MSBuild.Classification;
 using DotNetRepoInspector.MSBuild.Evaluation;
