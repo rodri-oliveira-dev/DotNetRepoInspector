@@ -1,10 +1,37 @@
-# Local container image
+# Official container image
 
 **Languages:** English | [Português (Brasil)](../pt-BR/container.md)
 
-The repository contains the implementation of the planned official DotNetRepoInspector container image. This stage is for local build and validation only; issue #101 does **not** publish an image to GHCR or Docker Hub.
+DotNetRepoInspector publishes an official multi-architecture container image with every protected product release. The same release is distributed through GHCR and Docker Hub and is validated against the same source revision and immutable image digest.
 
 The runtime contract is defined by [ADR 0005](decisions/0005-container-execution-contract.md).
+
+## Official distribution
+
+Official images are published to both registries:
+
+```text
+ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector
+docker.io/rodrigodotnet/dotnet-repo-inspector
+```
+
+The published OCI index supports `linux/amd64` and `linux/arm64`. Stable releases publish the exact `:<version>` tag plus moving `:<major>.<minor>`, `:<major>`, and `:latest` tags. Prereleases publish only their exact prerelease version tag so they cannot move stable aliases.
+
+For reproducible automation, prefer the immutable release version and then pin the resolved `sha256` digest instead of relying on a moving tag. The protected Release workflow verifies that GHCR and Docker Hub resolve the expected release digest.
+
+Each GitHub Release carries container evidence produced by the same protected workflow:
+
+- `container-release-plan.json` records the intended images, tags, platforms, labels, and source revision before publication;
+- `container-distribution.json` records the published digest, `linux/amd64` / `linux/arm64` platforms, and verified SBOM/provenance expectations.
+
+A published image can be inspected without pulling every platform:
+
+```bash
+docker buildx imagetools inspect ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:<version>
+docker buildx imagetools inspect docker.io/rodrigodotnet/dotnet-repo-inspector:<version>
+```
+
+The digest and platform list should match the release's `container-distribution.json`. SBOM and provenance are digest-bound OCI attestations verified by the release workflow; use the GitHub Release evidence and registry digest together when validating supply chain provenance.
 
 ## Image contents
 
