@@ -30,6 +30,73 @@ public sealed class ProjectClassifierTests
     }
 
     [Fact]
+    public void Classify_MtpApplicationOverridesExplicitVstestFalseAndWorkloadSignals()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            WebAndWorkerSdks,
+            "Exe",
+            false)
+        {
+            IsTestingPlatformApplication = true
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:IsTestingPlatformApplication=true",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_MSTestSdkIsAHighConfidenceTestSignal()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            [DeterministicProjectClassifier.MSTestSdk],
+            "Exe",
+            false));
+
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "sdk:MSTest.Sdk",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_MicrosoftNetTestSdkPackageIsFallbackWhenIsTestProjectIsMissing()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Library",
+            null)
+        {
+            PackageReferences = [DeterministicProjectClassifier.MicrosoftNetTestSdkPackage]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.NET.Test.Sdk",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_MicrosoftNetTestSdkPackageDoesNotOverrideExplicitFalse()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Library",
+            false)
+        {
+            PackageReferences = [DeterministicProjectClassifier.MicrosoftNetTestSdkPackage]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Library, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal("property:OutputType=Library", Assert.Single(classification.Signals));
+    }
+
+    [Fact]
     public void Classify_WebSdkIsRecognizedBeforeOutputType()
     {
         var classification = _classifier.Classify(new ProjectClassificationFacts(
