@@ -46,9 +46,9 @@ Therefore:
 
 The `ExplicitFalseConflict` fixture records this conservative boundary.
 
-### Proposed precedence for issue #151
+### Implemented precedence
 
-Issue #151 should implement the following order before the existing Web/Worker/Console/Library rules:
+Issue #151 implements the following order before the existing Web/Worker/Console/Library rules:
 
 1. `IsTestingPlatformApplication == true` -> `test`, high confidence.
 2. `IsTestProject == true` -> `test`, high confidence.
@@ -60,9 +60,9 @@ Issue #151 should implement the following order before the existing Web/Worker/C
 
 A strong test signal continues to win over executable output and specialized workload SDKs, matching the existing rule that test semantics have higher precedence than Web/Worker/Console shape.
 
-### Exact facts for issue #151
+### Implemented normalized facts
 
-The implementation issue must collect or reuse these normalized classification facts:
+The implementation collects or reuses these normalized classification facts:
 
 - existing `bool? IsTestProject`;
 - new effective `bool? IsTestingPlatformApplication`;
@@ -80,7 +80,7 @@ Suggested stable classification signals are:
 - `sdk:MSTest.Sdk`;
 - `package:Microsoft.NET.Test.Sdk`.
 
-The public `projects[].isTestProject` field must keep its current meaning: the evaluated `IsTestProject` MSBuild fact. Issue #151 must not silently redefine that field to mean the broader derived classification.
+The public `projects[].isTestProject` field must keep its current meaning: the evaluated `IsTestProject` MSBuild fact. The implementation does not redefine that field to mean the broader derived classification.
 
 ## Fixtures and evidence
 
@@ -90,7 +90,7 @@ The research fixtures live under `tests/Fixtures/TestProjectSignals` so they do 
 - `TestSdkFallback` exposes a direct `Microsoft.NET.Test.Sdk` reference while `IsTestProject` is missing;
 - `ExplicitFalseConflict` combines `IsTestProject=false` with the package hint and proves the ambiguity boundary.
 
-`TestProjectSignalResearchTests` verifies that the signals are observable through the existing MSBuild evaluation infrastructure and records the current false-negative classifications without changing production behavior.
+`TestProjectSignalClassificationTests` verifies that the approved signals are observable through the existing MSBuild evaluation infrastructure and now produce the intended production classifications.
 
 ## Consequences
 
@@ -98,7 +98,7 @@ The follow-up implementation can support both VSTest and MTP without name-based 
 
 Collecting `PackageReference` items adds a bounded amount of evaluation data. The fallback is intentionally narrower than "any test framework package", reducing false positives in shared test utilities or projects that merely reference testing libraries.
 
-The research tests that document current false negatives are expected to change in #151 when production classification consumes the approved facts.
+Issue #151 converted the research expectations into production classification assertions while preserving the ambiguity fixture.
 
 ## Alternatives considered
 
@@ -113,4 +113,4 @@ The research tests that document current false negatives are expected to change 
 - Microsoft Learn — MSBuild properties for Microsoft.NET.Sdk: https://learn.microsoft.com/dotnet/core/project-sdk/msbuild-props
 - Microsoft Learn — Microsoft.Testing.Platform overview: https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-intro
 - Issue #96: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/96
-- Follow-up #151: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/151
+- Implementation #151: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/151

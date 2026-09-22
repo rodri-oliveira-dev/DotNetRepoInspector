@@ -9,6 +9,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
     [
         "IsPackable",
         "IsTestProject",
+        "IsTestingPlatformApplication",
         "OutputType",
         "RuntimeIdentifier",
         "RuntimeIdentifiers",
@@ -16,7 +17,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         "TargetFrameworks"
     ];
 
-    private static readonly string[] EvaluatedItemNames = ["ProjectReference"];
+    private static readonly string[] EvaluatedItemNames = ["PackageReference", "ProjectReference"];
 
     private readonly IMsBuildProjectEvaluator _projectEvaluator;
 
@@ -89,6 +90,10 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier"),
             properties)
         {
+            IsTestingPlatformApplication = NormalizeBoolean(
+                properties,
+                "IsTestingPlatformApplication"),
+            PackageReferences = NormalizePackageReferences(evaluation.Items),
             ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items)
         };
 
@@ -157,6 +162,24 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
                 sdkReference[..separatorIndex],
                 sdkReference[(separatorIndex + 1)..]));
         }
+    }
+
+    private static string[] NormalizePackageReferences(
+        IReadOnlyDictionary<string, IReadOnlyList<MsBuildEvaluationItem>> evaluatedItems)
+    {
+        if (!evaluatedItems.TryGetValue("PackageReference", out var packageReferences))
+        {
+            return [];
+        }
+
+        return packageReferences
+            .Select(item => NormalizeText(item.Identity))
+            .Where(static identity => identity is not null)
+            .Select(static identity => identity!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(identity => identity, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(identity => identity, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static MsBuildProjectReference[] NormalizeProjectReferences(

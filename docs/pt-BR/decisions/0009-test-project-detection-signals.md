@@ -46,9 +46,9 @@ Portanto:
 
 A fixture `ExplicitFalseConflict` registra essa fronteira conservadora.
 
-### Precedência proposta para a issue #151
+### Precedência implementada
 
-A issue #151 deve implementar a seguinte ordem antes das regras existentes de Web/Worker/Console/Library:
+A issue #151 implementa a seguinte ordem antes das regras existentes de Web/Worker/Console/Library:
 
 1. `IsTestingPlatformApplication == true` -> `test`, confiança alta.
 2. `IsTestProject == true` -> `test`, confiança alta.
@@ -60,9 +60,9 @@ A issue #151 deve implementar a seguinte ordem antes das regras existentes de We
 
 Um sinal forte de teste continua vencendo output executável e SDKs especializados, preservando a regra atual de que a semântica de teste possui precedência sobre o formato Web/Worker/Console.
 
-### Fatos exatos para a issue #151
+### Fatos normalizados implementados
 
-A issue de implementação deve coletar ou reutilizar estes fatos normalizados de classificação:
+A implementação coleta ou reutiliza estes fatos normalizados de classificação:
 
 - `bool? IsTestProject` existente;
 - novo `bool? IsTestingPlatformApplication` efetivo;
@@ -80,7 +80,7 @@ Sinais estáveis sugeridos para a classificação:
 - `sdk:MSTest.Sdk`;
 - `package:Microsoft.NET.Test.Sdk`.
 
-O campo público `projects[].isTestProject` deve manter o significado atual: o fato MSBuild avaliado `IsTestProject`. A issue #151 não deve redefinir silenciosamente esse campo para representar a classificação derivada mais ampla.
+O campo público `projects[].isTestProject` deve manter o significado atual: o fato MSBuild avaliado `IsTestProject`. A implementação não redefine esse campo para representar a classificação derivada mais ampla.
 
 ## Fixtures e evidências
 
@@ -90,7 +90,7 @@ As fixtures de pesquisa ficam em `tests/Fixtures/TestProjectSignals` para não a
 - `TestSdkFallback` expõe uma referência direta a `Microsoft.NET.Test.Sdk` com `IsTestProject` ausente;
 - `ExplicitFalseConflict` combina `IsTestProject=false` com o hint do pacote e comprova a fronteira de ambiguidade.
 
-`TestProjectSignalResearchTests` verifica que os sinais são observáveis pela infraestrutura MSBuild atual e registra os falsos negativos atuais sem alterar o comportamento de produção.
+`TestProjectSignalClassificationTests` verifica que os sinais aprovados são observáveis pela infraestrutura MSBuild atual e agora produzem as classificações de produção esperadas.
 
 ## Consequências
 
@@ -98,7 +98,7 @@ A implementação seguinte poderá suportar VSTest e MTP sem heurísticas de nom
 
 Coletar itens `PackageReference` adiciona uma quantidade limitada de dados à avaliação. O fallback é intencionalmente mais estreito que "qualquer pacote de framework de testes", reduzindo falsos positivos em bibliotecas auxiliares ou projetos que apenas usam bibliotecas de teste.
 
-Os testes de pesquisa que documentam os falsos negativos atuais devem mudar na #151 quando a classificação de produção passar a consumir os fatos aprovados.
+A issue #151 converteu as expectativas de pesquisa em asserções da classificação de produção, preservando a fixture de ambiguidade.
 
 ## Alternativas consideradas
 
@@ -113,4 +113,4 @@ Os testes de pesquisa que documentam os falsos negativos atuais devem mudar na #
 - Microsoft Learn — propriedades MSBuild para Microsoft.NET.Sdk: https://learn.microsoft.com/dotnet/core/project-sdk/msbuild-props
 - Microsoft Learn — visão geral do Microsoft.Testing.Platform: https://learn.microsoft.com/dotnet/core/testing/microsoft-testing-platform-intro
 - Issue #96: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/96
-- Follow-up #151: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/151
+- Implementação #151: https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/151

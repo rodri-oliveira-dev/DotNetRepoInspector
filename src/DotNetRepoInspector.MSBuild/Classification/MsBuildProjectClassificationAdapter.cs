@@ -32,6 +32,10 @@ public sealed class MsBuildProjectClassificationAdapter
         return _classifier.Classify(new ProjectClassificationFacts(
             declaredSdks,
             facts.OutputType,
-            facts.IsTestProject));
+            facts.IsTestProject)
+        {
+            IsTestingPlatformApplication = facts.IsTestingPlatformApplication,
+            PackageReferences = facts.PackageReferences
+        });
     }
 }
