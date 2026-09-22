@@ -25,6 +25,10 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `TestProjectSignals/MtpApplication` | MTP `IsTestingPlatformApplication=true` with `IsTestProject` absent |
 | `TestProjectSignals/TestSdkFallback` | direct `Microsoft.NET.Test.Sdk` fallback with `IsTestProject` absent |
 | `TestProjectSignals/ExplicitFalseConflict` | explicit `IsTestProject=false` conflicting with a test SDK package hint |
+| `WorkerProjectSignals/UsingWorkerProperty` | common SDK with official `UsingMicrosoftNETSdkWorker=true` build signal |
+| `WorkerProjectSignals/SystemdService` | executable common-SDK app with explicit systemd service-hosting integration |
+| `WorkerProjectSignals/HostingOnlyAmbiguous` | executable Generic Host package usage that remains ambiguous |
+| `WorkerProjectSignals/WebConflict` | Web SDK combined with a strong Worker build signal |
 | `MSBuildEvaluation` | inherited `Directory.Build.props` plus a conditional property |
 | `ProjectReferences/Simple` | one project reference |
 | `ProjectReferences/Chain` | A → B → C |

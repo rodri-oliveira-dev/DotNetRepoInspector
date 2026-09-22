@@ -81,3 +81,19 @@ The engine does not classify from:
 - arbitrary raw MSBuild properties that have not been promoted to normalized classification facts.
 
 New signals should only be added when the inspection model can collect them explicitly and their precedence is deterministic.
+
+
+## Approved Worker-signal evolution
+
+Issue #47 researches Worker false negatives without changing the production rules above. [ADR 0010](decisions/0010-worker-project-detection-signals.md) defines the facts and precedence that issue #152 should implement.
+
+The approved direction is intentionally narrower than Generic Host detection:
+
+- effective `UsingMicrosoftNETSdkWorker == true` is a high-confidence **explicit opt-in** signal. The Worker SDK sets it, but the effective value carries no assignment provenance and can also be set manually; classification must not imply that the Worker SDK was imported;
+- executable projects with `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` are medium-confidence Worker candidates when stronger Test/Web evidence is absent;
+- `Microsoft.Extensions.Hosting` by itself remains supporting evidence only because ordinary console and Web applications can use Generic Host;
+- Web SDK plus a strong Worker signal is conflicting workload evidence and should become `unknown`;
+- Test signals keep their existing higher precedence;
+- names, paths, `.Worker` suffixes, and source scanning are not approved.
+
+Until #152 is merged, production classification intentionally continues to use the current Worker SDK rule only.

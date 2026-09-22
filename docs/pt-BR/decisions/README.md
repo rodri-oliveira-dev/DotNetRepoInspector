@@ -23,5 +23,6 @@ Um ADR deve registrar:
 - [ADR 0007: Endurecer a fronteira de confiança do MCP local](0007-mcp-trust-boundary-hardening.md) — Aceito.
 - [ADR 0008: Limitar a concorrência de inspeções MCP e a telemetria operacional](0008-mcp-operational-reliability.md) — Aceito.
 - [ADR 0009: Detectar projetos de teste por sinais de VSTest e Microsoft.Testing.Platform](0009-test-project-detection-signals.md) — Aceito.
+- [ADR 0010: Detectar projetos Worker além do Worker SDK declarado](0010-worker-project-detection-signals.md) — Aceito.
 
 Decisões futuras prováveis incluem fronteiras da avaliação de políticas e transporte MCP remoto caso ele se torne um cenário suportado.
