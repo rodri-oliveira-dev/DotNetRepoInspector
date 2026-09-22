@@ -50,7 +50,10 @@ Every release build produces the same validated candidate set before publication
 - `DotNetRepoInspector.Mcp.<version>.snupkg`;
 - `release-manifest.json`;
 - `SHA256SUMS`;
-- `container-release-plan.json`;
+- `container-release-plan.json`.
+
+After container publication, the final GitHub Release additionally includes:
+
 - `container-distribution.json`.
 
 The manifest records:
