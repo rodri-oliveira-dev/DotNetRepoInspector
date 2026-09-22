@@ -54,3 +54,19 @@ O engine inicial não classifica com base em:
 - propriedades MSBuild arbitrárias e brutas que não tenham sido promovidas a fatos normalizados de classificação.
 
 Esses sinais só devem ser considerados no futuro se o modelo de inspeção passar a coletá-los explicitamente e se a regra puder ser documentada com precedência determinística.
+
+
+## Evolução aprovada dos sinais de projeto de teste
+
+A issue #96 pesquisou falsos negativos de projetos de teste sem alterar as regras de produção acima. A [ADR 0009](decisions/0009-test-project-detection-signals.md) aprova os fatos e a precedência que a issue #151 deve implementar.
+
+A direção aprovada diferencia VSTest de Microsoft.Testing.Platform (MTP):
+
+- `IsTestProject == true` permanece um sinal VSTest de alta confiança;
+- `IsTestingPlatformApplication == true` é um sinal de alta confiança de aplicação MTP;
+- `MSTest.Sdk` declarado é um sinal de alta confiança de SDK específico de testes;
+- uma referência direta/avaliada a `Microsoft.NET.Test.Sdk` é fallback de confiança média somente quando `IsTestProject` está ausente;
+- a presença do pacote `Microsoft.NET.Test.Sdk` sozinha não sobrepõe `IsTestProject=false` explícito;
+- presença de pacotes MTP, pacotes de framework, seleção de runner no repositório, nomes e caminhos não são autoritativos isoladamente.
+
+Até o merge da #151, o classificador de produção continua intencionalmente consumindo apenas as entradas documentadas na seção **Entradas** atual.

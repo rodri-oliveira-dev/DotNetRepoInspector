@@ -32,7 +32,12 @@ public sealed class FixtureMatrixTests
         "project-reference-simple",
         "project-reference-unresolved",
         "sdk-resolution-missing",
+        "test-false-negative-current",
         "test-project",
+        "test-signal-ambiguous",
+        "test-signal-explicit-false-conflict",
+        "test-signal-microsoft-net-test-sdk",
+        "test-signal-mtp-application",
         "web-sdk",
         "worker-sdk"
     ];
@@ -115,7 +120,7 @@ public sealed class FixtureMatrixTests
         {
             XDocument document = XDocument.Load(projectFile);
             Assert.Equal("Project", document.Root?.Name.LocalName);
-            Assert.Empty(document.Descendants("PackageReference"));
+            AssertAllowedPackageReferences(projectFile, document);
 
             foreach (XElement projectReference in document.Descendants("ProjectReference"))
             {
@@ -202,6 +207,38 @@ public sealed class FixtureMatrixTests
         string emptyRepository = ResolveFixturePath("EmptyRepository");
 
         Assert.Empty(EnumerateCSharpProjects(emptyRepository));
+    }
+
+
+    private static void AssertAllowedPackageReferences(string projectFile, XDocument document)
+    {
+        XElement[] packageReferences = document
+            .Descendants("PackageReference")
+            .ToArray();
+
+        string relativePath = Path.GetRelativePath(_fixtureRoot, projectFile)
+            .Replace(Path.DirectorySeparatorChar, '/');
+
+        bool allowsTestSdkReference =
+            string.Equals(
+                relativePath,
+                "TestProjectSignals/TestSdkFallback/TestSdkFallback.csproj",
+                StringComparison.Ordinal) ||
+            string.Equals(
+                relativePath,
+                "TestProjectSignals/ExplicitFalseConflict/ExplicitFalseConflict.csproj",
+                StringComparison.Ordinal);
+
+        if (!allowsTestSdkReference)
+        {
+            Assert.Empty(packageReferences);
+            return;
+        }
+
+        XElement packageReference = Assert.Single(packageReferences);
+        Assert.Equal("Microsoft.NET.Test.Sdk", packageReference.Attribute("Include")?.Value);
+        Assert.Equal("18.10.1", packageReference.Attribute("Version")?.Value);
+        Assert.Equal("all", packageReference.Attribute("PrivateAssets")?.Value);
     }
 
     private static IEnumerable<string> EnumerateCSharpProjects(string root) =>

@@ -54,3 +54,19 @@ The initial engine does not classify from:
 - arbitrary raw MSBuild properties that have not been promoted to normalized classification facts.
 
 These signals may be considered later only if the inspection model collects them explicitly and the rule can be documented with deterministic precedence.
+
+
+## Approved test-project signal evolution
+
+Issue #96 researched test-project false negatives without changing the production rules above. [ADR 0009](decisions/0009-test-project-detection-signals.md) approves the facts and precedence that issue #151 must implement.
+
+The approved direction distinguishes VSTest from Microsoft.Testing.Platform (MTP):
+
+- `IsTestProject == true` remains a high-confidence VSTest signal;
+- `IsTestingPlatformApplication == true` is a high-confidence MTP application signal;
+- declared `MSTest.Sdk` is a high-confidence test-specific SDK signal;
+- a direct/evaluated `Microsoft.NET.Test.Sdk` reference is a medium-confidence fallback only when `IsTestProject` is missing;
+- `Microsoft.NET.Test.Sdk` package presence alone does not override explicit `IsTestProject=false`;
+- MTP package presence, framework packages, repository runner selection, names, and paths are not authoritative by themselves.
+
+Until #151 is merged, the production classifier intentionally continues to consume only the inputs documented in the current **Inputs** section.

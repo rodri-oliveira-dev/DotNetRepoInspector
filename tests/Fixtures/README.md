@@ -22,6 +22,9 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `ProjectKinds/Library` | default SDK library semantics |
 | `ProjectKinds/Test` | authoritative `IsTestProject` metadata |
 | `ProjectKinds/MultiTargeting` | multiple target frameworks |
+| `TestProjectSignals/MtpApplication` | MTP `IsTestingPlatformApplication=true` with `IsTestProject` absent |
+| `TestProjectSignals/TestSdkFallback` | direct `Microsoft.NET.Test.Sdk` fallback with `IsTestProject` absent |
+| `TestProjectSignals/ExplicitFalseConflict` | explicit `IsTestProject=false` conflicting with a test SDK package hint |
 | `MSBuildEvaluation` | inherited `Directory.Build.props` plus a conditional property |
 | `ProjectReferences/Simple` | one project reference |
 | `ProjectReferences/Chain` | A → B → C |

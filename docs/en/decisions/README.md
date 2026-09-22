@@ -22,5 +22,6 @@ An ADR should capture:
 - [ADR 0006: Define the MCP adapter architecture and MVP contract](0006-mcp-adapter-architecture.md) — Accepted.
 - [ADR 0007: Harden the local MCP trust boundary](0007-mcp-trust-boundary-hardening.md) — Accepted.
 - [ADR 0008: Bound MCP inspection concurrency and operational telemetry](0008-mcp-operational-reliability.md) — Accepted.
+- [ADR 0009: Detect test projects from VSTest and Microsoft.Testing.Platform signals](0009-test-project-detection-signals.md) — Accepted.
 
-Likely next decisions include classification precedence, policy evaluation boundaries, and remote MCP transport if it becomes a supported scenario.
+Likely next decisions include policy evaluation boundaries and remote MCP transport if it becomes a supported scenario.
