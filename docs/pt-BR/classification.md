@@ -89,7 +89,7 @@ A issue #47 pesquisa falsos negativos de Worker sem alterar as regras de produç
 
 A direção aprovada é intencionalmente mais restrita que detectar Generic Host:
 
-- `UsingMicrosoftNETSdkWorker == true` efetivo é um sinal Worker de alta confiança, pois é o flag oficial emitido pelo Worker SDK;
+- `UsingMicrosoftNETSdkWorker == true` efetivo é um sinal de **opt-in explícito** de Worker com alta confiança. O Worker SDK o define, mas o valor efetivo não possui proveniência da atribuição e também pode ser definido manualmente; a classificação não deve sugerir que o Worker SDK foi importado;
 - projetos executáveis com `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` são candidatos Worker de confiança média quando não existe evidência Test/Web mais forte;
 - `Microsoft.Extensions.Hosting` isoladamente permanece apenas evidência de apoio, pois consoles comuns e aplicações Web também podem usar Generic Host;
 - Web SDK mais um sinal Worker forte representa evidência conflitante de workload e deve resultar em `unknown`;
