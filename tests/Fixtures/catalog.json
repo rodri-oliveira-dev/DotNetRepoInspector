@@ -168,8 +168,7 @@
       "id": "test-signal-test-sdk-fallback",
       "path": "TestProjectSignals/TestSdkFallback",
       "proves": [
-        "test-signal-microsoft-net-test-sdk",
-        "test-false-negative-current"
+        "test-signal-microsoft-net-test-sdk"
       ]
     },
     {
