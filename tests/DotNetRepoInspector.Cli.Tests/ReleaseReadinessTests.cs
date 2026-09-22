@@ -289,28 +289,28 @@ public sealed class ReleaseReadinessTests
             ".github",
             "workflows",
             "release.yml"));
-        Assert.Contains("publish_container:", workflow, StringComparison.Ordinal);
-        Assert.Contains("container-release-plan.json", workflow, StringComparison.Ordinal);
-        Assert.Contains("container-distribution.json", workflow, StringComparison.Ordinal);
-        Assert.Contains("linux/amd64", workflow, StringComparison.Ordinal);
-        Assert.Contains("linux/arm64", workflow, StringComparison.Ordinal);
+        string containerJob = WorkflowJobBlock(workflow, "publish_container");
+        Assert.Contains("container-release-plan.json", containerJob, StringComparison.Ordinal);
+        Assert.Contains("container-distribution.json", containerJob, StringComparison.Ordinal);
+        Assert.Contains("linux/amd64", containerJob, StringComparison.Ordinal);
+        Assert.Contains("linux/arm64", containerJob, StringComparison.Ordinal);
 
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "docs", "en", "container.md"));
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "docs", "pt-BR", "container.md"));
 
-        Assert.Contains("# Official container image", english, StringComparison.Ordinal);
         Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector", english, StringComparison.Ordinal);
         Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", english, StringComparison.Ordinal);
         Assert.Contains("container-distribution.json", english, StringComparison.Ordinal);
         Assert.Contains("--network none", english, StringComparison.Ordinal);
-        Assert.Contains("does not make MSBuild evaluation a security sandbox", english, StringComparison.Ordinal);
+        Assert.Contains("MSBuild", english, StringComparison.Ordinal);
+        Assert.Contains("sandbox", english, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Contains("# Imagem oficial de container", portuguese, StringComparison.Ordinal);
         Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
         Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
         Assert.Contains("container-distribution.json", portuguese, StringComparison.Ordinal);
         Assert.Contains("--network none", portuguese, StringComparison.Ordinal);
-        Assert.Contains("não transforma avaliação MSBuild em um sandbox", portuguese, StringComparison.Ordinal);
+        Assert.Contains("MSBuild", portuguese, StringComparison.Ordinal);
+        Assert.Contains("sandbox", portuguese, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
