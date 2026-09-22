@@ -20,14 +20,14 @@ This ADR defines the contract that the implementation, CI, publication, and docu
 
 ### Official image identity
 
-The planned official image names are:
+The official image names are:
 
 ```text
 ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector
 docker.io/rodrigodotnet/dotnet-repo-inspector
 ```
 
-Both registries must represent the same product version and source revision. Publication, tag policy, SBOM, provenance, and release verification are follow-up concerns; this ADR only fixes the identity and runtime contract.
+Both registries represent the same product version and source revision. Publication, tag policy, SBOM, provenance, and release verification were implemented by the protected Release workflow after this ADR was accepted; current operational details are documented in [`../container.md`](../container.md). This ADR remains the authority for image identity and runtime contract.
 
 The official image is a Linux container image. The target platforms are:
 
