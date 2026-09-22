@@ -63,6 +63,7 @@ def status($diagnostics):
   end;
 
 {
+  overallStatus: status([.diagnostics[], .projects[].diagnostics[]]),
   repositoryStatus: status(.diagnostics),
   projectsWithDiagnostics:
     ([.projects[] | select((.diagnostics | length) > 0)] | length),
