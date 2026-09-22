@@ -23,5 +23,6 @@ An ADR should capture:
 - [ADR 0007: Harden the local MCP trust boundary](0007-mcp-trust-boundary-hardening.md) — Accepted.
 - [ADR 0008: Bound MCP inspection concurrency and operational telemetry](0008-mcp-operational-reliability.md) — Accepted.
 - [ADR 0009: Detect test projects from VSTest and Microsoft.Testing.Platform signals](0009-test-project-detection-signals.md) — Accepted.
+- [ADR 0010: Detect Worker projects beyond the declared Worker SDK](0010-worker-project-detection-signals.md) — Accepted.
 
 Likely next decisions include policy evaluation boundaries and remote MCP transport if it becomes a supported scenario.
