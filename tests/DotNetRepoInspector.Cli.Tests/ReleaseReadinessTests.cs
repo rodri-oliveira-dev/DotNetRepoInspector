@@ -228,6 +228,96 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void V1Baseline_RecordsPublishedContainerDistribution()
+    {
+        JsonElement container = LoadBaseline().GetProperty("container");
+
+        Assert.Equal("published", RequiredString(container, "publicationStatus"));
+        Assert.Equal(106, container.GetProperty("readinessIssue").GetInt32());
+
+        string[] registries = container
+            .GetProperty("registries")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                "ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector",
+                "docker.io/rodrigodotnet/dotnet-repo-inspector",
+            ],
+            registries);
+
+        string[] platforms = container
+            .GetProperty("platforms")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(["linux/amd64", "linux/arm64"], platforms);
+
+        string[] stableTagPolicy = container
+            .GetProperty("stableTagPolicy")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(["<version>", "<major>.<minor>", "<major>", "latest"], stableTagPolicy);
+
+        string[] prereleaseTagPolicy = container
+            .GetProperty("prereleaseTagPolicy")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(["<version>"], prereleaseTagPolicy);
+
+        Assert.Equal("container-release-plan.json", RequiredString(container, "releasePlanArtifact"));
+        Assert.Equal("container-distribution.json", RequiredString(container, "distributionArtifact"));
+
+        string[] controls = container
+            .GetProperty("requiredControls")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("non-root", controls);
+        Assert.Contains("read-only-compatible", controls);
+        Assert.Contains("offline-capable", controls);
+        Assert.Contains("digest-pinning", controls);
+        Assert.Contains("fixable-high-critical-scan-gate", controls);
+        Assert.Contains("sbom", controls);
+        Assert.Contains("provenance", controls);
+
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+        string containerJob = WorkflowJobBlock(workflow, "publish_container");
+        Assert.Contains("container-release-plan.json", containerJob, StringComparison.Ordinal);
+        Assert.Contains("container-distribution.json", containerJob, StringComparison.Ordinal);
+        Assert.Contains("linux/amd64", containerJob, StringComparison.Ordinal);
+        Assert.Contains("linux/arm64", containerJob, StringComparison.Ordinal);
+
+        string english = File.ReadAllText(Path.Combine(RepositoryRoot, "docs", "en", "container.md"));
+        string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "docs", "pt-BR", "container.md"));
+
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector", english, StringComparison.Ordinal);
+        Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", english, StringComparison.Ordinal);
+        Assert.Contains("container-distribution.json", english, StringComparison.Ordinal);
+        Assert.Contains("--network none", english, StringComparison.Ordinal);
+        Assert.Contains(
+            "Containerization does not make MSBuild evaluation a security sandbox",
+            english,
+            StringComparison.Ordinal);
+
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
+        Assert.Contains("docker.io/rodrigodotnet/dotnet-repo-inspector", portuguese, StringComparison.Ordinal);
+        Assert.Contains("container-distribution.json", portuguese, StringComparison.Ordinal);
+        Assert.Contains("--network none", portuguese, StringComparison.Ordinal);
+        Assert.Contains(
+            "Containerização não transforma avaliação MSBuild em um sandbox de segurança",
+            portuguese,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));

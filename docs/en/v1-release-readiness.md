@@ -24,6 +24,8 @@ The public GitHub Action refs created from that release line are available, incl
 
 The machine-readable counterpart of this table is `.github/release-readiness-v1.json`. Repository tests compare that baseline with `action.yml`, `InspectionSchema`, the CLI package metadata, the canonical schema example, and the required governance/security files.
 
+For the current v1 release line, the same machine-readable file also records the official container distribution contract: published GHCR/Docker Hub identities, `linux/amd64` and `linux/arm64`, stable/prerelease tag policy, release evidence artifacts, and required non-root/read-only/offline/digest/SBOM/provenance controls. This extends release readiness without rewriting the historical v1.0.0 publication record.
+
 The same manifest recognizes `DotNetRepoInspector.Mcp` as a release-ready, framework-dependent package with stdio, explicit root boundary, read-only, hermetic E2E, security, performance, `McpServer`, embedded `.mcp/server.json`, symbols, and packaged-tool smoke controls. The historical CLI/Action `v1.0.0` release has been published; the separate `DotNetRepoInspector.Mcp` package is prepared for publication but has **not** yet been published to NuGet.org. See [MCP RC readiness](mcp-release-candidate.md) for its own release status.
 
 ## Public contract included in v1
@@ -69,7 +71,8 @@ The gate verifies:
 5. the canonical schema example advertises the same `schemaVersion`;
 6. required license, security, contribution, conduct, issue/PR templates, and release documentation are present;
 7. the MCP project remains a packable .NET Tool and `McpServer` with the expected package identity, command, manifest, and framework-dependent strategy;
-8. the public READMEs no longer contain pre-v1 statements that describe the schema as hypothetical or not final.
+8. the public READMEs no longer contain pre-v1 statements that describe the schema as hypothetical or not final;
+9. the container contract records both official registries, required platforms, tag policy, release evidence artifacts, and security/supply-chain controls, while the EN/PT-BR container guides describe the published distribution.
 
 This gate does not validate external account configuration on GitHub or NuGet.org; those checks remain administrative prerequisites.
 

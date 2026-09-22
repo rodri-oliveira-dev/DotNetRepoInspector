@@ -2,7 +2,7 @@
 
 **Languages:** English | [Português (Brasil)](../pt-BR/releases.md)
 
-DotNetRepoInspector uses one product version for the CLI .NET Tool, MCP server package, and reusable GitHub Action. Official publication is deliberately separate from normal CI and is performed only through the protected `Release` workflow.
+DotNetRepoInspector uses one product version for the CLI .NET Tool, MCP server package, reusable GitHub Action, and official container images. Official publication is deliberately separate from normal CI and is performed only through the protected `Release` workflow.
 
 ## Product version
 
@@ -49,7 +49,12 @@ Every release build produces the same validated candidate set before publication
 - `DotNetRepoInspector.Mcp.<version>.nupkg`;
 - `DotNetRepoInspector.Mcp.<version>.snupkg`;
 - `release-manifest.json`;
-- `SHA256SUMS`.
+- `SHA256SUMS`;
+- `container-release-plan.json`.
+
+After container publication, the final GitHub Release additionally includes:
+
+- `container-distribution.json`.
 
 The manifest records:
 
@@ -58,6 +63,8 @@ The manifest records:
 - `schemaVersion` observed from a real packaged-tool smoke inspection;
 - SHA-256 of every CLI/MCP package artifact;
 - Action aliases that are eligible to move for the version.
+
+The container release plan records the intended GHCR/Docker Hub images, tags, platforms, OCI labels, and source revision. After publication, `container-distribution.json` records the immutable published digest, the required `linux/amd64` and `linux/arm64` platforms, and the SBOM/provenance expectations verified by the release workflow. Stable container releases publish `:<version>`, `:<major>.<minor>`, `:<major>`, and `:latest`; prereleases publish only their exact version tag.
 
 The release build passes the CLI through its existing .NET Tool validator. The MCP validator checks both package types, `.mcp/server.json`, metadata, symbols, embedded runtime dependencies, absence of secrets/private project dependencies, isolated tool installation, exact-version `dnx` resolution, stdio handshake, discovery, and a real packaged `inspect_repository` call. Both packages are therefore validated before they can enter the publication job.
 
@@ -108,6 +115,8 @@ The protected job intentionally orders irreversible operations:
 8. for stable releases only, move `v<major>` and `v<major>.<minor>` to the release commit.
 
 This ordering prevents a stable moving Action alias from pointing to a release whose NuGet package was not published successfully.
+
+Container publication runs as a dedicated protected release job from the same build/tag source. GitHub Release finalization waits for the package and container publication jobs and attaches the container release-plan/distribution evidence, so the published release can be traced back to the same source revision and digest-verified image set.
 
 ## Partial failure and reruns
 

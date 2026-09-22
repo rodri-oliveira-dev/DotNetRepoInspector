@@ -2,7 +2,7 @@
 
 **Idiomas:** [English](../en/releases.md) | Português (Brasil)
 
-O DotNetRepoInspector usa uma única versão de produto para a .NET Tool da CLI, o pacote do servidor MCP e a GitHub Action reutilizável. A publicação oficial é deliberadamente separada do CI normal e acontece somente pelo workflow protegido `Release`.
+O DotNetRepoInspector usa uma única versão de produto para a .NET Tool da CLI, o pacote do servidor MCP, a GitHub Action reutilizável e as imagens oficiais de container. A publicação oficial é deliberadamente separada do CI normal e acontece somente pelo workflow protegido `Release`.
 
 ## Versão do produto
 
@@ -49,7 +49,12 @@ Todo build de release produz o mesmo conjunto validado antes da publicação:
 - `DotNetRepoInspector.Mcp.<version>.nupkg`;
 - `DotNetRepoInspector.Mcp.<version>.snupkg`;
 - `release-manifest.json`;
-- `SHA256SUMS`.
+- `SHA256SUMS`;
+- `container-release-plan.json`.
+
+Após a publicação do container, a GitHub Release final também inclui:
+
+- `container-distribution.json`.
 
 O manifest registra:
 
@@ -58,6 +63,8 @@ O manifest registra:
 - `schemaVersion` observado em uma inspeção real feita pela Tool empacotada;
 - SHA-256 de cada artifact de pacote CLI/MCP;
 - aliases da Action elegíveis para movimentação naquela versão.
+
+O plano de release do container registra as imagens esperadas no GHCR/Docker Hub, tags, plataformas, labels OCI e revision de código-fonte. Após a publicação, `container-distribution.json` registra o digest imutável publicado, as plataformas obrigatórias `linux/amd64` e `linux/arm64` e as expectativas de SBOM/provenance verificadas pelo workflow de release. Releases estáveis de container publicam `:<version>`, `:<major>.<minor>`, `:<major>` e `:latest`; prereleases publicam somente a tag de sua versão exata.
 
 O build passa a CLI pelo validador existente da .NET Tool. O validador MCP verifica os dois package types, `.mcp/server.json`, metadata, símbolos, dependências runtime incorporadas, ausência de secrets/dependências de projetos privados, instalação isolada da tool, resolução da versão exata via `dnx`, handshake stdio, discovery e uma chamada real empacotada de `inspect_repository`. Ambos os pacotes são validados antes de poderem entrar no job de publicação.
 
@@ -108,6 +115,8 @@ O job protegido ordena deliberadamente as operações irreversíveis:
 8. somente em releases estáveis, move `v<major>` e `v<major>.<minor>` para o commit da release.
 
 Essa ordem impede que um alias estável da Action aponte para uma release cujo pacote NuGet não tenha sido publicado com sucesso.
+
+A publicação de container roda em um job protegido dedicado da mesma release e parte do mesmo build/tag. A finalização da GitHub Release aguarda os jobs de publicação dos pacotes e do container e anexa as evidências de plano/distribuição, permitindo rastrear a release publicada até a mesma revision de código-fonte e o conjunto de imagens verificado por digest.
 
 ## Falha parcial e reruns
 

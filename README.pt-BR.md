@@ -261,7 +261,7 @@ A avaliação MSBuild **não é um sandbox**. Repositórios não confiáveis dev
 
 ## Readiness da release
 
-A baseline de release da v1 está em formato legível por máquina em [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) e é protegida por testes do repositório. Ela mantém alinhados versão do produto, versão do schema, alias major da Action, metadados NuGet/.NET Tool, exemplo canônico do schema e arquivos obrigatórios de governança/segurança.
+A baseline de release da v1 está em formato legível por máquina em [`.github/release-readiness-v1.json`](.github/release-readiness-v1.json) e é protegida por testes do repositório. Ela mantém alinhados versão do produto, versão do schema, alias major da Action, metadados NuGet/.NET Tool, exemplo canônico do schema, o contrato publicado de distribuição por container e os arquivos obrigatórios de governança/segurança.
 
 O checklist da primeira publicação, pré-requisitos externos de GitHub/NuGet, procedimento seguro de dry-run e verificação pós-publicação estão em [`docs/pt-BR/v1-release-readiness.md`](docs/pt-BR/v1-release-readiness.md). As regras gerais de SemVer, artifacts, tags, provenance e recuperação estão em [`docs/pt-BR/releases.md`](docs/pt-BR/releases.md).
 
