@@ -77,6 +77,26 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void NuGetPackageIcon_ExistsAndRespectsNuGetSizeLimit()
+    {
+        string iconPath = Path.Combine(RepositoryRoot, "resource", "nuget-icon.png");
+        var icon = new FileInfo(iconPath);
+
+        Assert.True(icon.Exists, "The NuGet package icon was not found.");
+        Assert.InRange(icon.Length, 1, 1_000_000);
+
+        foreach (string projectPath in new[]
+        {
+            Path.Combine("src", "DotNetRepoInspector.Cli", "DotNetRepoInspector.Cli.csproj"),
+            Path.Combine("src", "DotNetRepoInspector.Mcp", "DotNetRepoInspector.Mcp.csproj"),
+        })
+        {
+            XDocument project = XDocument.Load(Path.Combine(RepositoryRoot, projectPath));
+            Assert.Equal("nuget-icon.png", ProjectProperty(project, "PackageIcon"));
+        }
+    }
+
+    [Fact]
     public void V1Baseline_RequiresGovernanceSecurityAndReleaseDocumentation()
     {
         JsonElement baseline = LoadBaseline();
@@ -100,19 +120,137 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void V1Baseline_RecognizesMcpAsReleaseReadyPackage()
+    {
+        JsonElement mcp = LoadBaseline().GetProperty("mcp");
+        string projectPath = RequiredString(mcp, "project");
+        XDocument project = XDocument.Load(Path.Combine(
+            RepositoryRoot,
+            projectPath.Replace('/', Path.DirectorySeparatorChar)));
+
+        Assert.Equal("DotNetRepoInspector.Mcp", RequiredString(mcp, "packageId"));
+        Assert.Equal(RequiredString(mcp, "packageId"), ProjectProperty(project, "PackageId"));
+        Assert.Equal("net10.0", ProjectProperty(project, "TargetFramework"));
+        Assert.Equal("true", ProjectProperty(project, "IsPackable"));
+        Assert.Equal("true", ProjectProperty(project, "PackAsTool"));
+        Assert.Equal("dotnet-repo-inspector-mcp", RequiredString(mcp, "toolCommandName"));
+        Assert.Equal("McpServer", RequiredString(mcp, "packageType"));
+        Assert.Equal("McpServer", ProjectProperty(project, "PackageType"));
+        Assert.Equal(".mcp/server.json", RequiredString(mcp, "manifest"));
+        Assert.Equal("framework-dependent", RequiredString(mcp, "distribution"));
+        Assert.Equal("stdio", RequiredString(mcp, "transport"));
+        Assert.Equal("release-ready", RequiredString(mcp, "publicationStatus"));
+        Assert.Equal(136, mcp.GetProperty("publicationIssue").GetInt32());
+
+        var controls = mcp.GetProperty("requiredControls")
+            .EnumerateArray()
+            .Select(static item => item.GetString())
+            .ToArray();
+        Assert.Contains("hermetic-e2e", controls);
+        Assert.Contains("security-tests", controls);
+        Assert.Contains("performance-baseline", controls);
+    }
+
+    [Fact]
+    public void McpReleaseCandidate_RecordsVersionAndUnresolvedPromotionGates()
+    {
+        JsonElement releaseCandidate = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("releaseCandidate");
+
+        Assert.Equal("1.2.0-rc.1", RequiredString(releaseCandidate, "version"));
+        Assert.Equal("blocked", RequiredString(releaseCandidate, "status"));
+        Assert.Equal(137, releaseCandidate.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            "docs/en/mcp-release-candidate.md",
+            RequiredString(releaseCandidate, "evidence"));
+
+        int[] blockingIssues = releaseCandidate
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Empty(blockingIssues);
+
+        string[] externalBlockers = releaseCandidate
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+    }
+
+    [Fact]
+    public void McpGeneralAvailability_FreezesContractAndRemainsBlockedByRequiredEvidence()
+    {
+        JsonElement generalAvailability = LoadBaseline()
+            .GetProperty("mcp")
+            .GetProperty("generalAvailability");
+
+        Assert.Equal("1.2.0", RequiredString(generalAvailability, "version"));
+        Assert.Equal("blocked", RequiredString(generalAvailability, "status"));
+        Assert.Equal(138, generalAvailability.GetProperty("readinessIssue").GetInt32());
+        Assert.Equal(
+            ".github/mcp-performance-baseline.json",
+            RequiredString(generalAvailability, "performanceBaseline"));
+
+        string[] tools = generalAvailability
+            .GetProperty("frozenTools")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Equal(
+            [
+                "inspect_repository",
+                "list_projects",
+                "get_project_details",
+                "get_project_reference_graph",
+                "get_repository_diagnostics",
+                "get_sdk_metadata",
+            ],
+            tools);
+
+        int[] blockingIssues = generalAvailability
+            .GetProperty("blockingIssues")
+            .EnumerateArray()
+            .Select(static item => item.GetInt32())
+            .ToArray();
+        Assert.Equal([137], blockingIssues);
+
+        string[] externalBlockers = generalAvailability
+            .GetProperty("externalBlockers")
+            .EnumerateArray()
+            .Select(static item => item.GetString()!)
+            .ToArray();
+        Assert.Contains("nuget-trusted-publishing-policy", externalBlockers);
+        Assert.Contains("protected-release-approval", externalBlockers);
+        Assert.Contains("merge-to-allowed-release-ref", externalBlockers);
+    }
+
+    [Fact]
     public void PublicReadmes_DescribeTheActualV1Contract()
     {
         string english = File.ReadAllText(Path.Combine(RepositoryRoot, "README.md"));
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "README.pt-BR.md"));
 
-        Assert.Contains("v1.0.0 stable baseline", english, StringComparison.Ordinal);
+        Assert.Contains("stable v1 contract", english, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": \"1.3\"", english, StringComparison.Ordinal);
+        Assert.Contains("dotnet tool install --global DotNetRepoInspector", english, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", english, StringComparison.Ordinal);
+        Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", english, StringComparison.Ordinal);
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest", english, StringComparison.Ordinal);
+        Assert.Contains("GitHub Packages", english, StringComparison.Ordinal);
         Assert.DoesNotContain("Status: early development", english, StringComparison.Ordinal);
         Assert.DoesNotContain("The exact schema is not final", english, StringComparison.Ordinal);
         Assert.DoesNotContain("release candidate", english, StringComparison.OrdinalIgnoreCase);
 
-        Assert.Contains("baseline estável v1.0.0", portuguese, StringComparison.Ordinal);
+        Assert.Contains("contrato v1 estável", portuguese, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": \"1.3\"", portuguese, StringComparison.Ordinal);
+        Assert.Contains("dotnet tool install --global DotNetRepoInspector", portuguese, StringComparison.Ordinal);
+        Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", portuguese, StringComparison.Ordinal);
+        Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", portuguese, StringComparison.Ordinal);
+        Assert.Contains("ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:latest", portuguese, StringComparison.Ordinal);
+        Assert.Contains("GitHub Packages", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("Status: desenvolvimento inicial", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("O schema exato ainda não é definitivo", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("candidata à release", portuguese, StringComparison.OrdinalIgnoreCase);
@@ -133,7 +271,150 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("publish=true", portugueseReadiness, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void McpPackageMetadata_IsBomFreeAndValidatedBeforePublication()
+    {
+        string projectPath = Path.Combine(
+            RepositoryRoot,
+            "src",
+            "DotNetRepoInspector.Mcp",
+            "DotNetRepoInspector.Mcp.csproj");
+        string projectText = File.ReadAllText(projectPath);
+        XDocument project = XDocument.Load(projectPath);
+
+        XElement? manifestWriter = project
+            .Descendants()
+            .FirstOrDefault(element =>
+                string.Equals(element.Name.LocalName, "WriteLinesToFile", StringComparison.Ordinal) &&
+                string.Equals(
+                    element.Attribute("File")?.Value,
+                    "$(McpManifestPath)",
+                    StringComparison.Ordinal));
+
+        Assert.NotNull(manifestWriter);
+        Assert.Null(manifestWriter.Attribute("Encoding"));
+        Assert.DoesNotContain("&quot;valueHint&quot;: &quot;repository_root&quot;", projectText, StringComparison.Ordinal);
+
+        string validator = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "scripts",
+            "validate_mcp_package.ps1"));
+
+        Assert.Contains("UTF-8 without a BOM", validator, StringComparison.Ordinal);
+        Assert.Contains("20000", validator, StringComparison.Ordinal);
+        Assert.Contains("mcp-publisher", validator, StringComparison.Ordinal);
+
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+
+        Assert.Contains("MCP_PUBLISHER_VERSION: \"1.8.1\"", workflow, StringComparison.Ordinal);
+        Assert.Contains("a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc", workflow, StringComparison.Ordinal);
+        Assert.Contains("-McpPublisherPath $env:MCP_PUBLISHER_PATH", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void ReleaseWorkflow_ProtectsMcpPackagingAndTrustedPublication()
+    {
+        string workflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "release.yml"));
+
+        Assert.Contains("validate_mcp_package.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("./.github/scripts/validate_mcp_rc.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg", workflow, StringComparison.Ordinal);
+        Assert.Contains("invoke_mcp_package_smoke.ps1", workflow, StringComparison.Ordinal);
+        Assert.Contains("id-token: write", workflow, StringComparison.Ordinal);
+        Assert.Contains("NuGet/login@", workflow, StringComparison.Ordinal);
+        Assert.Contains("environment: release", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("NUGET_API_KEY: ${{ secrets.", workflow, StringComparison.Ordinal);
+        Assert.Contains("--skip-duplicate", workflow, StringComparison.Ordinal);
+        Assert.Contains("Wait for MCP package propagation on NuGet.org", workflow, StringComparison.Ordinal);
+        Assert.Contains("id: nuget-mcp-propagation", workflow, StringComparison.Ordinal);
+        Assert.Contains("v3-flatcontainer/$packageId/index.json", workflow, StringComparison.Ordinal);
+        Assert.Contains("$maxAttempts = 10", workflow, StringComparison.Ordinal);
+        Assert.Contains("[Math]::Pow(2, $attempt - 1)", workflow, StringComparison.Ordinal);
+        Assert.Contains("::warning title=NuGet propagation delayed::", workflow, StringComparison.Ordinal);
+        Assert.Contains("propagated=$($propagated.ToString().ToLowerInvariant())", workflow, StringComparison.Ordinal);
+        Assert.Contains("steps.nuget-mcp-propagation.outputs.propagated == 'true'", workflow, StringComparison.Ordinal);
+        Assert.DoesNotContain("did not appear in the NuGet.org V3 index after $maxAttempts attempts", workflow, StringComparison.Ordinal);
+
+        Assert.Contains("name: Validate, build, test and pack", workflow, StringComparison.Ordinal);
+        Assert.Contains("create_release_tag:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Create release tag", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_nuget:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish to NuGet.org", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_github_packages:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish to GitHub Packages", workflow, StringComparison.Ordinal);
+        Assert.Contains("publish_container:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Publish container images", workflow, StringComparison.Ordinal);
+        Assert.Contains("create_github_release:", workflow, StringComparison.Ordinal);
+        Assert.Contains("name: Create GitHub Release", workflow, StringComparison.Ordinal);
+
+        string nugetJob = WorkflowJobBlock(workflow, "publish_nuget");
+        string githubPackagesJob = WorkflowJobBlock(workflow, "publish_github_packages");
+        string containerJob = WorkflowJobBlock(workflow, "publish_container");
+        string githubReleaseJob = WorkflowJobBlock(workflow, "create_github_release");
+
+        foreach (string publicationJob in new[] { nugetJob, githubPackagesJob, containerJob })
+        {
+            Assert.Contains("needs: [build, create_release_tag]", publicationJob, StringComparison.Ordinal);
+        }
+
+        Assert.Contains("- build", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- create_release_tag", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_nuget", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_github_packages", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("- publish_container", githubReleaseJob, StringComparison.Ordinal);
+        Assert.Contains("timeout-minutes: 40", nugetJob, StringComparison.Ordinal);
+        Assert.Contains("-TimeoutSec 30", nugetJob, StringComparison.Ordinal);
+
+        int tagIndex = workflow.IndexOf("name: Create release tag", StringComparison.Ordinal);
+        int nugetIndex = workflow.IndexOf("name: Publish to NuGet.org", StringComparison.Ordinal);
+        int packagesIndex = workflow.IndexOf("name: Publish to GitHub Packages", StringComparison.Ordinal);
+        int containerIndex = workflow.IndexOf("name: Publish container images", StringComparison.Ordinal);
+        int releaseIndex = workflow.IndexOf("name: Create GitHub Release", StringComparison.Ordinal);
+        Assert.True(tagIndex >= 0);
+        Assert.True(nugetIndex > tagIndex);
+        Assert.True(packagesIndex > tagIndex);
+        Assert.True(containerIndex > tagIndex);
+        Assert.True(releaseIndex > nugetIndex);
+        Assert.True(releaseIndex > packagesIndex);
+        Assert.True(releaseIndex > containerIndex);
+    }
+
     private static string RepositoryRoot { get; } = FindRepositoryRoot();
+
+    private static string WorkflowJobBlock(string workflow, string jobId)
+    {
+        string[] lines = workflow.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        int start = Array.FindIndex(
+            lines,
+            line => string.Equals(line, $"  {jobId}:", StringComparison.Ordinal));
+
+        Assert.True(start >= 0, $"Workflow job '{jobId}' was not found.");
+
+        int end = Array.FindIndex(
+            lines,
+            start + 1,
+            line =>
+                line.StartsWith("  ", StringComparison.Ordinal) &&
+                !line.StartsWith("    ", StringComparison.Ordinal) &&
+                line.EndsWith(':'));
+
+        if (end < 0)
+        {
+            end = lines.Length;
+        }
+
+        return string.Join('\n', lines[start..end]);
+    }
 
     private static JsonElement LoadBaseline()
     {

@@ -44,7 +44,7 @@ public sealed class GitSecurityTests
         }
         finally
         {
-            Directory.Delete(repositoryRoot, recursive: true);
+            TemporaryDirectory.Delete(repositoryRoot);
         }
     }
 

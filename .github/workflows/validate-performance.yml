@@ -10,7 +10,10 @@ on:
       - "src/DotNetRepoInspector.Engine/**"
       - "src/DotNetRepoInspector.Git/**"
       - "src/DotNetRepoInspector.MSBuild/**"
+      - "src/DotNetRepoInspector.Mcp/**"
+      - "tests/DotNetRepoInspector.Mcp.Tests/**"
       - ".github/performance-baseline.json"
+      - ".github/mcp-performance-baseline.json"
       - ".github/workflows/validate-performance.yml"
   workflow_dispatch:
 
@@ -79,6 +82,63 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: performance-synthetic-100-projects
+          path: artifacts/performance
+          if-no-files-found: warn
+          retention-days: 30
+
+  mcp-protocol:
+    name: MCP protocol and adapter
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore MCP performance harness
+        run: dotnet restore ./benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj
+
+      - name: Build MCP performance harness
+        run: >-
+          dotnet build ./benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj
+          --configuration Release
+          --no-restore
+          --warnaserror
+          -p:RunAnalyzers=true
+
+      - name: Measure and enforce MCP performance baseline
+        run: >-
+          dotnet run
+          --project ./benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj
+          --configuration Release
+          --no-build
+          --
+          --repository ./tests/Fixtures/ProjectKinds
+          --timeout-seconds 300
+          --output ./artifacts/performance/mcp-metrics.json
+          --summary ./artifacts/performance/mcp-summary.md
+          --baseline ./.github/mcp-performance-baseline.json
+
+      - name: Publish MCP performance summary
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f ./artifacts/performance/mcp-summary.md ]]; then
+            cat ./artifacts/performance/mcp-summary.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload MCP performance artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: performance-mcp-protocol
           path: artifacts/performance
           if-no-files-found: warn
           retention-days: 30

@@ -219,7 +219,7 @@ jobs:
           /k:"rodri-oliveira-dev_DotNetRepoInspector"
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
-          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Mcp.Tests/coverage.opencover.xml"
           /d:sonar.coverage.exclusions=".github/**"
           /d:sonar.qualitygate.wait="${SONAR_QUALITY_GATE_WAIT}"
           /d:sonar.qualitygate.timeout=300
@@ -245,7 +245,8 @@ jobs:
             "tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj",
-            "tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj"
+            "tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj",
+            "tests/DotNetRepoInspector.Mcp.Tests/DotNetRepoInspector.Mcp.Tests.csproj"
           )
 
           foreach ($project in $testProjects) {
@@ -299,9 +300,9 @@ jobs:
               -File
           )
 
-          if ($reports.Count -ne 7) {
+          if ($reports.Count -ne 8) {
             $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
-            throw "Expected seven normalized OpenCover reports, found $($reports.Count): $found"
+            throw "Expected eight normalized OpenCover reports, found $($reports.Count): $found"
           }
 
           Write-Host "Found $($reports.Count) normalized OpenCover reports."
@@ -314,6 +315,59 @@ jobs:
         run: >-
           dotnet sonarscanner end
           /d:sonar.token="${SONAR_TOKEN}"
+
+  mcp-e2e:
+    name: MCP E2E (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore MCP tests
+        run: dotnet restore ./tests/DotNetRepoInspector.Mcp.Tests/DotNetRepoInspector.Mcp.Tests.csproj
+
+      - name: Build MCP tests with analyzers and zero warnings
+        run: >-
+          dotnet build ./tests/DotNetRepoInspector.Mcp.Tests/DotNetRepoInspector.Mcp.Tests.csproj
+          --configuration Release
+          --no-restore
+          --warnaserror
+          -p:RunAnalyzers=true
+
+      - name: Run hermetic MCP unit, security, integration, and E2E tests
+        run: >-
+          dotnet test ./tests/DotNetRepoInspector.Mcp.Tests/DotNetRepoInspector.Mcp.Tests.csproj
+          --configuration Release
+          --no-build
+          --no-restore
+          --results-directory ./artifacts/mcp-test-results
+          --
+          --report-trx
+
+      - name: Upload MCP test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mcp-test-results-${{ matrix.os }}
+          path: artifacts/mcp-test-results
+          if-no-files-found: warn
+          retention-days: 14
 
   action-smoke:
     name: GitHub Action (${{ matrix.os }})

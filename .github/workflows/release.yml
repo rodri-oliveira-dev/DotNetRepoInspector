@@ -13,9 +13,15 @@ on:
       - .github/workflows/release.yml
       - .github/release.yml
       - .github/release-readiness-v1.json
+      - DotNetRepoInspector.slnx
+      - Directory.Packages.props
       - .github/scripts/container_release.sh
+      - .github/scripts/coverage_summary.py
       - .github/scripts/release_metadata.py
       - .github/scripts/validate_tool_package.ps1
+      - .github/scripts/validate_mcp_package.ps1
+      - .github/scripts/invoke_mcp_package_smoke.ps1
+      - .github/scripts/validate_mcp_rc.ps1
       - action.yml
       - README.md
       - README.pt-BR.md
@@ -24,7 +30,9 @@ on:
       - docs/pt-BR/v1-release-readiness.md
       - src/DotNetRepoInspector.Core/Contracts/InspectionSchema.cs
       - src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj
+      - src/DotNetRepoInspector.Mcp/**
       - tests/DotNetRepoInspector.Cli.Tests/ReleaseReadinessTests.cs
+      - tests/DotNetRepoInspector.Mcp.Tests/**
   workflow_dispatch:
     inputs:
       version:
@@ -50,7 +58,7 @@ env:
 
 jobs:
   build:
-    name: Build release artifacts
+    name: Validate, build, test and pack
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -70,6 +78,23 @@ jobs:
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
           global-json-file: global.json
+
+      - name: Install pinned MCP publisher validator
+        env:
+          MCP_PUBLISHER_VERSION: "1.8.1"
+          MCP_PUBLISHER_SHA256: "a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc"
+        run: |
+          set -euo pipefail
+
+          archive="mcp-publisher_linux_amd64.tar.gz"
+          url="https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/${archive}"
+
+          curl --fail --silent --show-error --location --proto "=https" --proto-redir "=https" "$url" --output "$archive"
+          echo "${MCP_PUBLISHER_SHA256}  ${archive}" | sha256sum --check -
+          tar -xzf "$archive" mcp-publisher
+          install -m 0755 mcp-publisher "${RUNNER_TEMP}/mcp-publisher"
+          "${RUNNER_TEMP}/mcp-publisher" --help >/dev/null
+          echo "MCP_PUBLISHER_PATH=${RUNNER_TEMP}/mcp-publisher" >> "${GITHUB_ENV}"
 
       - name: Resolve release metadata
         id: release-metadata
@@ -171,12 +196,12 @@ jobs:
             --plan ./artifacts/release/container-release-plan.json
 
       - name: Setup QEMU for container release validation
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: all
 
       - name: Setup Docker Buildx for container release validation
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Validate multi-architecture container release build configuration
         run: bash ./.github/scripts/container_release.sh check ./artifacts/release/container-release-plan.json
@@ -225,6 +250,20 @@ jobs:
           -p:TreatWarningsAsErrors=true
           -p:RunAnalyzers=true
 
+      - name: Pack exact MCP server version
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          dotnet pack ./src/DotNetRepoInspector.Mcp/DotNetRepoInspector.Mcp.csproj
+          --configuration Release
+          --no-restore
+          --output ./artifacts/release
+          -p:Version=${RELEASE_VERSION}
+          -p:RepositoryCommit=${GITHUB_SHA}
+          -p:ContinuousIntegrationBuild=true
+          -p:TreatWarningsAsErrors=true
+          -p:RunAnalyzers=true
+
       - name: Validate packaged .NET Tool
         shell: pwsh
         env:
@@ -236,6 +275,29 @@ jobs:
           -FixturePath ./tests/Fixtures/ProjectKinds
           -ArtifactsDirectory ./artifacts/release-smoke
 
+      - name: Validate packaged MCP server
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          ./.github/scripts/validate_mcp_package.ps1
+          -PackageDirectory ./artifacts/release
+          -Version $env:RELEASE_VERSION
+          -FixturePath ./tests/Fixtures/ProjectKinds
+          -ArtifactsDirectory ./artifacts/mcp-release-smoke
+          -McpPublisherPath $env:MCP_PUBLISHER_PATH
+
+      - name: Validate MCP release candidate
+        if: "${{ steps.release-metadata.outputs.is_prerelease == 'true' }}"
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
+        run: >-
+          ./.github/scripts/validate_mcp_rc.ps1
+          -PackageDirectory ./artifacts/release
+          -Version $env:RELEASE_VERSION
+          -ArtifactsDirectory ./artifacts/mcp-rc-validation
+
       - name: Generate release manifest and checksums
         env:
           RELEASE_VERSION: "${{ steps.release-metadata.outputs.version }}"
@@ -244,6 +306,8 @@ jobs:
           --version "${RELEASE_VERSION}"
           --commit "${GITHUB_SHA}"
           --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+          --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg"
           --inspection-report ./artifacts/release-smoke/global-inspection.json
           --output ./artifacts/release/release-manifest.json
           --checksums-output ./artifacts/release/SHA256SUMS
@@ -256,19 +320,18 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-  publish:
-    name: Publish official release
+  create_release_tag:
+    name: Create release tag
     if: "${{ github.event_name == 'workflow_dispatch' && inputs.publish }}"
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 15
     environment: release
     permissions:
       contents: write
       id-token: write
       attestations: write
       artifact-metadata: write
-      packages: write
 
     steps:
       - name: Validate protected publication request
@@ -311,7 +374,9 @@ jobs:
             --version "${RELEASE_VERSION}" \
             --commit "${GITHUB_SHA}" \
             --manifest ./artifacts/release/release-manifest.json \
-            --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg"
+            --package "./artifacts/release/DotNetRepoInspector.${RELEASE_VERSION}.nupkg" \
+            --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg" \
+            --package "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.snupkg"
           python ./.github/scripts/release_metadata.py verify-container-plan \
             --version "${RELEASE_VERSION}" \
             --commit "${GITHUB_SHA}" \
@@ -322,11 +387,13 @@ jobs:
         with:
           subject-path: |
             artifacts/release/DotNetRepoInspector.${{ needs.build.outputs.version }}.nupkg
+            artifacts/release/DotNetRepoInspector.Mcp.${{ needs.build.outputs.version }}.nupkg
+            artifacts/release/DotNetRepoInspector.Mcp.${{ needs.build.outputs.version }}.snupkg
             artifacts/release/release-manifest.json
             artifacts/release/SHA256SUMS
             artifacts/release/container-release-plan.json
 
-      - name: Create or resume draft GitHub Release
+      - name: Create immutable release tag
         env:
           GH_TOKEN: "${{ github.token }}"
           RELEASE_TAG: "${{ needs.build.outputs.tag }}"
@@ -334,13 +401,6 @@ jobs:
           set -euo pipefail
 
           git fetch --force --tags origin
-          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            existing_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
-            if [[ "${existing_commit}" != "${GITHUB_SHA}" ]]; then
-              echo "Tag ${RELEASE_TAG} already points to ${existing_commit}, not ${GITHUB_SHA}." >&2
-              exit 3
-            fi
-          fi
 
           release_state="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
           if [[ "${release_state}" == "false" ]]; then
@@ -348,23 +408,49 @@ jobs:
             exit 3
           fi
 
-          if [[ -z "${release_state}" ]]; then
-            if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-              gh release create "${RELEASE_TAG}" \
-                --verify-tag \
-                --draft \
-                --generate-notes \
-                --title "${RELEASE_TAG}"
-            else
-              gh release create "${RELEASE_TAG}" \
-                --target "${GITHUB_SHA}" \
-                --draft \
-                --generate-notes \
-                --title "${RELEASE_TAG}"
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            existing_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [[ "${existing_commit}" != "${GITHUB_SHA}" ]]; then
+              echo "Tag ${RELEASE_TAG} already points to ${existing_commit}, not ${GITHUB_SHA}." >&2
+              exit 3
             fi
+
+            echo "Release tag ${RELEASE_TAG} already points to the requested commit."
+          else
+            gh api --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f ref="refs/tags/${RELEASE_TAG}" \
+              -f sha="${GITHUB_SHA}" >/dev/null
+            echo "Created release tag ${RELEASE_TAG} at ${GITHUB_SHA}."
           fi
 
-          gh release upload "${RELEASE_TAG}" artifacts/release/* --clobber
+  publish_nuget:
+    name: Publish to NuGet.org
+    needs: [build, create_release_tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: "${{ github.sha }}"
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Download validated release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: "release-candidate-${{ needs.build.outputs.version }}"
+          path: artifacts/release
 
       - name: Authenticate to NuGet.org with trusted publishing
         id: nuget-login
@@ -383,6 +469,116 @@ jobs:
           --api-key "${NUGET_API_KEY}"
           --skip-duplicate
 
+      - name: Publish MCP server package
+        env:
+          NUGET_API_KEY: "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          dotnet nuget push
+          "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --source https://api.nuget.org/v3/index.json
+          --api-key "${NUGET_API_KEY}"
+          --skip-duplicate
+
+      - name: Build MCP package smoke harness
+        run: >-
+          dotnet build
+          ./evals/DotNetRepoInspector.Mcp.Evals/DotNetRepoInspector.Mcp.Evals.csproj
+          --configuration Release
+
+      - name: Wait for MCP package propagation on NuGet.org
+        id: nuget-mcp-propagation
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: |
+          $ErrorActionPreference = "Stop"
+          $packageId = "dotnetrepoinspector.mcp"
+          $indexUrl = "https://api.nuget.org/v3-flatcontainer/$packageId/index.json"
+          $maxAttempts = 10
+          $baseDelaySeconds = 30
+          $maxDelaySeconds = 120
+          $propagated = $false
+
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            try {
+              $probeUrl = "$indexUrl?nocache=$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+              $index = Invoke-RestMethod -Uri $probeUrl -Method Get -TimeoutSec 30 -Headers @{ "Cache-Control" = "no-cache" }
+              $publishedVersion = @($index.versions | Where-Object { $_ -ieq $env:RELEASE_VERSION })
+              if ($publishedVersion.Count -gt 0) {
+                $propagated = $true
+                Write-Host "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) is visible in the NuGet.org V3 flat-container index."
+                break
+              }
+            }
+            catch {
+              Write-Host "NuGet propagation probe attempt $attempt/$maxAttempts failed: $($_.Exception.Message)"
+            }
+
+            if ($attempt -eq $maxAttempts) {
+              $warning = "DotNetRepoInspector.Mcp $($env:RELEASE_VERSION) was accepted for publication but is not yet visible in the NuGet.org V3 flat-container index after $maxAttempts attempts. Verify the package manually on NuGet.org."
+              Write-Host "::warning title=NuGet propagation delayed::$warning"
+              @(
+                "### NuGet propagation warning"
+                ""
+                "$warning"
+                ""
+                "The release workflow will continue without the external NuGet MCP smoke test."
+              ) | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+              break
+            }
+
+            $delaySeconds = [Math]::Min(
+              $maxDelaySeconds,
+              [int]($baseDelaySeconds * [Math]::Pow(2, $attempt - 1)))
+            Write-Host "Package version is not visible yet; waiting $delaySeconds second(s) before retrying."
+            Start-Sleep -Seconds $delaySeconds
+          }
+
+          "propagated=$($propagated.ToString().ToLowerInvariant())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Smoke exact MCP package version from NuGet.org
+        if: "${{ steps.nuget-mcp-propagation.outputs.propagated == 'true' }}"
+        shell: pwsh
+        env:
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          ./.github/scripts/invoke_mcp_package_smoke.ps1
+          -PackageSource https://api.nuget.org/v3/index.json
+          -Version $env:RELEASE_VERSION
+          -FixturePath ./tests/Fixtures/ProjectKinds
+          -ArtifactsDirectory ./artifacts/published-mcp-smoke
+          -MaxAttempts 10
+          -RetryDelaySeconds 30
+
+  publish_github_packages:
+    name: Publish to GitHub Packages
+    needs: [build, create_release_tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: "${{ github.sha }}"
+          persist-credentials: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Download validated release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: "release-candidate-${{ needs.build.outputs.version }}"
+          path: artifacts/release
+
       - name: Configure GitHub Packages source
         env:
           GITHUB_TOKEN: "${{ github.token }}"
@@ -394,7 +590,7 @@ jobs:
           --name github
           "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
-      - name: Publish .NET Tool package to GitHub Packages
+      - name: Publish .NET Tool package
         env:
           GITHUB_TOKEN: "${{ github.token }}"
           RELEASE_VERSION: "${{ needs.build.outputs.version }}"
@@ -404,6 +600,44 @@ jobs:
           --source github
           --api-key "${GITHUB_TOKEN}"
           --skip-duplicate
+
+      - name: Publish MCP server package
+        env:
+          GITHUB_TOKEN: "${{ github.token }}"
+          RELEASE_VERSION: "${{ needs.build.outputs.version }}"
+        run: >-
+          dotnet nuget push
+          "./artifacts/release/DotNetRepoInspector.Mcp.${RELEASE_VERSION}.nupkg"
+          --source github
+          --api-key "${GITHUB_TOKEN}"
+          --skip-duplicate
+          --no-symbols
+
+  publish_container:
+    name: Publish container images
+    needs: [build, create_release_tag]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: "${{ github.sha }}"
+          persist-credentials: false
+
+      - name: Download validated release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: "release-candidate-${{ needs.build.outputs.version }}"
+          path: artifacts/release
 
       - name: Validate Docker Hub publication credential
         env:
@@ -416,12 +650,12 @@ jobs:
           fi
 
       - name: Setup QEMU for multi-architecture publication
-        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: all
 
       - name: Setup Docker Buildx for multi-architecture publication
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Authenticate to GHCR and Docker Hub
         env:
@@ -539,14 +773,77 @@ jobs:
         with:
           subject-path: artifacts/release/container-distribution.json
 
-      - name: Attach verified container distribution to draft GitHub Release
+      - name: Upload verified container distribution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: "container-distribution-${{ needs.build.outputs.version }}"
+          path: artifacts/release/container-distribution.json
+          if-no-files-found: error
+          retention-days: 14
+
+  create_github_release:
+    name: Create GitHub Release
+    needs:
+      - build
+      - create_release_tag
+      - publish_nuget
+      - publish_github_packages
+      - publish_container
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout exact release commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: "${{ github.sha }}"
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download validated release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: "release-candidate-${{ needs.build.outputs.version }}"
+          path: artifacts/release
+
+      - name: Download verified container distribution
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: "container-distribution-${{ needs.build.outputs.version }}"
+          path: artifacts/release
+
+      - name: Create or resume draft GitHub Release
         env:
           GH_TOKEN: "${{ github.token }}"
           RELEASE_TAG: "${{ needs.build.outputs.tag }}"
-        run: >-
-          gh release upload "${RELEASE_TAG}"
-          ./artifacts/release/container-distribution.json
-          --clobber
+        run: |
+          set -euo pipefail
+
+          git fetch --force --tags origin
+          existing_commit="$(git rev-list -n 1 "${RELEASE_TAG}" 2>/dev/null || true)"
+          if [[ -z "${existing_commit}" || "${existing_commit}" != "${GITHUB_SHA}" ]]; then
+            echo "Tag ${RELEASE_TAG} must exist and point to ${GITHUB_SHA} before the GitHub Release is created." >&2
+            exit 3
+          fi
+
+          release_state="$(gh release view "${RELEASE_TAG}" --json isDraft --jq '.isDraft' 2>/dev/null || true)"
+          if [[ "${release_state}" == "false" ]]; then
+            echo "Release ${RELEASE_TAG} is already published; refusing to mutate an immutable release." >&2
+            exit 3
+          fi
+
+          if [[ -z "${release_state}" ]]; then
+            gh release create "${RELEASE_TAG}" \
+              --verify-tag \
+              --draft \
+              --generate-notes \
+              --title "${RELEASE_TAG}"
+          fi
+
+          gh release upload "${RELEASE_TAG}" artifacts/release/* --clobber
 
       - name: Publish GitHub Release
         env:

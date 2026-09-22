@@ -75,6 +75,12 @@ For code you do not fully trust, use a separate security boundary around DotNetR
 
 If a private SDK or build extension requires credentials during evaluation, prefer a dedicated short-lived identity scoped only to the required package source. Do not reuse deployment or production credentials. Be aware that the Inspector's child-process filtering intentionally removes common credential-like environment variables; pre-provisioning dependencies is safer than making secrets visible to MSBuild evaluation.
 
+## Local MCP server
+
+The local MCP adapter applies an additional trust boundary around client-controlled inputs. It requires and canonicalizes `--root`, rejects traversal and links below that root, removes credential-like variables from the MCP process before Engine startup, bounds tool inputs/results, and exposes read-only tools only. These controls constrain what a client can request; they do not constrain what repository-controlled MSBuild imports, SDK resolvers, property functions, or external processes can access with the server's OS identity.
+
+See the [MCP threat model](architecture/mcp-threat-model.md) and [ADR 0007](decisions/0007-mcp-trust-boundary-hardening.md) for the exact link policy, limits, TOCTOU limitation, controls, and residual risks.
+
 ## GitHub Action permissions
 
 The reusable composite Action does not require GitHub API write access and does not expose a token input. The repository's own validation workflows use:

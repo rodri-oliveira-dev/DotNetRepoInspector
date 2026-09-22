@@ -7,6 +7,7 @@ namespace DotNetRepoInspector.MSBuild.Tests;
 public sealed class SecurityHardeningTests
 {
     private const string SecretEnvironmentName = "DRI_SECURITY_TEST_ACCESS_TOKEN";
+    private const string AccessKeyEnvironmentName = "DRI_SECURITY_TEST_ACCESS_KEY";
     private const string SafeEnvironmentName = "DRI_SECURITY_TEST_SETTING";
 
     [Fact]
@@ -14,11 +15,13 @@ public sealed class SecurityHardeningTests
     {
         var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Security-").FullName;
         var previousSecret = Environment.GetEnvironmentVariable(SecretEnvironmentName);
+        var previousAccessKey = Environment.GetEnvironmentVariable(AccessKeyEnvironmentName);
         var previousSafe = Environment.GetEnvironmentVariable(SafeEnvironmentName);
 
         try
         {
             Environment.SetEnvironmentVariable(SecretEnvironmentName, "must-not-reach-msbuild");
+            Environment.SetEnvironmentVariable(AccessKeyEnvironmentName, "must-not-reach-msbuild-either");
             Environment.SetEnvironmentVariable(SafeEnvironmentName, "safe-setting");
 
             var projectPath = Path.Combine(repositoryRoot, "SecurityProbe.csproj");
@@ -29,6 +32,7 @@ public sealed class SecurityHardeningTests
                   <PropertyGroup>
                     <TargetFramework>net10.0</TargetFramework>
                     <ObservedSecret>$({{SecretEnvironmentName}})</ObservedSecret>
+                    <ObservedAccessKey>$({{AccessKeyEnvironmentName}})</ObservedAccessKey>
                     <ObservedSafe>$({{SafeEnvironmentName}})</ObservedSafe>
                     <ObservedNodeReuse>$(MSBUILDDISABLENODEREUSE)</ObservedNodeReuse>
                   </PropertyGroup>
@@ -40,17 +44,19 @@ public sealed class SecurityHardeningTests
             var result = await evaluator.EvaluateAsync(
                 new MsBuildEvaluationRequest(
                     projectPath,
-                    ["ObservedSecret", "ObservedSafe", "ObservedNodeReuse"]),
+                    ["ObservedSecret", "ObservedAccessKey", "ObservedSafe", "ObservedNodeReuse"]),
                 TestContext.Current.CancellationToken);
 
             Assert.True(result.Succeeded, result.Error?.Message ?? "MSBuild evaluation failed.");
             Assert.Equal(string.Empty, result.Properties["ObservedSecret"]);
+            Assert.Equal(string.Empty, result.Properties["ObservedAccessKey"]);
             Assert.Equal("safe-setting", result.Properties["ObservedSafe"]);
             Assert.Equal("1", result.Properties["ObservedNodeReuse"]);
         }
         finally
         {
             Environment.SetEnvironmentVariable(SecretEnvironmentName, previousSecret);
+            Environment.SetEnvironmentVariable(AccessKeyEnvironmentName, previousAccessKey);
             Environment.SetEnvironmentVariable(SafeEnvironmentName, previousSafe);
             Directory.Delete(repositoryRoot, recursive: true);
         }

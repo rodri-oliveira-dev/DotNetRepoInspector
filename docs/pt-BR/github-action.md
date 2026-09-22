@@ -4,7 +4,7 @@
 
 O DotNetRepoInspector fornece uma GitHub Action reutilizável do tipo composite que executa a mesma .NET Tool e a mesma engine de inspeção usadas pela CLI. A Action é apenas um adapter de entrega: descoberta de projetos, avaliação MSBuild, classificação, configuração, diagnósticos, serialização JSON, persistência opcional e semântica de códigos de saída continuam pertencendo aos componentes existentes do Inspector.
 
-> A implementação da Action já existe e é validada pelo CI do repositório, mas uma release pública `v1` ainda não foi publicada. `uses: rodri-oliveira-dev/DotNetRepoInspector@v1` passa a estar disponível depois que o fluxo de release publicar o pacote `DotNetRepoInspector` correspondente e criar as tags da Action.
+> A Composite Action está publicada e pode ser consumida diretamente com `uses: rodri-oliveira-dev/DotNetRepoInspector@v1`. Existem refs públicas `v1`, `v1.0`, `v1.0.0` e `v1.1.0`; use uma tag imutável de versão completa ou um commit SHA quando for necessária reprodutibilidade exata.
 
 ## Uso mínimo
 

@@ -75,6 +75,12 @@ Para código que você não confia completamente, use uma fronteira de seguranç
 
 Se um SDK privado ou extensão de build exigir credenciais durante a evaluation, prefira uma identidade dedicada, de curta duração e limitada somente ao package source necessário. Não reutilize credenciais de deployment ou produção. Observe que a filtragem dos processos filhos remove intencionalmente variáveis de ambiente comuns que pareçam conter credenciais; pré-provisionar dependências é mais seguro do que tornar secrets visíveis à evaluation do MSBuild.
 
+## Servidor MCP local
+
+O adapter MCP local aplica uma fronteira de confiança adicional ao redor de inputs controlados pelo cliente. Ele exige e canonicaliza `--root`, rejeita traversal e links abaixo desse root, remove variáveis com aparência de credenciais do processo MCP antes do startup do Engine, limita inputs/resultados das tools e expõe somente tools read-only. Esses controles restringem o que um cliente pode solicitar; eles não restringem o que imports, SDK resolvers, property functions ou processos externos controlados pelo repositório podem acessar com a identidade do SO do servidor.
+
+Consulte o [threat model MCP](architecture/mcp-threat-model.md) e a [ADR 0007](decisions/0007-mcp-trust-boundary-hardening.md) para a política exata de links, limites, limitação de TOCTOU, controles e riscos residuais.
+
 ## Permissões da GitHub Action
 
 A Composite Action reutilizável não precisa de acesso de escrita à API do GitHub e não expõe input de token. Os próprios workflows de validação do repositório usam:

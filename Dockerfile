@@ -7,11 +7,11 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0.424-noble@sha256:2ae6f287fa860c15f121474cf
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.400-noble@sha256:e1ffd2a92ae84c1291bc1b6887501f8af98e6331e7af6d4c8d37168c5e87a64c AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-noble@sha256:2fa828c68761b1b8c23d7662dc134421b9d3b59fe1425fdbc80804e390cdb24d AS build
 
 ARG PRODUCT_VERSION=0.0.0
 ARG REPOSITORY_COMMIT=local
@@ -32,7 +32,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.11-noble@sha256:9b37bbaf06fc653cb0e757215081139fb493658e1f864a738f6a478620c9196f AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-noble@sha256:23257ea51d7c12e0d5aabecaffe24b4eccacff63a2e669ea9408ac29790d4ce1 AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 

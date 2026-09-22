@@ -11,6 +11,58 @@
     "readme": "README.md",
     "repositoryUrl": "https://github.com/rodri-oliveira-dev/DotNetRepoInspector"
   },
+  "mcp": {
+    "packageId": "DotNetRepoInspector.Mcp",
+    "project": "src/DotNetRepoInspector.Mcp/DotNetRepoInspector.Mcp.csproj",
+    "toolCommandName": "dotnet-repo-inspector-mcp",
+    "packageType": "McpServer",
+    "manifest": ".mcp/server.json",
+    "distribution": "framework-dependent",
+    "transport": "stdio",
+    "publicationStatus": "release-ready",
+    "publicationIssue": 136,
+    "releaseCandidate": {
+      "version": "1.2.0-rc.1",
+      "status": "blocked",
+      "readinessIssue": 137,
+      "evidence": "docs/en/mcp-release-candidate.md",
+      "blockingIssues": [],
+      "externalBlockers": [
+        "nuget-trusted-publishing-policy"
+      ]
+    },
+    "generalAvailability": {
+      "version": "1.2.0",
+      "status": "blocked",
+      "readinessIssue": 138,
+      "evidence": "docs/en/mcp-ga-readiness.md",
+      "releaseNotes": "docs/en/mcp-1.2.0-release-notes.md",
+      "performanceBaseline": ".github/mcp-performance-baseline.json",
+      "frozenTools": [
+        "inspect_repository",
+        "list_projects",
+        "get_project_details",
+        "get_project_reference_graph",
+        "get_repository_diagnostics",
+        "get_sdk_metadata"
+      ],
+      "blockingIssues": [
+        137
+      ],
+      "externalBlockers": [
+        "nuget-trusted-publishing-policy",
+        "protected-release-approval",
+        "merge-to-allowed-release-ref"
+      ]
+    },
+    "requiredControls": [
+      "explicit-root",
+      "read-only-tools",
+      "hermetic-e2e",
+      "security-tests",
+      "performance-baseline"
+    ]
+  },
   "schemaExample": "docs/en/schema/examples/inspection-v1.example.json",
   "requiredFiles": [
     "LICENSE",
@@ -23,6 +75,12 @@
     "docs/en/releases.md",
     "docs/pt-BR/releases.md",
     "docs/en/v1-release-readiness.md",
-    "docs/pt-BR/v1-release-readiness.md"
+    "docs/pt-BR/v1-release-readiness.md",
+    "docs/en/mcp-release-candidate.md",
+    "docs/pt-BR/mcp-release-candidate.md",
+    "docs/en/mcp-ga-readiness.md",
+    "docs/pt-BR/mcp-ga-readiness.md",
+    "docs/en/mcp-1.2.0-release-notes.md",
+    "docs/pt-BR/mcp-1.2.0-release-notes.md"
   ]
 }

@@ -4,7 +4,7 @@
 
 DotNetRepoInspector provides a reusable composite GitHub Action that runs the same .NET Tool and inspection engine used by the CLI. The Action is a delivery adapter only: project discovery, MSBuild evaluation, classification, configuration, diagnostics, JSON serialization, optional persistence, and exit semantics remain owned by the existing Inspector components.
 
-> The Action implementation is present and validated in repository CI, but a public `v1` release is not published yet. `uses: rodri-oliveira-dev/DotNetRepoInspector@v1` becomes available after the release workflow publishes the matching `DotNetRepoInspector` package and creates the Action tags.
+> The Composite Action is published and can be consumed directly with `uses: rodri-oliveira-dev/DotNetRepoInspector@v1`. Public version refs including `v1`, `v1.0`, `v1.0.0`, and `v1.1.0` exist; use an immutable full version tag or commit SHA when exact reproducibility is required.
 
 ## Minimal usage
 

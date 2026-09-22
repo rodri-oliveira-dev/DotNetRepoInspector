@@ -107,3 +107,33 @@ dotnet run \
 ```
 
 Execute sem `--baseline` ao coletar medições exploratórias para outra quantidade de projetos. Essas medições são úteis para investigação, mas não são diretamente comparáveis à baseline versionada de 100 projetos usada no CI.
+
+## Baseline operacional do MCP
+
+`benchmarks/DotNetRepoInspector.Mcp.Performance` inicia o servidor stdio real pelo cliente MCP oficial, realiza o handshake, chama todas as tools v1 e compara a mesma fixture `ProjectKinds` com execuções diretas da Engine e da CLI. O arquivo versionado `.github/mcp-performance-baseline.json` registra uma observação de uma máquina de desenvolvimento Windows em 2026-09-19:
+
+| Medição | Observado |
+| --- | ---: |
+| Início do processo | 79,19 ms |
+| Startup e handshake | 935,36 ms |
+| Inspeção da Engine | 10.200,32 ms |
+| Inspeção da CLI | 10.874,59 ms |
+| Tools MCP | 10.158,65-11.192,28 ms |
+
+O CI aplica limite de 5.000 ms para início, 15.000 ms para startup/handshake e, para chamadas da CLI ou tools, um limite relativo de três vezes a duração da Engine naquela execução mais 10.000 ms. Limites relativos acomodam variações de runner e SDK instalado enquanto detectam avaliação duplicada ou overhead material do adapter. Cada chamada de tool também deve produzir um evento estruturado de conclusão.
+
+O host MCP permite uma inspeção ativa e oito chamadas na fila para sua única raiz. A fila e a chamada da Engine compartilham timeout de cinco minutos e propagam o cancelamento do cliente. Cache de sessão não é usado porque o repositório, os arquivos de build importados, a seleção do SDK e o estado do Git não possuem um sinal completo de invalidação. Consulte o [ADR 0008](decisions/0008-mcp-operational-reliability.md).
+
+Execute a baseline localmente com:
+
+```bash
+dotnet run \
+  --project ./benchmarks/DotNetRepoInspector.Mcp.Performance/DotNetRepoInspector.Mcp.Performance.csproj \
+  --configuration Release \
+  -- \
+  --repository ./tests/Fixtures/ProjectKinds \
+  --timeout-seconds 300 \
+  --output ./artifacts/performance/mcp-metrics.json \
+  --summary ./artifacts/performance/mcp-summary.md \
+  --baseline ./.github/mcp-performance-baseline.json
+```
