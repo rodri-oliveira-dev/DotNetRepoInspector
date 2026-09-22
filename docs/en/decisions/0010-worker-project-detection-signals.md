@@ -10,7 +10,7 @@
 
 The production classifier currently recognizes `worker` only when the project root declares `Microsoft.NET.Sdk.Worker`. That rule is deterministic, but it misses Worker-shaped projects that use the common `Microsoft.NET.Sdk`, custom/composed SDKs, or explicit service-hosting integration.
 
-The official Worker SDK sets the evaluated MSBuild property `UsingMicrosoftNETSdkWorker=true` in its `Sdk.props`. This property can survive SDK composition even when the root project declaration does not expose `Microsoft.NET.Sdk.Worker` directly.
+The official Worker SDK sets the evaluated MSBuild property `UsingMicrosoftNETSdkWorker=true` in its `Sdk.props`. However, MSBuild evaluation exposes only the effective value: DotNetRepoInspector cannot determine whether the Worker SDK, a custom SDK, imported props, or the project itself assigned it. The property is therefore treated as an explicit Worker opt-in signal, not as provenance that proves the Worker SDK was imported.
 
 Microsoft's Worker guidance also uses `Microsoft.Extensions.Hosting`, but Generic Host is not Worker-specific: console and Web applications can use it for configuration, dependency injection, logging, lifetime management, and hosted services. Package presence alone therefore cannot distinguish a Worker from a generic hosted console application.
 
@@ -23,7 +23,7 @@ Service-lifetime packages are narrower. `Microsoft.Extensions.Hosting.Systemd` e
 | Strength | Structural signal | Decision |
 | --- | --- | --- |
 | Strong | declared `Microsoft.NET.Sdk.Worker` | Existing authoritative Worker SDK signal. |
-| Strong | effective `UsingMicrosoftNETSdkWorker == true` | Approved fallback. This is the official flag emitted by the Worker SDK and can preserve Worker semantics through composed/custom SDKs. |
+| Strong | effective `UsingMicrosoftNETSdkWorker == true` | Approved explicit Worker opt-in. The Worker SDK sets this property, but the effective value has no assignment provenance; a project can set it manually. High confidence reflects the explicit opt-in, not proof of Worker SDK import. |
 | Moderate | `OutputType == Exe` plus direct/evaluated `Microsoft.Extensions.Hosting.Systemd` | Approved service-lifetime fallback when no stronger Test/Web conflict exists. |
 | Moderate | `OutputType == Exe` plus direct/evaluated `Microsoft.Extensions.Hosting.WindowsServices` | Approved service-lifetime fallback under the same constraints. |
 | Weak, supporting only | `Microsoft.Extensions.Hosting` package presence | Generic Host is shared by Workers, consoles, and other host-based applications; do not classify from this alone. |
@@ -37,6 +37,12 @@ The Worker template uses `Microsoft.Extensions.Hosting`, but that package provid
 
 The `HostingOnlyAmbiguous` fixture records this boundary.
 
+### Provenance limitation of `UsingMicrosoftNETSdkWorker`
+
+The scalar property is intentionally **not** interpreted as Worker SDK provenance. A common-SDK project can set `UsingMicrosoftNETSdkWorker=true` directly and is indistinguishable, at the normalized-fact level proposed for #152, from the same value flowing through an imported/composed SDK. #152 may classify that effective value as a high-confidence explicit opt-in, but must not report or imply that `Microsoft.NET.Sdk.Worker` was imported unless the declared SDK facts independently prove it.
+
+This choice accepts a bounded false-positive risk: a project can accidentally or deliberately set the property while not behaving as a Worker. The trade-off is considered acceptable for classification because the signal is explicit, exact, and Worker-specific in name; it is not inferred from generic hosting behavior. Consumers that require SDK provenance must use the declared SDK list rather than this property.
+
 ### Proposed precedence for issue #152
 
 Issue #152 should preserve all Test rules from ADR 0009 before Worker/Web decisions, then apply:
@@ -45,7 +51,7 @@ Issue #152 should preserve all Test rules from ADR 0009 before Worker/Web decisi
 2. Web SDK plus any **strong** Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker=true`) -> `unknown` due conflicting workload evidence;
 3. `Microsoft.NET.Sdk.Web` -> `web`, high confidence; service-lifetime packages do not override Web;
 4. `Microsoft.NET.Sdk.Worker` -> `worker`, high confidence;
-5. `UsingMicrosoftNETSdkWorker == true` -> `worker`, high confidence;
+5. `UsingMicrosoftNETSdkWorker == true` -> `worker`, high confidence as an explicit opt-in, without claiming Worker SDK provenance;
 6. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`, medium confidence;
 7. continue with existing `OutputType == Exe` -> `console`, `OutputType == Library` -> `library`, then `unknown`.
 
@@ -57,7 +63,7 @@ The implementation should collect or reuse only:
 
 - existing declared project SDK names;
 - existing normalized `OutputType`;
-- new effective `bool? UsingMicrosoftNETSdkWorker`;
+- new effective `bool? UsingMicrosoftNETSdkWorker`, interpreted only as an explicit opt-in value and not as SDK-import provenance;
 - existing normalized `PackageReference` identities introduced by #151.
 
 No new package-item collection is needed. `MsBuildProjectFactsEvaluator` already requests `PackageReference`; #152 only needs one additional property in the existing `dotnet msbuild -getProperty` evaluation.
@@ -73,7 +79,7 @@ The Core classifier must continue to receive normalized values only and remain i
 
 ### Signals evaluated but not selected
 
-The Worker SDK also emits the project-system capability `DotNetCoreWorker`. This is strong Worker-specific evidence, but collecting `ProjectCapability` would add another evaluated item set while duplicating the cheaper `UsingMicrosoftNETSdkWorker` property. It is not approved for #152 unless later evidence shows the property is insufficient.
+The Worker SDK also emits the project-system capability `DotNetCoreWorker`. It is Worker-specific evidence, but an evaluated item likewise does not by itself prove which import declared it. Collecting `ProjectCapability` would also add another evaluated item set while largely duplicating the cheaper explicit-opt-in property, so it is not approved for #152.
 
 `Microsoft.Extensions.Hosting`, `Microsoft.Extensions.Hosting.Abstractions`, GC properties, content-copy defaults, and framework/hosting packages were considered but remain non-authoritative.
 
@@ -81,7 +87,7 @@ The Worker SDK also emits the project-system capability `DotNetCoreWorker`. This
 
 Research fixtures live under `tests/Fixtures/WorkerProjectSignals` so they do not alter the existing `ProjectKinds` smoke baseline before #152:
 
-- `UsingWorkerProperty`: common SDK executable with the official `UsingMicrosoftNETSdkWorker=true` flag; reproduces the current `console` false negative;
+- `UsingWorkerProperty`: common SDK executable that manually opts in with `UsingMicrosoftNETSdkWorker=true`; proves both the current `console` false negative and the lack of assignment provenance;
 - `SystemdService`: common SDK executable with explicit systemd service integration; represents the approved moderate fallback;
 - `HostingOnlyAmbiguous`: executable with only `Microsoft.Extensions.Hosting`; remains `console` and demonstrates why Generic Host alone is insufficient;
 - `WebConflict`: Web SDK plus the strong Worker flag; records the future conservative `unknown` conflict.
@@ -96,7 +102,7 @@ Service-lifetime detection reuses the normalized `PackageReference` items alread
 
 ## Consequences
 
-The follow-up can recognize SDK-composed Workers with high confidence and common-SDK service applications with medium confidence without broad Generic Host false positives.
+The follow-up can recognize projects that explicitly advertise Worker semantics through `UsingMicrosoftNETSdkWorker=true` with high confidence, and common-SDK service applications with medium confidence, without broad Generic Host false positives. That classification does not assert where the property was assigned.
 
 Some real Workers that use only `Microsoft.Extensions.Hosting` and register `BackgroundService` in source will intentionally remain `console`. Detecting those would require source-level or richer semantic evidence and is outside this roadmap step.
 
