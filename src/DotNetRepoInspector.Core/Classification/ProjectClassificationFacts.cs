@@ -5,8 +5,15 @@ public sealed record ProjectClassificationFacts(
     string? OutputType,
     bool? IsTestProject)
 {
-    public bool? IsTestingPlatformApplication { get; init; }
+    public bool? IsTestingPlatformApplication
+    {
+        get;
+        init;
+    }
 
-    public IReadOnlyList<string> PackageReferences { get; init; } =
-        [];
+    public IReadOnlyList<string> PackageReferences
+    {
+        get;
+        init;
+    } = [];
 }
