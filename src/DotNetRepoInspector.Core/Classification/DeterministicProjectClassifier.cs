@@ -6,9 +6,20 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
 {
     public const string WebSdk = "Microsoft.NET.Sdk.Web";
     public const string WorkerSdk = "Microsoft.NET.Sdk.Worker";
+    public const string MSTestSdk = "MSTest.Sdk";
+    public const string MicrosoftNetTestSdkPackage = "Microsoft.NET.Test.Sdk";
 
-    private static readonly IReadOnlyList<string> TestSignals =
+    private static readonly IReadOnlyList<string> IsTestProjectSignals =
         Array.AsReadOnly(new[] { "property:IsTestProject=true" });
+
+    private static readonly IReadOnlyList<string> TestingPlatformApplicationSignals =
+        Array.AsReadOnly(new[] { "property:IsTestingPlatformApplication=true" });
+
+    private static readonly IReadOnlyList<string> MSTestSdkSignals =
+        Array.AsReadOnly(new[] { $"sdk:{MSTestSdk}" });
+
+    private static readonly IReadOnlyList<string> MicrosoftNetTestSdkPackageSignals =
+        Array.AsReadOnly(new[] { $"package:{MicrosoftNetTestSdkPackage}" });
 
     private static readonly IReadOnlyList<string> WebSignals =
         Array.AsReadOnly(new[] { $"sdk:{WebSdk}" });
@@ -44,15 +55,51 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
             }
         }
 
+        var packageReferences = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var packageReference in facts.PackageReferences)
+        {
+            if (!string.IsNullOrWhiteSpace(packageReference))
+            {
+                packageReferences.Add(packageReference.Trim());
+            }
+        }
+
         var hasWebSdk = declaredSdks.Contains(WebSdk);
         var hasWorkerSdk = declaredSdks.Contains(WorkerSdk);
+        var hasMSTestSdk = declaredSdks.Contains(MSTestSdk);
+        var hasMicrosoftNetTestSdkPackage =
+            packageReferences.Contains(MicrosoftNetTestSdkPackage);
+
+        if (facts.IsTestingPlatformApplication is true)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Test,
+                ProjectClassificationConfidence.High,
+                TestingPlatformApplicationSignals);
+        }
 
         if (facts.IsTestProject is true)
         {
             return new ProjectClassification(
                 ProjectClassificationKinds.Test,
                 ProjectClassificationConfidence.High,
-                TestSignals);
+                IsTestProjectSignals);
+        }
+
+        if (hasMSTestSdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Test,
+                ProjectClassificationConfidence.High,
+                MSTestSdkSignals);
+        }
+
+        if (facts.IsTestProject is null && hasMicrosoftNetTestSdkPackage)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Test,
+                ProjectClassificationConfidence.Medium,
+                MicrosoftNetTestSdkPackageSignals);
         }
 
         if (hasWebSdk && hasWorkerSdk)
