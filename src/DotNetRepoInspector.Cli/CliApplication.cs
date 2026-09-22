@@ -222,30 +222,43 @@ public sealed class CliApplication
             }
         }
 
-        var hasErrors = HasErrorDiagnostics(report);
-        if (hasErrors)
+        var health = InspectionHealthEvaluator.Evaluate(report);
+        if (string.Equals(
+                health.OverallStatus,
+                InspectionHealthStatus.Error,
+                StringComparison.Ordinal))
         {
             console.Logger.Warning(
                 "inspection.completed-with-errors",
-                "Repository inspection completed with error diagnostics.");
+                "Repository inspection completed with error diagnostics.",
+                InspectionHealthContext(health));
             return CliExitCodes.CompletedWithErrors;
         }
 
         console.Logger.Verbose(
             "inspection.completed",
-            "Repository inspection completed successfully.");
+            "Repository inspection completed successfully.",
+            InspectionHealthContext(health));
         return CliExitCodes.Success;
     }
 
-    private static bool HasErrorDiagnostics(InspectionReport report) =>
-        report.Diagnostics.Any(IsError) ||
-        report.Projects.Any(project => project.Diagnostics.Any(IsError));
-
-    private static bool IsError(InspectionDiagnostic diagnostic) =>
-        string.Equals(
-            diagnostic.Severity,
-            InspectionDiagnosticSeverity.Error,
-            StringComparison.Ordinal);
+    private static Dictionary<string, string> InspectionHealthContext(
+        InspectionHealthSummary health) =>
+        new(StringComparer.Ordinal)
+        {
+            ["overallStatus"] = health.OverallStatus,
+            ["repositoryStatus"] = health.RepositoryStatus,
+            ["repositoryDiagnostics"] =
+                health.RepositoryDiagnostics.Total.ToString(CultureInfo.InvariantCulture),
+            ["projectDiagnostics"] =
+                health.ProjectDiagnostics.Total.ToString(CultureInfo.InvariantCulture),
+            ["projectsWithDiagnostics"] =
+                health.ProjectsWithDiagnostics.ToString(CultureInfo.InvariantCulture),
+            ["projectsWithWarnings"] =
+                health.ProjectsWithWarnings.ToString(CultureInfo.InvariantCulture),
+            ["projectsWithErrors"] =
+                health.ProjectsWithErrors.ToString(CultureInfo.InvariantCulture)
+        };
 
     private static Dictionary<string, string> ExceptionContext(Exception exception) =>
         new(StringComparer.Ordinal)
