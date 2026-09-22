@@ -18,7 +18,7 @@ public sealed class WorkerProjectSignalResearchTests
     private static readonly string[] ResearchItems = ["PackageReference"];
 
     [Fact]
-    public async Task ExplicitWorkerProperty_IsObservableButProductionStillClassifiesConsole()
+    public async Task ExplicitWorkerOptInProperty_IsObservableButProductionStillClassifiesConsole()
     {
         string projectPath = FixturePath(
             "WorkerProjectSignals",
@@ -109,7 +109,7 @@ public sealed class WorkerProjectSignalResearchTests
     }
 
     [Fact]
-    public async Task WebConflict_ExposesStrongWorkerFlagButProductionStillChoosesWeb()
+    public async Task WebConflict_ExposesExplicitWorkerOptInButProductionStillChoosesWeb()
     {
         string projectPath = FixturePath(
             "WorkerProjectSignals",
