@@ -1,10 +1,37 @@
-# Imagem de container local
+# Imagem oficial de container
 
 **Idiomas:** [English](../en/container.md) | Português (Brasil)
 
-O repositório contém a implementação da imagem de container oficial planejada do DotNetRepoInspector. Esta etapa é somente para build e validação local; a issue #101 **não** publica imagem no GHCR nem no Docker Hub.
+O DotNetRepoInspector publica uma imagem oficial multi-arquitetura de container em cada release protegida do produto. A mesma release é distribuída pelo GHCR e pelo Docker Hub e é validada contra a mesma revision de código-fonte e o mesmo digest imutável da imagem.
 
 O contrato de runtime é definido pela [ADR 0005](decisions/0005-container-execution-contract.md).
+
+## Distribuição oficial
+
+As imagens oficiais são publicadas nos dois registries:
+
+```text
+ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector
+docker.io/rodrigodotnet/dotnet-repo-inspector
+```
+
+O índice OCI publicado oferece suporte a `linux/amd64` e `linux/arm64`. Releases estáveis publicam a tag exata `:<version>` e também as tags móveis `:<major>.<minor>`, `:<major>` e `:latest`. Prereleases publicam somente a tag exata da versão de prerelease, sem mover aliases estáveis.
+
+Para automação reproduzível, prefira a versão imutável da release e depois fixe o digest `sha256` resolvido em vez de depender de uma tag móvel. O workflow protegido de Release verifica que GHCR e Docker Hub resolvem o digest esperado da release.
+
+Cada GitHub Release inclui evidências de container produzidas pelo mesmo workflow protegido:
+
+- `container-release-plan.json` registra imagens, tags, plataformas, labels e revision de código-fonte esperadas antes da publicação;
+- `container-distribution.json` registra o digest publicado, as plataformas `linux/amd64` / `linux/arm64` e as expectativas verificadas de SBOM/provenance.
+
+Uma imagem publicada pode ser inspecionada sem baixar todas as plataformas:
+
+```bash
+docker buildx imagetools inspect ghcr.io/rodri-oliveira-dev/dotnet-repo-inspector:<version>
+docker buildx imagetools inspect docker.io/rodrigodotnet/dotnet-repo-inspector:<version>
+```
+
+O digest e a lista de plataformas devem corresponder ao `container-distribution.json` da release. SBOM e provenance são attestations OCI vinculadas ao digest e verificadas pelo workflow de release; use em conjunto a evidência da GitHub Release e o digest do registry ao validar a provenance de supply chain.
 
 ## Conteúdo da imagem
 
