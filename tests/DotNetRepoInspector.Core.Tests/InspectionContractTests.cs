@@ -88,6 +88,28 @@ public sealed class InspectionContractTests
     }
 
     [Fact]
+    public void Serialize_RejectsWhitespaceClassificationSubtype()
+    {
+        var report = CreateReport(reverseCollections: false);
+        var project = report.Projects[0];
+        var reportWithWhitespaceSubtype = report with
+        {
+            Projects = new[]
+            {
+                project with
+                {
+                    Classification = project.Classification! with
+                    {
+                        Subtype = " "
+                    }
+                }
+            }
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(reportWithWhitespaceSubtype));
+    }
+
+    [Fact]
     public void Deserialize_AcceptsOlderPayloadWithoutClassificationSubtype()
     {
         var json = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false));
