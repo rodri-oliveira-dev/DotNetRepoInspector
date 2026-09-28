@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` defines the stable inspection result independently of MSBuild internals, GitHub Actions, persistence, or any specific delivery mechanism.
 
-The current schema version is `1.3`.
+The current schema version is `1.4`.
 
 ## Top-level contract
 
@@ -32,12 +32,14 @@ A directory that is not inside a Git repository remains a valid inspection targe
 
 ## Classification and explicit overrides
 
-`projects[].classification.kind` is the effective classification. Normally it is produced by the deterministic classifier and `confidence` and `signals` describe the automatic decision.
+`projects[].classification.kind` is the effective base classification. Normally it is produced by the deterministic classifier and `confidence` and `signals` describe the automatic decision.
 
-Schema `1.3` adds two optional fields used only when an explicit configuration override changes that effective result:
+Schema `1.3` added two optional fields used only when an explicit configuration override changes that effective result:
 
 - `source`: `configuration` when the override came from the repository configuration file, or `request` when it came directly from the CLI/Action/request layer;
 - `automaticKind`: the classification kind that the automatic classifier produced before the override was applied.
+
+Schema `1.4` adds optional `subtype` as a separate refinement of `classification.kind`. `subtype` is omitted when no approved subtype evidence exists. The current engine does not implement any concrete subtype rules for Web API, MVC/Razor, Blazor, Azure Functions, or other workloads; consumers must not infer a subtype from project names, paths, source files, or the base `kind` alone.
 
 Automatic `signals` remain in the result even when an override is active. The Inspector does not rewrite MSBuild facts to make them agree with a configured override, and automatic `confidence` is omitted rather than being presented as confidence in the manual choice.
 
@@ -52,7 +54,7 @@ The contract deliberately distinguishes absence from an explicit value:
 - `[]` means the collection was produced and contains no entries;
 - JSON `null` values are not emitted by the canonical serializer.
 
-This distinction is particularly important for MSBuild facts such as `isTestProject` and `isPackable`, for `repository.isDirty`, and for classification provenance fields that only exist when an override is active.
+This distinction is particularly important for MSBuild facts such as `isTestProject` and `isPackable`, for `repository.isDirty`, for `classification.subtype` when no subtype evidence exists, and for classification provenance fields that only exist when an override is active.
 
 ## Diagnostics
 
@@ -96,7 +98,8 @@ Schema versions follow a major/minor policy.
 - Additive, optional fields may be introduced in a new `1.x` version.
 - Schema `1.1` added the optional diagnostic `context` object and constrained diagnostic severity to the documented vocabulary.
 - Schema `1.2` added the optional `repository.isDirty` boolean populated by Git metadata inspection.
-- Schema `1.3` adds optional `classification.source` and `classification.automaticKind` fields so explicit classification overrides remain distinguishable from automatic classification.
+- Schema `1.3` added optional `classification.source` and `classification.automaticKind` fields so explicit classification overrides remain distinguishable from automatic classification.
+- Schema `1.4` adds optional `classification.subtype` as a refinement of the base classification kind without adding concrete subtype detection rules.
 - Consumers of schema `1.x` should ignore unknown fields and preserve the documented semantics of existing fields.
 - Removing or renaming a field, changing its type, making an optional field required, or changing its meaning is a breaking change and requires a new major schema version such as `2.0`.
 - `InspectionSchema.IsCompatibleVersion` accepts versions with the current major version and rejects a different major version.
@@ -125,6 +128,7 @@ The stable contract intentionally does not expose infrastructure-specific result
 | Project `IsPackable` | `projects[].isPackable` |
 | Project `RuntimeIdentifiers` | `projects[].runtimeIdentifiers` |
 | Automatic classifier result | `projects[].classification.kind` when no override is active; otherwise `projects[].classification.automaticKind` |
+| Approved subtype evidence | optional `projects[].classification.subtype` when supported evidence exists |
 | Explicit classification override | effective `projects[].classification.kind` plus `projects[].classification.source` |
 
 The raw MSBuild `Properties` dictionary from the evaluation layer is intentionally excluded. It is an internal evidence source, not part of the stable public contract.

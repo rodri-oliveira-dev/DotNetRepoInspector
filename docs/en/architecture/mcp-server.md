@@ -78,7 +78,7 @@ A successful result sets MCP `isError` to `false`. `data.report` is the existing
   "ok": true,
   "data": {
     "report": {
-      "schemaVersion": "1.3"
+      "schemaVersion": "1.4"
     }
   },
   "error": null

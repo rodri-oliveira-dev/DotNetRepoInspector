@@ -342,4 +342,19 @@ public sealed class ProjectClassifierTests
 
         Assert.Equal(second, first);
     }
+
+    [Fact]
+    public void Classify_DoesNotPopulateConcreteSubtypes()
+    {
+        var classifications = new[]
+        {
+            _classifier.Classify(new ProjectClassificationFacts(WebSdk, "Exe", false)),
+            _classifier.Classify(new ProjectClassificationFacts(WorkerSdk, "Exe", false)),
+            _classifier.Classify(new ProjectClassificationFacts(Array.Empty<string>(), "Exe", false)),
+            _classifier.Classify(new ProjectClassificationFacts(Array.Empty<string>(), "Library", false)),
+            _classifier.Classify(new ProjectClassificationFacts(Array.Empty<string>(), null, null))
+        };
+
+        Assert.All(classifications, classification => Assert.Null(classification.Subtype));
+    }
 }

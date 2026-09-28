@@ -11,7 +11,7 @@ The public GitHub Action refs created from that release line are available, incl
 | Surface | v1.0.0 baseline |
 | --- | --- |
 | Product version | `1.0.0` |
-| Inspection schema | `1.3` (schema major `1`) |
+| Inspection schema | `1.4` (schema major `1`) |
 | NuGet package | `DotNetRepoInspector` |
 | .NET Tool command | `dotnet-repo-inspect` / `dotnet repo-inspect` |
 | MCP NuGet package | `DotNetRepoInspector.Mcp` (`DotnetTool`, `McpServer`) |
@@ -35,7 +35,7 @@ The first stable release includes these supported surfaces:
 - repository/project discovery based on evaluated .NET/MSBuild metadata;
 - base classification: Web, Worker, Console, Library, Test, and Unknown;
 - normalized project references and Git repository metadata;
-- versioned inspection JSON, with `schemaVersion 1.3` as the first v1 release baseline;
+- versioned inspection JSON, with `schemaVersion 1.4` as the first v1 release baseline;
 - optional `.dotnetrepoinspector.json`, exclusions, and explicit classification overrides;
 - CLI/.NET Tool with deterministic stdout/stderr separation and documented exit codes;
 - reusable Composite GitHub Action using the same .NET Tool;
@@ -43,7 +43,7 @@ The first stable release includes these supported surfaces:
 - compatibility validation for .NET 8/10 target repositories on Ubuntu, Windows, and macOS;
 - security/privacy boundaries, OSS governance, real-repository validation, and performance guardrails.
 
-Application subtypes and the optional policy engine remain post-v1 work. They are not part of the v1.0.0 compatibility promise.
+Concrete subtype detection rules and the optional policy engine remain post-v1 work. The v1 contract includes the optional `classification.subtype` field, but the v1.0.0 compatibility promise does not include concrete subtype classifications.
 
 ## Compatibility boundaries
 
@@ -87,7 +87,7 @@ Before starting the official release, confirm on `main`:
 - package validation installs the exact `DotNetRepoInspector.1.0.0.nupkg` globally and locally and verifies `--help`, `--version`, and a real inspection;
 - MCP validation inspects the exact `.nupkg`/`.snupkg`, installs the tool, resolves it through local-source `dnx`, and performs a real stdio `inspect_repository` call;
 - the release candidate contains `release-manifest.json` and `SHA256SUMS`;
-- the manifest points to the exact release commit and reports schema `1.3`;
+- the manifest points to the exact release commit and reports schema `1.4`;
 - GitHub Action and compatibility smoke tests are green on Ubuntu, Windows, and macOS.
 
 A manual safe dry-run can be started with **Actions → Release → Run workflow**, version `1.0.0`, `publish=false`. The publication job must be skipped.

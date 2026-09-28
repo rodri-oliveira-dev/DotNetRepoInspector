@@ -6,6 +6,8 @@ DotNetRepoInspector classifies projects from evaluated structural facts instead 
 
 The classifications are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
+`projects[].classification.subtype` is a separate optional refinement of the base classification kind. The current classifier does not populate concrete subtypes; the field stays absent unless a future approved rule provides explicit subtype evidence.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:
@@ -89,3 +91,5 @@ The engine does not classify from:
 - arbitrary raw MSBuild properties that have not been promoted to normalized classification facts.
 
 New signals should only be added when the inspection model can collect them explicitly and their precedence is deterministic.
+
+Subtype rules follow the same bar: they must use approved evaluated metadata, avoid source-code inspection and name/path heuristics, and keep the base `classification.kind` semantics unchanged.

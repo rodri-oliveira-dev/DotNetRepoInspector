@@ -66,7 +66,7 @@ A Action intencionalmente não expõe um input `inspector-version`. Cada revisã
       src/App/App.csproj=web
 ```
 
-Um override altera somente a interpretação efetiva da classificação. Os fatos do MSBuild permanecem intactos. O schema `1.3` expõe `classification.source` e `classification.automaticKind` quando um override está ativo, permitindo que automações distingam o resultado configurado do automático.
+Um override altera somente a interpretação efetiva da classificação. Os fatos do MSBuild permanecem intactos. O schema `1.3` e posteriores expõem `classification.source` e `classification.automaticKind` quando um override está ativo, permitindo que automações distingam o resultado configurado do automático.
 
 ## Exclusões em inventário de frota
 

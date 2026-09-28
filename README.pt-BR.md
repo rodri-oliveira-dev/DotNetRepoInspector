@@ -28,13 +28,14 @@ A superfície da v1 inclui:
 - metadados de `global.json` e SDK resolvido;
 - metadados Git de repositório, commit, branch, remote e dirty state quando disponíveis;
 - classificação base determinística: Web, Worker, Console, Library, Test e Unknown;
-- JSON de inspeção versionado (`schemaVersion 1.3`);
+- campo opcional de contrato `classification.subtype` reservado para evidência explícita de subtipo;
+- JSON de inspeção versionado (`schemaVersion 1.4`);
 - configuração opcional do repositório para exclusões e overrides explícitos de classificação;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
 - diagnósticos estruturados, cancelamento, compatibilidade cross-platform, hardening de segurança, guardrails de performance e validação contra repositórios públicos fixados.
 
-Subtipos de aplicações e a camada opcional de políticas são trabalho pós-v1 e não fazem parte da promessa de compatibilidade da v1.
+Regras concretas de detecção de subtipo e a camada opcional de políticas continuam como trabalho futuro. O contrato v1 inclui o campo opcional `classification.subtype`, mas o engine atual o mantém ausente até que evidência de subtipo aprovada seja introduzida depois.
 
 ## Princípios de design
 
@@ -48,11 +49,11 @@ Subtipos de aplicações e a camada opcional de políticas são trabalho pós-v1
 
 ## Contrato JSON
 
-O contrato v1 usa atualmente o schema de inspeção **1.3**. Um payload representativo é:
+O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload representativo é:
 
 ```json
 {
-  "schemaVersion": "1.3",
+  "schemaVersion": "1.4",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -296,7 +297,7 @@ Inspection Engine ----> InspectionReport ----> JSON output
                     HTTP/webhook
 
 Delivery hosts: CLI / .NET Tool, servidor MCP, GitHub Action e imagens de container
-Pós-v1: sinks adicionais, policy/reporting, subtipos mais ricos
+Pós-v1: sinks adicionais, policy/reporting, regras concretas de subtipo
 ```
 
 `DotNetRepoInspector.Core` contém os contratos normalizados e a classificação. A coleta de MSBuild e Git permanece em adapters. `DotNetRepoInspector.Persistence` contém contratos de snapshot/proveniência agnósticos de provider e `DotNetRepoInspector.Persistence.Http` é o primeiro sink concreto. Core e Engine continuam independentes de providers HTTP/banco e de credenciais.
@@ -309,7 +310,7 @@ Mudanças de classificação exigem fixtures sintéticas reproduzíveis e evidê
 
 ## Roadmap
 
-A fundação da v1 e os canais públicos de distribuição estão estabelecidos. A publicação oficial permanece uma operação protegida e explícita. O trabalho contínuo inclui subtipos mais ricos de aplicações, adapters adicionais de persistência quando justificados, uma camada opcional de políticas sobre o contrato normalizado e novas evidências de interoperabilidade.
+A fundação da v1 e os canais públicos de distribuição estão estabelecidos. A publicação oficial permanece uma operação protegida e explícita. O trabalho contínuo inclui regras concretas de subtipo de aplicações, adapters adicionais de persistência quando justificados, uma camada opcional de políticas sobre o contrato normalizado e novas evidências de interoperabilidade.
 
 ## Licença
 

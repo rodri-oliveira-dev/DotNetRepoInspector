@@ -6,6 +6,8 @@ O DotNetRepoInspector classifica projetos a partir de fatos estruturais avaliado
 
 As classificações são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
+`projects[].classification.subtype` é um refinamento opcional separado do tipo base de classificação. O classificador atual não preenche subtipos concretos; o campo permanece ausente até que uma regra futura aprovada forneça evidência explícita de subtipo.
+
 ## Entradas
 
 O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:
@@ -89,3 +91,5 @@ O engine não classifica com base em:
 - propriedades MSBuild arbitrárias e brutas que não tenham sido promovidas a fatos normalizados de classificação.
 
 Novos sinais só devem ser adicionados quando o modelo de inspeção puder coletá-los explicitamente e sua precedência for determinística.
+
+Regras de subtipo seguem o mesmo critério: elas devem usar metadados avaliados e aprovados, evitar inspeção de código-fonte e heurísticas por nome/caminho, e preservar a semântica do `classification.kind` base.

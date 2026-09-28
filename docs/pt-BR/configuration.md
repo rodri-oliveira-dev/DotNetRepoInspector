@@ -49,7 +49,7 @@ As exclusões internas da descoberta, como diretórios normais de saída de buil
 
 Um override altera apenas a **interpretação efetiva da classificação do projeto**. Ele não altera SDKs, target frameworks, `OutputType`, metadados de teste, packability, runtime identifiers, referências nem qualquer outro fato coletado pelo MSBuild.
 
-Quando um override é aplicado, o schema `1.3` o torna distinguível da classificação automática:
+Quando um override é aplicado, o schema `1.3` e posteriores o tornam distinguível da classificação automática:
 
 ```json
 "classification": {

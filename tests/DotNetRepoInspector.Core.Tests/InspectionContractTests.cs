@@ -54,6 +54,52 @@ public sealed class InspectionContractTests
                 .EnumerateArray()
                 .Select(element => element.GetString())
                 .ToArray());
+        Assert.False(projects[0].GetProperty("classification").TryGetProperty("subtype", out _));
+    }
+
+    [Fact]
+    public void Serialize_EmitsClassificationSubtypeWhenPresent()
+    {
+        var report = CreateReport(reverseCollections: false);
+        var project = report.Projects[0];
+        var reportWithSubtype = report with
+        {
+            Projects = new[]
+            {
+                project with
+                {
+                    Classification = project.Classification! with
+                    {
+                        Subtype = "sample-subtype"
+                    }
+                }
+            }
+        };
+
+        var json = InspectionJsonSerializer.Serialize(reportWithSubtype);
+
+        using var document = JsonDocument.Parse(json);
+        var classification = document.RootElement
+            .GetProperty("projects")[0]
+            .GetProperty("classification");
+
+        Assert.Equal("web", classification.GetProperty("kind").GetString());
+        Assert.Equal("sample-subtype", classification.GetProperty("subtype").GetString());
+    }
+
+    [Fact]
+    public void Deserialize_AcceptsOlderPayloadWithoutClassificationSubtype()
+    {
+        var json = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false));
+        json = json.Replace(
+            $"\"schemaVersion\": \"{InspectionSchema.CurrentVersion}\"",
+            "\"schemaVersion\": \"1.3\"",
+            StringComparison.Ordinal);
+
+        var report = InspectionJsonSerializer.Deserialize(json);
+
+        Assert.Equal("1.3", report.SchemaVersion);
+        Assert.Null(report.Projects[0].Classification!.Subtype);
     }
 
     [Fact]

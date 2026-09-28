@@ -11,7 +11,7 @@ As refs públicas da GitHub Action criadas a partir dessa linha de release estã
 | Superfície | Baseline v1.0.0 |
 | --- | --- |
 | Versão do produto | `1.0.0` |
-| Schema de inspeção | `1.3` (major `1`) |
+| Schema de inspeção | `1.4` (major `1`) |
 | Pacote NuGet | `DotNetRepoInspector` |
 | Comando da .NET Tool | `dotnet-repo-inspect` / `dotnet repo-inspect` |
 | Pacote NuGet MCP | `DotNetRepoInspector.Mcp` (`DotnetTool`, `McpServer`) |
@@ -35,7 +35,7 @@ A primeira release estável inclui estas superfícies suportadas:
 - descoberta de repositórios/projetos baseada em metadados .NET/MSBuild avaliados;
 - classificação base: Web, Worker, Console, Library, Test e Unknown;
 - referências normalizadas entre projetos e metadados Git do repositório;
-- JSON de inspeção versionado, tendo `schemaVersion 1.3` como baseline da primeira release v1;
+- JSON de inspeção versionado, tendo `schemaVersion 1.4` como baseline da primeira release v1;
 - `.dotnetrepoinspector.json` opcional, exclusões e overrides explícitos de classificação;
 - CLI/.NET Tool com separação determinística entre stdout/stderr e códigos de saída documentados;
 - Composite GitHub Action reutilizando a mesma .NET Tool;
@@ -43,7 +43,7 @@ A primeira release estável inclui estas superfícies suportadas:
 - validação de compatibilidade para repositórios alvo .NET 8/10 em Ubuntu, Windows e macOS;
 - fronteiras de segurança/privacidade, governança OSS, validação em repositórios reais e guardrails de performance.
 
-Subtipos de aplicações e a camada opcional de políticas permanecem como trabalho pós-v1. Eles não fazem parte da promessa de compatibilidade da v1.0.0.
+Regras concretas de detecção de subtipo e a camada opcional de políticas permanecem como trabalho pós-v1. O contrato v1 inclui o campo opcional `classification.subtype`, mas a promessa de compatibilidade da v1.0.0 não inclui classificações concretas de subtipo.
 
 ## Limites de compatibilidade
 
@@ -87,7 +87,7 @@ Antes de iniciar a release oficial, confirme na `main`:
 - a validação do pacote instala o `DotNetRepoInspector.1.0.0.nupkg` exato global e localmente e verifica `--help`, `--version` e uma inspeção real;
 - a validação MCP inspeciona `.nupkg`/`.snupkg` exatos, instala a tool, resolve por `dnx` com fonte local e executa uma chamada stdio real de `inspect_repository`;
 - o release candidate contém `release-manifest.json` e `SHA256SUMS`;
-- o manifest aponta para o commit exato da release e informa schema `1.3`;
+- o manifest aponta para o commit exato da release e informa schema `1.4`;
 - smoke tests da GitHub Action e de compatibilidade estão verdes em Ubuntu, Windows e macOS.
 
 Um dry-run manual seguro pode ser iniciado em **Actions → Release → Run workflow**, versão `1.0.0`, `publish=false`. O job de publicação deve ser ignorado.
