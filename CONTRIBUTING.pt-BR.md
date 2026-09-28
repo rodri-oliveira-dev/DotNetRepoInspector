@@ -74,6 +74,12 @@ python ./.github/scripts/coverage_summary.py \
   --baseline ./.github/coverage-baseline.json
 ```
 
+### Baseline de cobertura vs cobertura observada
+
+O badge de cobertura do README é intencionalmente um **badge de gate**, não uma medição ao vivo. O valor `coverage gate ≥70%` representa o threshold do repositório configurado em [`.github/coverage-baseline.json`](.github/coverage-baseline.json). A cobertura de linhas observada é recalculada a partir dos relatórios Cobertura em cada validação do CI e gravada em `artifacts/coverage/coverage-summary.json` e `artifacts/coverage/coverage-summary.md`; o CI também adiciona o mesmo resumo ao `GITHUB_STEP_SUMMARY`.
+
+O gate combina o mínimo absoluto, a baseline registrada e a queda máxima permitida. Quando a política da baseline de cobertura mudar, mantenha o badge do README sincronizado com o requisito efetivo. Não use o badge estático para representar a cobertura observada mais recente.
+
 Durante a implementação, execute primeiro os testes mais próximos da mudança e, antes de abrir o pull request, execute a baseline do repositório.
 
 ## Convenções do projeto

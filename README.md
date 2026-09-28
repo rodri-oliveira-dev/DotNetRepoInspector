@@ -7,9 +7,11 @@
 [![NuGet](https://img.shields.io/nuget/v/DotNetRepoInspector.svg)](https://www.nuget.org/packages/DotNetRepoInspector)
 [![MCP NuGet](https://img.shields.io/nuget/v/DotNetRepoInspector.Mcp.svg?label=MCP%20NuGet)](https://www.nuget.org/packages/DotNetRepoInspector.Mcp)
 [![.NET](https://img.shields.io/badge/.NET-10.0-512BD4)](https://dotnet.microsoft.com/)
-[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
+[![Coverage gate](https://img.shields.io/badge/coverage%20gate-%E2%89%A570%25-brightgreen)](.github/coverage-baseline.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub Marketplace](https://img.shields.io/badge/GitHub%20Marketplace-DotNetRepoInspector-181717?logo=github)](https://github.com/marketplace/actions/dotnetrepoinspector)
+
+> **Coverage badge semantics:** `coverage gate ≥70%` is the enforced repository threshold, not the coverage measured in the latest run. CI computes observed line coverage on every validation run and publishes it in the coverage artifacts and job summary.
 
 **Inspect and classify .NET projects using evaluated MSBuild metadata for CI/CD, automation, architecture governance, and optional historical evidence.**
 
