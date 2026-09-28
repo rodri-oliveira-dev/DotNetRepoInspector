@@ -81,13 +81,57 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         }
 
         var properties = new Dictionary<string, string>(evaluation.Properties, StringComparer.Ordinal);
+        var targetFrameworks = NormalizeList(properties, "TargetFrameworks", "TargetFramework");
+        var innerBuildTargetFrameworks = GetListValues(properties, "TargetFrameworks");
+        var targetFrameworkFacts = new List<MsBuildTargetFrameworkFacts>(
+            innerBuildTargetFrameworks.Length);
+
+        foreach (var targetFramework in innerBuildTargetFrameworks)
+        {
+            var innerEvaluation = await _projectEvaluator.EvaluateAsync(
+                new MsBuildEvaluationRequest(
+                    projectPath,
+                    EvaluatedPropertyNames,
+                    EvaluatedItemNames,
+                    new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["TargetFramework"] = targetFramework
+                    }),
+                cancellationToken);
+
+            if (!innerEvaluation.Succeeded)
+            {
+                var error = innerEvaluation.Error ?? new MsBuildEvaluationError(
+                    MsBuildEvaluationErrorCode.InvalidMsBuildOutput,
+                    $"MSBuild inner-build evaluation failed for target framework '{targetFramework}'.");
+
+                return MsBuildProjectFactsResult.Failure(projectPath, error);
+            }
+
+            var innerProperties = new Dictionary<string, string>(
+                innerEvaluation.Properties,
+                StringComparer.Ordinal);
+            targetFrameworkFacts.Add(new MsBuildTargetFrameworkFacts(
+                targetFramework,
+                NormalizeScalar(innerProperties, "OutputType"),
+                NormalizeBoolean(innerProperties, "IsTestProject"),
+                NormalizeBoolean(innerProperties, "IsTestingPlatformApplication"),
+                NormalizeBoolean(innerProperties, "UsingMicrosoftNETSdkWorker"),
+                NormalizePackageReferences(innerEvaluation.Items)));
+        }
+
+        var packageReferences = NormalizePackageReferences(evaluation.Items)
+            .Concat(targetFrameworkFacts.SelectMany(facts => facts.PackageReferences))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(identity => identity, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(identity => identity, StringComparer.Ordinal)
+            .ToArray();
         var facts = new MsBuildProjectFacts(
             evaluation.ResolvedSdkVersion,
             projectSdks,
-            NormalizeList(properties, "TargetFrameworks", "TargetFramework"),
+            targetFrameworks,
             NormalizeScalar(properties, "OutputType"),
             NormalizeBoolean(properties, "IsTestProject"),
-            NormalizeBoolean(properties, "UsingMicrosoftNETSdkWorker"),
             NormalizeBoolean(properties, "IsPackable"),
             NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier"),
             properties)
@@ -95,8 +139,12 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             IsTestingPlatformApplication = NormalizeBoolean(
                 properties,
                 "IsTestingPlatformApplication"),
-            PackageReferences = NormalizePackageReferences(evaluation.Items),
-            ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items)
+            UsingMicrosoftNETSdkWorker = NormalizeBoolean(
+                properties,
+                "UsingMicrosoftNETSdkWorker"),
+            PackageReferences = packageReferences,
+            ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items),
+            TargetFrameworkFacts = targetFrameworkFacts
         };
 
         return MsBuildProjectFactsResult.Success(projectPath, facts);

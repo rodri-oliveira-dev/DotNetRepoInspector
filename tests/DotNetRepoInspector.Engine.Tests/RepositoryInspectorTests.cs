@@ -231,7 +231,6 @@ public sealed class RepositoryInspectorTests
                 ["net10.0"],
                 "Library",
                 false,
-                null,
                 true,
                 Array.Empty<string>(),
                 new Dictionary<string, string>(StringComparer.Ordinal));

@@ -202,6 +202,13 @@
       ]
     },
     {
+      "id": "worker-signal-multi-targeted-conditional",
+      "path": "WorkerProjectSignals/MultiTargetedConditional",
+      "proves": [
+        "worker-signal-multi-targeted-conditional"
+      ]
+    },
+    {
       "id": "worker-signal-hosting-only-ambiguous",
       "path": "WorkerProjectSignals/HostingOnlyAmbiguous",
       "proves": [

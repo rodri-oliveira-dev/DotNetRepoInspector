@@ -19,6 +19,8 @@ O classificador consome fatos normalizados produzidos pelo pipeline de inspeçã
 
 O classificador do Core não possui dependência de MSBuild. `MsBuildProjectClassificationAdapter` converte `MsBuildProjectFacts` para o modelo de entrada do Core.
 
+Para projetos multi-target, os fatos de classificação são avaliados em cada inner build do MSBuild. Propriedades de Worker e referências de pacote são combinadas entre os target frameworks, enquanto um pacote de lifetime de serviço só é associado a `OutputType == Exe` quando ambos os fatos ocorrem no mesmo target framework.
+
 O campo público `projects[].isTestProject` mantém o significado original: ele representa o fato MSBuild avaliado `IsTestProject`. Assim, um projeto pode ser classificado como `test` por outro sinal aprovado enquanto `isTestProject` é `false` ou está ausente.
 
 ## Sinais de projeto de teste

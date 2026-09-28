@@ -28,6 +28,7 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `WorkerProjectSignals/UsingWorkerProperty` | common SDK with official `UsingMicrosoftNETSdkWorker=true` build signal |
 | `WorkerProjectSignals/SystemdService` | executable common-SDK app with explicit systemd service-hosting integration |
 | `WorkerProjectSignals/WindowsService` | executable common-SDK app with explicit Windows Service lifetime integration |
+| `WorkerProjectSignals/MultiTargetedConditional` | multi-targeted apps with target-framework-conditional Worker signals and a cross-target counterexample |
 | `WorkerProjectSignals/HostingOnlyAmbiguous` | executable Generic Host package usage that remains ambiguous |
 | `WorkerProjectSignals/WebConflict` | Web SDK combined with a strong Worker build signal |
 | `MSBuildEvaluation` | inherited `Directory.Build.props` plus a conditional property |

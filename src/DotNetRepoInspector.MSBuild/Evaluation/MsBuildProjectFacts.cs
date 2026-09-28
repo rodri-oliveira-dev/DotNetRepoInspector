@@ -6,12 +6,17 @@ public sealed record MsBuildProjectFacts(
     IReadOnlyList<string> TargetFrameworks,
     string? OutputType,
     bool? IsTestProject,
-    bool? UsingMicrosoftNETSdkWorker,
     bool? IsPackable,
     IReadOnlyList<string> RuntimeIdentifiers,
     IReadOnlyDictionary<string, string> Properties)
 {
     public bool? IsTestingPlatformApplication
+    {
+        get;
+        init;
+    }
+
+    public bool? UsingMicrosoftNETSdkWorker
     {
         get;
         init;
@@ -24,4 +29,6 @@ public sealed record MsBuildProjectFacts(
     } = [];
 
     public IReadOnlyList<MsBuildProjectReference> ProjectReferences { get; init; } = [];
+
+    public IReadOnlyList<MsBuildTargetFrameworkFacts> TargetFrameworkFacts { get; init; } = [];
 }

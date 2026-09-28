@@ -19,6 +19,8 @@ The classifier consumes normalized facts produced by the inspection pipeline:
 
 The Core classifier has no dependency on MSBuild. `MsBuildProjectClassificationAdapter` maps `MsBuildProjectFacts` into the Core input model.
 
+For multi-targeted projects, classification facts are evaluated in each MSBuild inner build. Worker properties and package references are merged across target frameworks, while a service-lifetime package is paired with `OutputType == Exe` only when both facts occur in the same target framework.
+
 The public `projects[].isTestProject` field keeps its original meaning: it is the evaluated MSBuild `IsTestProject` fact. A project can therefore be classified as `test` from another approved signal while `isTestProject` is `false` or absent.
 
 ## Test-project signals

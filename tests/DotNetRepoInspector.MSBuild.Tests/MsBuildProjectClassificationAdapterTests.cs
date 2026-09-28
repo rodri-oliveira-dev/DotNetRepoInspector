@@ -119,7 +119,6 @@ public sealed class MsBuildProjectClassificationAdapterTests
             outputType,
             isTestProject,
             null,
-            null,
             Array.Empty<string>(),
             properties);
 }
