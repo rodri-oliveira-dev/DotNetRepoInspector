@@ -195,6 +195,13 @@
       ]
     },
     {
+      "id": "worker-signal-windows-service",
+      "path": "WorkerProjectSignals/WindowsService",
+      "proves": [
+        "worker-signal-windows-service"
+      ]
+    },
+    {
       "id": "worker-signal-hosting-only-ambiguous",
       "path": "WorkerProjectSignals/HostingOnlyAmbiguous",
       "proves": [

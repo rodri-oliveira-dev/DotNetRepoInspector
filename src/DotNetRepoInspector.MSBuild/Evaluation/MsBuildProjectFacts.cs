@@ -6,6 +6,7 @@ public sealed record MsBuildProjectFacts(
     IReadOnlyList<string> TargetFrameworks,
     string? OutputType,
     bool? IsTestProject,
+    bool? UsingMicrosoftNETSdkWorker,
     bool? IsPackable,
     IReadOnlyList<string> RuntimeIdentifiers,
     IReadOnlyDictionary<string, string> Properties)

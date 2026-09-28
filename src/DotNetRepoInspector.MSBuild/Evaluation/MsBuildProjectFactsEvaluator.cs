@@ -14,7 +14,8 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         "RuntimeIdentifier",
         "RuntimeIdentifiers",
         "TargetFramework",
-        "TargetFrameworks"
+        "TargetFrameworks",
+        "UsingMicrosoftNETSdkWorker"
     ];
 
     private static readonly string[] EvaluatedItemNames = ["PackageReference", "ProjectReference"];
@@ -86,6 +87,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             NormalizeList(properties, "TargetFrameworks", "TargetFramework"),
             NormalizeScalar(properties, "OutputType"),
             NormalizeBoolean(properties, "IsTestProject"),
+            NormalizeBoolean(properties, "UsingMicrosoftNETSdkWorker"),
             NormalizeBoolean(properties, "IsPackable"),
             NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier"),
             properties)

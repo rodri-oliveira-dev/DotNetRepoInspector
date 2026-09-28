@@ -67,6 +67,27 @@ public sealed class MsBuildProjectClassificationAdapterTests
     }
 
     [Fact]
+    public void Classify_MapsWorkerOptInPropertyToCoreClassifier()
+    {
+        var facts = CreateFacts(
+            new[] { new ProjectSdkReference("Microsoft.NET.Sdk") },
+            "Library",
+            false,
+            NoProperties) with
+        {
+            UsingMicrosoftNETSdkWorker = true
+        };
+
+        var classification = _adapter.Classify(facts);
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:UsingMicrosoftNETSdkWorker=true",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
     public void Classify_DoesNotUseSuggestiveRawPropertiesAsClassificationHeuristics()
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -97,6 +118,7 @@ public sealed class MsBuildProjectClassificationAdapterTests
             Array.Empty<string>(),
             outputType,
             isTestProject,
+            null,
             null,
             Array.Empty<string>(),
             properties);

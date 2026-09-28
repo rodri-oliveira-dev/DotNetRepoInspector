@@ -30,6 +30,26 @@ public sealed class ProjectClassifierTests
     }
 
     [Fact]
+    public void Classify_TestOverridesWorkerPropertyAndServiceLifetimeSignals()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Exe",
+            true)
+        {
+            UsingMicrosoftNETSdkWorker = true,
+            PackageReferences =
+            [
+                DeterministicProjectClassifier.MicrosoftExtensionsHostingSystemdPackage
+            ]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Test, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal("property:IsTestProject=true", Assert.Single(classification.Signals));
+    }
+
+    [Fact]
     public void Classify_MtpApplicationOverridesExplicitVstestFalseAndWorkloadSignals()
     {
         var classification = _classifier.Classify(new ProjectClassificationFacts(
@@ -127,6 +147,80 @@ public sealed class ProjectClassifierTests
     }
 
     [Fact]
+    public void Classify_WorkerOptInPropertyIsHighConfidenceWorkerSignal()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Library",
+            false)
+        {
+            UsingMicrosoftNETSdkWorker = true
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:UsingMicrosoftNETSdkWorker=true",
+            Assert.Single(classification.Signals));
+    }
+
+    [Theory]
+    [InlineData(DeterministicProjectClassifier.MicrosoftExtensionsHostingSystemdPackage)]
+    [InlineData(DeterministicProjectClassifier.MicrosoftExtensionsHostingWindowsServicesPackage)]
+    public void Classify_ExecutableWithServiceLifetimePackageIsMediumConfidenceWorker(
+        string packageReference)
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Exe",
+            false)
+        {
+            PackageReferences = [packageReference]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal($"package:{packageReference}", Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_GenericHostingPackageAloneRemainsConsole()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Exe",
+            false)
+        {
+            PackageReferences = ["Microsoft.Extensions.Hosting"]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Console, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal("property:OutputType=Exe", Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_WebSdkOverridesServiceLifetimePackage()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            WebSdk,
+            "Exe",
+            false)
+        {
+            PackageReferences =
+            [
+                DeterministicProjectClassifier.MicrosoftExtensionsHostingWindowsServicesPackage
+            ]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Web, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            $"sdk:{DeterministicProjectClassifier.WebSdk}",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
     public void Classify_ExecutableWithoutSpecializedSdkIsConsole()
     {
         var classification = _classifier.Classify(new ProjectClassificationFacts(
@@ -165,6 +259,43 @@ public sealed class ProjectClassifierTests
         Assert.Contains("conflict:specialized-sdk", classification.Signals);
         Assert.Contains($"sdk:{DeterministicProjectClassifier.WebSdk}", classification.Signals);
         Assert.Contains($"sdk:{DeterministicProjectClassifier.WorkerSdk}", classification.Signals);
+    }
+
+    [Fact]
+    public void Classify_WebSdkWithWorkerOptInPropertyReturnsUnknown()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            WebSdk,
+            "Exe",
+            false)
+        {
+            UsingMicrosoftNETSdkWorker = true
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Unknown, classification.Kind);
+        Assert.Null(classification.Confidence);
+        Assert.Contains($"sdk:{DeterministicProjectClassifier.WebSdk}", classification.Signals);
+        Assert.Contains("property:UsingMicrosoftNETSdkWorker=true", classification.Signals);
+        Assert.Contains("conflict:web-worker", classification.Signals);
+    }
+
+    [Fact]
+    public void Classify_ServiceLifetimePackageWithoutExecutableOutputRemainsConservative()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            Array.Empty<string>(),
+            "Library",
+            false)
+        {
+            PackageReferences =
+            [
+                DeterministicProjectClassifier.MicrosoftExtensionsHostingSystemdPackage
+            ]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Library, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal("property:OutputType=Library", Assert.Single(classification.Signals));
     }
 
     [Fact]

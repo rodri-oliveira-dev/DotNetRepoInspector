@@ -34,6 +34,7 @@ public sealed class MsBuildProjectClassificationAdapter
             facts.OutputType,
             facts.IsTestProject)
         {
+            UsingMicrosoftNETSdkWorker = facts.UsingMicrosoftNETSdkWorker,
             IsTestingPlatformApplication = facts.IsTestingPlatformApplication,
             PackageReferences = facts.PackageReferences
         });

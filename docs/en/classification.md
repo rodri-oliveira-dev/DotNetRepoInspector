@@ -14,6 +14,7 @@ The classifier consumes normalized facts produced by the inspection pipeline:
 - effective `OutputType`;
 - effective `IsTestProject`;
 - effective `IsTestingPlatformApplication`;
+- effective `UsingMicrosoftNETSdkWorker`;
 - evaluated `PackageReference` identities used by approved classification rules.
 
 The Core classifier has no dependency on MSBuild. `MsBuildProjectClassificationAdapter` maps `MsBuildProjectFacts` into the Core input model.
@@ -43,12 +44,14 @@ Rules are evaluated in this order:
 2. `IsTestProject == true` -> `test`.
 3. declared `MSTest.Sdk` -> `test`.
 4. when `IsTestProject` is missing, evaluated `Microsoft.NET.Test.Sdk` -> `test`.
-5. both `Microsoft.NET.Sdk.Web` and `Microsoft.NET.Sdk.Worker` -> `unknown` because the specialized SDK signals conflict.
-6. `Microsoft.NET.Sdk.Web` -> `web`.
+5. `Microsoft.NET.Sdk.Web` plus a strong Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker == true`) -> `unknown` because the workload signals conflict.
+6. `Microsoft.NET.Sdk.Web` -> `web`; service-lifetime package hints do not override Web.
 7. `Microsoft.NET.Sdk.Worker` -> `worker`.
-8. `OutputType == Exe` -> `console` when no more specific signal matched.
-9. `OutputType == Library` -> `library` when no more specific signal matched.
-10. otherwise -> `unknown`.
+8. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
+9. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
+10. `OutputType == Exe` -> `console` when no more specific signal matched.
+11. `OutputType == Library` -> `library` when no more specific signal matched.
+12. otherwise -> `unknown`.
 
 A strong test signal therefore remains `test` even when the project is executable or declares a specialized workload SDK. Conflicting Web/Worker SDK declarations produce `unknown` only when no approved test signal has already matched.
 
@@ -64,6 +67,9 @@ A strong test signal therefore remains `test` even when the project is executabl
 | `test` | fallback `Microsoft.NET.Test.Sdk` with missing `IsTestProject` | `package:Microsoft.NET.Test.Sdk` | `medium` |
 | `web` | declared `Microsoft.NET.Sdk.Web` | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | declared `Microsoft.NET.Sdk.Worker` | `sdk:Microsoft.NET.Sdk.Worker` | `high` |
+| `worker` | explicit Worker opt-in property | `property:UsingMicrosoftNETSdkWorker=true` | `high` |
+| `worker` | executable with systemd service lifetime integration | `package:Microsoft.Extensions.Hosting.Systemd` | `medium` |
+| `worker` | executable with Windows Service lifetime integration | `package:Microsoft.Extensions.Hosting.WindowsServices` | `medium` |
 | `console` | effective `OutputType == Exe` | `property:OutputType=Exe` | `medium` |
 | `library` | effective `OutputType == Library` | `property:OutputType=Library` | `high` |
 | `unknown` | insufficient or conflicting evidence | observed facts/conflict signal when available | omitted |
@@ -81,19 +87,3 @@ The engine does not classify from:
 - arbitrary raw MSBuild properties that have not been promoted to normalized classification facts.
 
 New signals should only be added when the inspection model can collect them explicitly and their precedence is deterministic.
-
-
-## Approved Worker-signal evolution
-
-Issue #47 researches Worker false negatives without changing the production rules above. [ADR 0010](decisions/0010-worker-project-detection-signals.md) defines the facts and precedence that issue #152 should implement.
-
-The approved direction is intentionally narrower than Generic Host detection:
-
-- effective `UsingMicrosoftNETSdkWorker == true` is a high-confidence **explicit opt-in** signal. The Worker SDK sets it, but the effective value carries no assignment provenance and can also be set manually; classification must not imply that the Worker SDK was imported;
-- executable projects with `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` are medium-confidence Worker candidates when stronger Test/Web evidence is absent;
-- `Microsoft.Extensions.Hosting` by itself remains supporting evidence only because ordinary console and Web applications can use Generic Host;
-- Web SDK plus a strong Worker signal is conflicting workload evidence and should become `unknown`;
-- Test signals keep their existing higher precedence;
-- names, paths, `.Worker` suffixes, and source scanning are not approved.
-
-Until #152 is merged, production classification intentionally continues to use the current Worker SDK rule only.

@@ -14,6 +14,7 @@ O classificador consome fatos normalizados produzidos pelo pipeline de inspeçã
 - `OutputType` efetivo;
 - `IsTestProject` efetivo;
 - `IsTestingPlatformApplication` efetivo;
+- `UsingMicrosoftNETSdkWorker` efetivo;
 - identidades avaliadas de `PackageReference` usadas pelas regras de classificação aprovadas.
 
 O classificador do Core não possui dependência de MSBuild. `MsBuildProjectClassificationAdapter` converte `MsBuildProjectFacts` para o modelo de entrada do Core.
@@ -43,12 +44,14 @@ As regras são avaliadas nesta ordem:
 2. `IsTestProject == true` -> `test`.
 3. `MSTest.Sdk` declarado -> `test`.
 4. quando `IsTestProject` está ausente, `Microsoft.NET.Test.Sdk` avaliado -> `test`.
-5. presença simultânea de `Microsoft.NET.Sdk.Web` e `Microsoft.NET.Sdk.Worker` -> `unknown`, pois os sinais de SDK especializados entram em conflito.
-6. `Microsoft.NET.Sdk.Web` -> `web`.
+5. `Microsoft.NET.Sdk.Web` mais um sinal Worker forte (`Microsoft.NET.Sdk.Worker` ou `UsingMicrosoftNETSdkWorker == true`) -> `unknown`, pois os sinais de workload entram em conflito.
+6. `Microsoft.NET.Sdk.Web` -> `web`; hints de pacote de lifetime de serviço não sobrepõem Web.
 7. `Microsoft.NET.Sdk.Worker` -> `worker`.
-8. `OutputType == Exe` -> `console` quando nenhum sinal mais específico correspondeu.
-9. `OutputType == Library` -> `library` quando nenhum sinal mais específico correspondeu.
-10. caso contrário -> `unknown`.
+8. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
+9. `OutputType == Exe` mais `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
+10. `OutputType == Exe` -> `console` quando nenhum sinal mais específico correspondeu.
+11. `OutputType == Library` -> `library` quando nenhum sinal mais específico correspondeu.
+12. caso contrário -> `unknown`.
 
 Portanto, um sinal forte de teste permanece `test` mesmo quando o projeto é executável ou declara um SDK de workload especializado. Declarações conflitantes dos SDKs Web/Worker produzem `unknown` somente quando nenhum sinal aprovado de teste já correspondeu.
 
@@ -64,6 +67,9 @@ Portanto, um sinal forte de teste permanece `test` mesmo quando o projeto é exe
 | `test` | fallback `Microsoft.NET.Test.Sdk` com `IsTestProject` ausente | `package:Microsoft.NET.Test.Sdk` | `medium` |
 | `web` | `Microsoft.NET.Sdk.Web` declarado | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | `Microsoft.NET.Sdk.Worker` declarado | `sdk:Microsoft.NET.Sdk.Worker` | `high` |
+| `worker` | propriedade de opt-in explícito de Worker | `property:UsingMicrosoftNETSdkWorker=true` | `high` |
+| `worker` | executável com integração de lifetime systemd | `package:Microsoft.Extensions.Hosting.Systemd` | `medium` |
+| `worker` | executável com integração de lifetime Windows Service | `package:Microsoft.Extensions.Hosting.WindowsServices` | `medium` |
 | `console` | `OutputType == Exe` efetivo | `property:OutputType=Exe` | `medium` |
 | `library` | `OutputType == Library` efetivo | `property:OutputType=Library` | `high` |
 | `unknown` | evidência insuficiente ou conflitante | fatos observados/sinal de conflito quando disponível | omitido |
@@ -81,19 +87,3 @@ O engine não classifica com base em:
 - propriedades MSBuild arbitrárias e brutas que não tenham sido promovidas a fatos normalizados de classificação.
 
 Novos sinais só devem ser adicionados quando o modelo de inspeção puder coletá-los explicitamente e sua precedência for determinística.
-
-
-## Evolução aprovada dos sinais de Worker
-
-A issue #47 pesquisa falsos negativos de Worker sem alterar as regras de produção acima. A [ADR 0010](decisions/0010-worker-project-detection-signals.md) define os fatos e a precedência que a issue #152 deve implementar.
-
-A direção aprovada é intencionalmente mais restrita que detectar Generic Host:
-
-- `UsingMicrosoftNETSdkWorker == true` efetivo é um sinal de **opt-in explícito** de Worker com alta confiança. O Worker SDK o define, mas o valor efetivo não possui proveniência da atribuição e também pode ser definido manualmente; a classificação não deve sugerir que o Worker SDK foi importado;
-- projetos executáveis com `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` são candidatos Worker de confiança média quando não existe evidência Test/Web mais forte;
-- `Microsoft.Extensions.Hosting` isoladamente permanece apenas evidência de apoio, pois consoles comuns e aplicações Web também podem usar Generic Host;
-- Web SDK mais um sinal Worker forte representa evidência conflitante de workload e deve resultar em `unknown`;
-- sinais Test mantêm a precedência superior já existente;
-- nomes, caminhos, sufixos `.Worker` e análise de código-fonte não são aprovados.
-
-Até o merge da #152, a classificação de produção continua intencionalmente usando somente a regra atual baseada no Worker SDK.

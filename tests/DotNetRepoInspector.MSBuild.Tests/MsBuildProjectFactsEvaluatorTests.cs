@@ -28,6 +28,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
         Assert.Equal(new[] { "net10.0" }, result.Facts.TargetFrameworks);
         Assert.Equal("Exe", result.Facts.OutputType);
         Assert.True(result.Facts.IsTestProject is true);
+        Assert.Null(result.Facts.UsingMicrosoftNETSdkWorker);
         Assert.True(result.Facts.IsPackable is false);
         Assert.Equal(
             new[] { "linux-x64", "win-x64" },
@@ -94,6 +95,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
                 ["TargetFrameworks"] = string.Empty,
                 ["OutputType"] = string.Empty,
                 ["IsTestProject"] = string.Empty,
+                ["UsingMicrosoftNETSdkWorker"] = " true ",
                 ["IsPackable"] = "true",
                 ["RuntimeIdentifier"] = "linux-x64",
                 ["RuntimeIdentifiers"] = string.Empty
@@ -119,6 +121,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
             Assert.Equal(new[] { "net10.0" }, result.Facts.TargetFrameworks);
             Assert.Null(result.Facts.OutputType);
             Assert.Null(result.Facts.IsTestProject);
+            Assert.True(result.Facts.UsingMicrosoftNETSdkWorker is true);
             Assert.True(result.Facts.IsPackable is true);
             Assert.Equal(new[] { "linux-x64" }, result.Facts.RuntimeIdentifiers);
             Assert.Equal(string.Empty, result.Facts.Properties["IsTestProject"]);
