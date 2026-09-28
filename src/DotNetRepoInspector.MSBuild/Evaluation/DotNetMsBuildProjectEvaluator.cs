@@ -51,6 +51,8 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
 
         var properties = NormalizeRequestedNames(request.Properties);
         var items = NormalizeRequestedNames(request.Items ?? []);
+        var globalProperties = request.GlobalProperties ??
+            new Dictionary<string, string>(StringComparer.Ordinal);
 
         if (properties.Length == 0 && items.Length == 0)
         {
@@ -61,6 +63,7 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
 
         var invalidName = properties
             .Concat(items)
+            .Concat(globalProperties.Keys)
             .FirstOrDefault(name => !IsValidMsBuildName(name));
         if (invalidName is not null)
         {
@@ -120,6 +123,13 @@ public sealed class DotNetMsBuildProjectEvaluator : IMsBuildProjectEvaluator
         if (items.Length > 0)
         {
             arguments.Add($"-getItem:{string.Join(',', items)}");
+        }
+
+        foreach (var globalProperty in globalProperties.OrderBy(
+                     property => property.Key,
+                     StringComparer.Ordinal))
+        {
+            arguments.Add($"-property:{globalProperty.Key}={globalProperty.Value}");
         }
 
         ProcessExecutionResult evaluationResult;

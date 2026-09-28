@@ -8,6 +8,9 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
     public const string WorkerSdk = "Microsoft.NET.Sdk.Worker";
     public const string MSTestSdk = "MSTest.Sdk";
     public const string MicrosoftNetTestSdkPackage = "Microsoft.NET.Test.Sdk";
+    public const string MicrosoftExtensionsHostingSystemdPackage = "Microsoft.Extensions.Hosting.Systemd";
+    public const string MicrosoftExtensionsHostingWindowsServicesPackage =
+        "Microsoft.Extensions.Hosting.WindowsServices";
 
     private static readonly IReadOnlyList<string> IsTestProjectSignals =
         Array.AsReadOnly(new[] { "property:IsTestProject=true" });
@@ -27,6 +30,9 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
     private static readonly IReadOnlyList<string> WorkerSignals =
         Array.AsReadOnly(new[] { $"sdk:{WorkerSdk}" });
 
+    private static readonly IReadOnlyList<string> UsingWorkerPropertySignals =
+        Array.AsReadOnly(new[] { "property:UsingMicrosoftNETSdkWorker=true" });
+
     private static readonly IReadOnlyList<string> ConsoleSignals =
         Array.AsReadOnly(new[] { "property:OutputType=Exe" });
 
@@ -39,6 +45,14 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
             $"sdk:{WebSdk}",
             $"sdk:{WorkerSdk}",
             "conflict:specialized-sdk"
+        });
+
+    private static readonly IReadOnlyList<string> WebAndWorkerPropertyConflictSignals =
+        Array.AsReadOnly(new[]
+        {
+            $"sdk:{WebSdk}",
+            "property:UsingMicrosoftNETSdkWorker=true",
+            "conflict:web-worker"
         });
 
     public ProjectClassification Classify(ProjectClassificationFacts facts)
@@ -70,6 +84,10 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
         var hasMSTestSdk = declaredSdks.Contains(MSTestSdk);
         var hasMicrosoftNetTestSdkPackage =
             packageReferences.Contains(MicrosoftNetTestSdkPackage);
+        var hasSystemdServiceLifetimePackage =
+            packageReferences.Contains(MicrosoftExtensionsHostingSystemdPackage);
+        var hasWindowsServiceLifetimePackage =
+            packageReferences.Contains(MicrosoftExtensionsHostingWindowsServicesPackage);
 
         if (facts.IsTestingPlatformApplication is true)
         {
@@ -111,6 +129,14 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 SpecializedSdkConflictSignals);
         }
 
+        if (hasWebSdk && facts.UsingMicrosoftNETSdkWorker is true)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                WebAndWorkerPropertyConflictSignals);
+        }
+
         if (hasWebSdk)
         {
             return new ProjectClassification(
@@ -127,9 +153,28 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 WorkerSignals);
         }
 
+        if (facts.UsingMicrosoftNETSdkWorker is true)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Worker,
+                ProjectClassificationConfidence.High,
+                UsingWorkerPropertySignals);
+        }
+
         var outputType = Normalize(facts.OutputType);
         if (string.Equals(outputType, "Exe", StringComparison.OrdinalIgnoreCase))
         {
+            var serviceLifetimeSignals = GetServiceLifetimeSignals(
+                hasSystemdServiceLifetimePackage,
+                hasWindowsServiceLifetimePackage);
+            if (serviceLifetimeSignals.Count > 0)
+            {
+                return new ProjectClassification(
+                    ProjectClassificationKinds.Worker,
+                    ProjectClassificationConfidence.Medium,
+                    serviceLifetimeSignals);
+            }
+
             return new ProjectClassification(
                 ProjectClassificationKinds.Console,
                 ProjectClassificationConfidence.Medium,
@@ -158,4 +203,23 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
         string.IsNullOrWhiteSpace(value)
             ? null
             : value.Trim();
+
+    private static List<string> GetServiceLifetimeSignals(
+        bool hasSystemdServiceLifetimePackage,
+        bool hasWindowsServiceLifetimePackage)
+    {
+        var signals = new List<string>(capacity: 2);
+
+        if (hasSystemdServiceLifetimePackage)
+        {
+            signals.Add($"package:{MicrosoftExtensionsHostingSystemdPackage}");
+        }
+
+        if (hasWindowsServiceLifetimePackage)
+        {
+            signals.Add($"package:{MicrosoftExtensionsHostingWindowsServicesPackage}");
+        }
+
+        return signals;
+    }
 }

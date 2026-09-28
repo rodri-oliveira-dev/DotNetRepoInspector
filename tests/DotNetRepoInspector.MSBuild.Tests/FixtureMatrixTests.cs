@@ -42,9 +42,11 @@ public sealed class FixtureMatrixTests
         "worker-false-negative-current",
         "worker-sdk",
         "worker-signal-hosting-only-ambiguous",
+        "worker-signal-multi-targeted-conditional",
         "worker-signal-systemd-service",
         "worker-signal-using-worker-property",
-        "worker-signal-web-conflict"
+        "worker-signal-web-conflict",
+        "worker-signal-windows-service"
     ];
 
     [Fact]
@@ -248,6 +250,48 @@ public sealed class FixtureMatrixTests
             XElement packageReference = Assert.Single(packageReferences);
             Assert.Equal(
                 "Microsoft.Extensions.Hosting.Systemd",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
+            Assert.Null(packageReference.Attribute("PrivateAssets"));
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "WorkerProjectSignals/WindowsService/WindowsService.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Extensions.Hosting.WindowsServices",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
+            Assert.Null(packageReference.Attribute("PrivateAssets"));
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "WorkerProjectSignals/MultiTargetedConditional/ConditionalService.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Extensions.Hosting.Systemd",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
+            Assert.Null(packageReference.Attribute("PrivateAssets"));
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "WorkerProjectSignals/MultiTargetedConditional/CrossTargetService.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Extensions.Hosting.WindowsServices",
                 packageReference.Attribute("Include")?.Value);
             Assert.Equal("10.0.0", packageReference.Attribute("Version")?.Value);
             Assert.Null(packageReference.Attribute("PrivateAssets"));

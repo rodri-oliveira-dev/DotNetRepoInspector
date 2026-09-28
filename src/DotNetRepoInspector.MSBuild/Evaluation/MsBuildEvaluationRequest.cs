@@ -3,4 +3,5 @@ namespace DotNetRepoInspector.MSBuild.Evaluation;
 public sealed record MsBuildEvaluationRequest(
     string ProjectPath,
     IReadOnlyCollection<string> Properties,
-    IReadOnlyCollection<string>? Items = null);
+    IReadOnlyCollection<string>? Items = null,
+    IReadOnlyDictionary<string, string>? GlobalProperties = null);

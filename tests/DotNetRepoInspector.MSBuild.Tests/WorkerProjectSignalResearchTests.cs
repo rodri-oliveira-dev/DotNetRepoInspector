@@ -18,7 +18,7 @@ public sealed class WorkerProjectSignalResearchTests
     private static readonly string[] ResearchItems = ["PackageReference"];
 
     [Fact]
-    public async Task ExplicitWorkerOptInProperty_IsObservableButProductionStillClassifiesConsole()
+    public async Task ExplicitWorkerOptInProperty_ClassifiesWorkerWithHighConfidence()
     {
         string projectPath = FixturePath(
             "WorkerProjectSignals",
@@ -37,16 +37,20 @@ public sealed class WorkerProjectSignalResearchTests
             factsResult.Succeeded,
             factsResult.Error?.Message ?? "Project facts evaluation failed.");
         Assert.NotNull(factsResult.Facts);
-        Assert.False(factsResult.Facts.Properties.ContainsKey("UsingMicrosoftNETSdkWorker"));
+        Assert.True(factsResult.Facts.UsingMicrosoftNETSdkWorker is true);
 
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
 
-        Assert.Equal(ProjectClassificationKinds.Console, classification.Kind);
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:UsingMicrosoftNETSdkWorker=true",
+            Assert.Single(classification.Signals));
     }
 
     [Fact]
-    public async Task SystemdService_ExposesServiceLifetimePackageButProductionStillClassifiesConsole()
+    public async Task SystemdService_ClassifiesWorkerWithMediumConfidence()
     {
         string projectPath = FixturePath(
             "WorkerProjectSignals",
@@ -75,7 +79,42 @@ public sealed class WorkerProjectSignalResearchTests
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
 
-        Assert.Equal(ProjectClassificationKinds.Console, classification.Kind);
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.Extensions.Hosting.Systemd",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public async Task WindowsService_ClassifiesWorkerWithMediumConfidence()
+    {
+        string projectPath = FixturePath(
+            "WorkerProjectSignals",
+            "WindowsService",
+            "WindowsService.csproj");
+
+        MsBuildProjectFactsResult factsResult = await EvaluateFactsAsync(projectPath);
+
+        Assert.True(
+            factsResult.Succeeded,
+            factsResult.Error?.Message ?? "Project facts evaluation failed.");
+        Assert.NotNull(factsResult.Facts);
+        Assert.Contains(
+            factsResult.Facts.PackageReferences,
+            package => string.Equals(
+                package,
+                "Microsoft.Extensions.Hosting.WindowsServices",
+                StringComparison.OrdinalIgnoreCase));
+
+        ProjectClassification classification =
+            new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.Extensions.Hosting.WindowsServices",
+            Assert.Single(classification.Signals));
     }
 
     [Fact]
@@ -109,7 +148,7 @@ public sealed class WorkerProjectSignalResearchTests
     }
 
     [Fact]
-    public async Task WebConflict_ExposesExplicitWorkerOptInButProductionStillChoosesWeb()
+    public async Task WebConflict_ExposesExplicitWorkerOptInAndClassifiesUnknown()
     {
         string projectPath = FixturePath(
             "WorkerProjectSignals",
@@ -137,7 +176,82 @@ public sealed class WorkerProjectSignalResearchTests
         ProjectClassification classification =
             new MsBuildProjectClassificationAdapter().Classify(factsResult.Facts);
 
-        Assert.Equal(ProjectClassificationKinds.Web, classification.Kind);
+        Assert.Equal(ProjectClassificationKinds.Unknown, classification.Kind);
+        Assert.Null(classification.Confidence);
+        Assert.Contains("conflict:web-worker", classification.Signals);
+    }
+
+    [Fact]
+    public async Task MultiTargetedWorkerProperty_ClassifiesFromInnerBuild()
+    {
+        string projectPath = FixturePath(
+            "WorkerProjectSignals",
+            "MultiTargetedConditional",
+            "ConditionalWorkerProperty.csproj");
+
+        MsBuildProjectFacts facts = await EvaluateSuccessfulFactsAsync(projectPath);
+
+        Assert.Null(facts.UsingMicrosoftNETSdkWorker);
+        Assert.Contains(
+            facts.TargetFrameworkFacts,
+            target => target.TargetFramework == "net10.0" &&
+                target.UsingMicrosoftNETSdkWorker is true);
+
+        ProjectClassification classification =
+            new MsBuildProjectClassificationAdapter().Classify(facts);
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(
+            "property:UsingMicrosoftNETSdkWorker=true",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public async Task MultiTargetedServicePackage_ClassifiesWhenExecutableInSameInnerBuild()
+    {
+        string projectPath = FixturePath(
+            "WorkerProjectSignals",
+            "MultiTargetedConditional",
+            "ConditionalService.csproj");
+
+        MsBuildProjectFacts facts = await EvaluateSuccessfulFactsAsync(projectPath);
+        MsBuildTargetFrameworkFacts target = Assert.Single(
+            facts.TargetFrameworkFacts,
+            target => target.TargetFramework == "net10.0");
+
+        Assert.Equal("Exe", target.OutputType);
+        Assert.Contains(
+            DeterministicProjectClassifier.MicrosoftExtensionsHostingSystemdPackage,
+            target.PackageReferences,
+            StringComparer.OrdinalIgnoreCase);
+
+        ProjectClassification classification =
+            new MsBuildProjectClassificationAdapter().Classify(facts);
+
+        Assert.Equal(ProjectClassificationKinds.Worker, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.Medium, classification.Confidence);
+        Assert.Equal(
+            "package:Microsoft.Extensions.Hosting.Systemd",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public async Task MultiTargetedServicePackage_DoesNotCombineSignalsAcrossInnerBuilds()
+    {
+        string projectPath = FixturePath(
+            "WorkerProjectSignals",
+            "MultiTargetedConditional",
+            "CrossTargetService.csproj");
+
+        MsBuildProjectFacts facts = await EvaluateSuccessfulFactsAsync(projectPath);
+        ProjectClassification classification =
+            new MsBuildProjectClassificationAdapter().Classify(facts);
+
+        Assert.Equal(ProjectClassificationKinds.Console, classification.Kind);
+        Assert.Equal(
+            "property:OutputType=Exe",
+            Assert.Single(classification.Signals));
     }
 
     private static Task<MsBuildEvaluationResult> EvaluateResearchSignalsAsync(string projectPath)
@@ -155,6 +269,14 @@ public sealed class WorkerProjectSignalResearchTests
         new MsBuildProjectFactsEvaluator().EvaluateAsync(
             projectPath,
             TestContext.Current.CancellationToken);
+
+    private static async Task<MsBuildProjectFacts> EvaluateSuccessfulFactsAsync(string projectPath)
+    {
+        MsBuildProjectFactsResult result = await EvaluateFactsAsync(projectPath);
+
+        Assert.True(result.Succeeded, result.Error?.Message ?? "Project facts evaluation failed.");
+        return Assert.IsType<MsBuildProjectFacts>(result.Facts);
+    }
 
     private static void AssertPackageReference(
         MsBuildEvaluationResult evaluation,

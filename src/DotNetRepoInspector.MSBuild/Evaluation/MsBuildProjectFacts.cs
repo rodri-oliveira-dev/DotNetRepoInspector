@@ -16,6 +16,12 @@ public sealed record MsBuildProjectFacts(
         init;
     }
 
+    public bool? UsingMicrosoftNETSdkWorker
+    {
+        get;
+        init;
+    }
+
     public IReadOnlyList<string> PackageReferences
     {
         get;
@@ -23,4 +29,6 @@ public sealed record MsBuildProjectFacts(
     } = [];
 
     public IReadOnlyList<MsBuildProjectReference> ProjectReferences { get; init; } = [];
+
+    public IReadOnlyList<MsBuildTargetFrameworkFacts> TargetFrameworkFacts { get; init; } = [];
 }
