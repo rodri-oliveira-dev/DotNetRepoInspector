@@ -24,5 +24,6 @@ An ADR should capture:
 - [ADR 0008: Bound MCP inspection concurrency and operational telemetry](0008-mcp-operational-reliability.md) — Accepted.
 - [ADR 0009: Detect test projects from VSTest and Microsoft.Testing.Platform signals](0009-test-project-detection-signals.md) — Accepted.
 - [ADR 0010: Detect Worker projects beyond the declared Worker SDK](0010-worker-project-detection-signals.md) — Accepted.
+- [ADR 0011: Keep Web API subtype unsupported without deterministic structural evidence](0011-web-api-subtype-detection.md) — Accepted.
 
 Likely next decisions include policy evaluation boundaries and remote MCP transport if it becomes a supported scenario.

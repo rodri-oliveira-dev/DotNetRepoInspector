@@ -9,6 +9,20 @@
       ]
     },
     {
+      "id": "web-api-subtype-web-sdk-ambiguous",
+      "path": "WebApiSubtypeSignals/WebSdkExecutable",
+      "proves": [
+        "web-api-subtype-ambiguous-web-sdk"
+      ]
+    },
+    {
+      "id": "web-api-subtype-razor-overlap",
+      "path": "WebApiSubtypeSignals/RazorSupportOverlap",
+      "proves": [
+        "web-api-subtype-razor-overlap"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

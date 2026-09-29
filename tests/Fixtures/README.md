@@ -17,6 +17,8 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | Fixture | Behavior |
 | --- | --- |
 | `ProjectKinds/Web` | `Microsoft.NET.Sdk.Web` |
+| `WebApiSubtypeSignals/WebSdkExecutable` | Web SDK + executable output remains ambiguous for Web API subtype |
+| `WebApiSubtypeSignals/RazorSupportOverlap` | Razor support can coexist with Web workloads and does not make Web API presence/absence deterministic |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

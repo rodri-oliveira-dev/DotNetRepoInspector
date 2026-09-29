@@ -8,6 +8,23 @@ The classifications are `web`, `worker`, `console`, `library`, `test`, and `unkn
 
 `projects[].classification.subtype` is a separate optional refinement of the base classification kind. The current classifier does not populate concrete subtypes; the field stays absent unless a future approved rule provides explicit subtype evidence.
 
+## Web API subtype: intentionally unsupported
+
+Web API is **not** currently emitted as a subtype. The inspection model does not expose a project-level structural fact that uniquely distinguishes ASP.NET Core Web API projects from MVC, Razor Pages, Blazor, or mixed Web applications.
+
+The decision is documented in [ADR 0011](decisions/0011-web-api-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Authoritative for base `kind = web`, but shared by multiple ASP.NET Core application models. |
+| effective `OutputType == Exe` | Common to modern ASP.NET Core hosts and not API-specific. |
+| packages such as `Microsoft.AspNetCore.OpenApi` or `Swashbuckle.AspNetCore` | Optional API tooling, removable from valid APIs, and usable by mixed/non-API Web applications. |
+| Razor-related properties/items | They can prove Razor support, but cannot prove that API endpoints are absent; application models can coexist. |
+| launch profiles such as a `swagger` launch URL | Optional tooling configuration outside the normalized evaluated classification facts. |
+| source markers such as `MapGet`, `[ApiController]`, or `ControllerBase` | Would require source/semantic analysis, which is outside the subtype boundary for this issue. |
+
+Consequently, a project classified as `web` keeps `classification.subtype` absent even when it has common API-oriented package hints. `classification.confidence` continues to describe the base `web` classification; no subtype confidence is fabricated.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:

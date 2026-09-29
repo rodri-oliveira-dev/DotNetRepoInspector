@@ -8,6 +8,23 @@ As classificações são `web`, `worker`, `console`, `library`, `test` e `unknow
 
 `projects[].classification.subtype` é um refinamento opcional separado do tipo base de classificação. O classificador atual não preenche subtipos concretos; o campo permanece ausente até que uma regra futura aprovada forneça evidência explícita de subtipo.
 
+## Subtipo Web API: não suportado intencionalmente
+
+Web API **não** é emitido atualmente como subtipo. O modelo de inspeção não expõe um fato estrutural no nível de projeto que diferencie de forma única projetos ASP.NET Core Web API de MVC, Razor Pages, Blazor ou aplicações Web mistas.
+
+A decisão está documentada na [ADR 0011](decisions/0011-web-api-subtype-detection.md). Os candidatos avaliados são rejeitados intencionalmente como regras de subtipo:
+
+| Evidência candidata | Por que é insuficiente |
+| --- | --- |
+| `Microsoft.NET.Sdk.Web` declarado | É autoritativo para o `kind = web` base, mas é compartilhado por vários modelos de aplicação ASP.NET Core. |
+| `OutputType == Exe` efetivo | É comum aos hosts ASP.NET Core modernos e não é específico de API. |
+| pacotes como `Microsoft.AspNetCore.OpenApi` ou `Swashbuckle.AspNetCore` | São tooling opcional para API, podem ser removidos de APIs válidas e podem ser usados por aplicações Web mistas/não exclusivamente API. |
+| propriedades/itens relacionados a Razor | Podem comprovar suporte a Razor, mas não comprovam ausência de endpoints de API; modelos de aplicação podem coexistir. |
+| perfis de launch, como URL de launch para `swagger` | São configuração opcional de tooling fora dos fatos normalizados e avaliados de classificação. |
+| marcadores de código-fonte como `MapGet`, `[ApiController]` ou `ControllerBase` | Exigiriam análise de código/semântica, fora da fronteira de subtipo desta issue. |
+
+Consequentemente, um projeto classificado como `web` mantém `classification.subtype` ausente mesmo quando possui hints de pacotes comuns em APIs. `classification.confidence` continua descrevendo a classificação base `web`; nenhuma confiança de subtipo é inventada.
+
 ## Entradas
 
 O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:

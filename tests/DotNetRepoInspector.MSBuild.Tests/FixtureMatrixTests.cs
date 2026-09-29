@@ -38,6 +38,8 @@ public sealed class FixtureMatrixTests
         "test-signal-explicit-false-conflict",
         "test-signal-microsoft-net-test-sdk",
         "test-signal-mtp-application",
+        "web-api-subtype-ambiguous-web-sdk",
+        "web-api-subtype-razor-overlap",
         "web-sdk",
         "worker-false-negative-current",
         "worker-sdk",
