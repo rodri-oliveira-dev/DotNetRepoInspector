@@ -1,6 +1,7 @@
 using System.Globalization;
 
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Git;
 using DotNetRepoInspector.MSBuild.Classification;
 using DotNetRepoInspector.MSBuild.Diagnostics;
@@ -136,11 +137,24 @@ public sealed class RepositoryInspector : IRepositoryInspector
             .OrderBy(static project => project.Path, StringComparer.Ordinal)
             .ToArray();
 
-        return InspectionReport.Create(
+        var report = InspectionReport.Create(
             gitResult.Metadata,
             ToSdkMetadata(repositoryRoot, sdkResult),
             projects,
             OrderDiagnostics(diagnostics));
+
+        if (configuration.PolicyRules.Count == 0)
+        {
+            return report;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var policyResult = new PolicyEngine(configuration.PolicyRules).Evaluate(report);
+
+        return report with
+        {
+            PolicyFindings = policyResult.Findings
+        };
     }
 
     private ProjectInspection BuildProjectInspection(

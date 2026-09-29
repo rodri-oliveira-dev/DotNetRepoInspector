@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
+using DotNetRepoInspector.Core.Policies;
+
 namespace DotNetRepoInspector.Core.Contracts;
 
 public static class InspectionJsonSerializer
@@ -69,7 +71,8 @@ public static class InspectionJsonSerializer
         {
             DotNetSdk = normalizedSdk,
             Projects = normalizedProjects,
-            Diagnostics = NormalizeDiagnostics(report.Diagnostics)
+            Diagnostics = NormalizeDiagnostics(report.Diagnostics),
+            PolicyFindings = NormalizePolicyFindings(report.PolicyFindings)
         };
     }
 
@@ -117,8 +120,83 @@ public static class InspectionJsonSerializer
             .ThenBy(diagnostic => diagnostic.Source ?? string.Empty, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Message, StringComparer.Ordinal)
             .ThenBy(diagnostic => diagnostic.Details ?? string.Empty, StringComparer.Ordinal)
-            .ThenBy(diagnostic => DiagnosticContextSortKey(diagnostic.Context), StringComparer.Ordinal)
+            .ThenBy(diagnostic => ContextSortKey(diagnostic.Context), StringComparer.Ordinal)
             .ToArray();
+
+    private static PolicyFinding[] NormalizePolicyFindings(
+        IReadOnlyList<PolicyFinding> findings) =>
+        findings
+            .Select(NormalizePolicyFinding)
+            .OrderBy(static finding => finding.RuleCode, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Severity, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Scope.Kind, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Scope.ProjectPath ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Message, StringComparer.Ordinal)
+            .ThenBy(static finding => ContextSortKey(finding.Context), StringComparer.Ordinal)
+            .ToArray();
+
+    private static PolicyFinding NormalizePolicyFinding(PolicyFinding finding)
+    {
+        if (finding is null ||
+            !IsValidPolicyRuleCode(finding.RuleCode) ||
+            !PolicySeverity.IsDefined(finding.Severity) ||
+            string.IsNullOrWhiteSpace(finding.Message) ||
+            finding.Scope is null)
+        {
+            throw new JsonException(
+                "A policy finding has an invalid rule code, severity, message, or scope.");
+        }
+
+        PolicyFindingScope normalizedScope;
+        if (string.Equals(
+                finding.Scope.Kind,
+                PolicyFindingScope.RepositoryKind,
+                StringComparison.Ordinal) &&
+            finding.Scope.ProjectPath is null)
+        {
+            normalizedScope = PolicyFindingScope.Repository;
+        }
+        else if (string.Equals(
+                     finding.Scope.Kind,
+                     PolicyFindingScope.ProjectKind,
+                     StringComparison.Ordinal) &&
+                 !string.IsNullOrWhiteSpace(finding.Scope.ProjectPath))
+        {
+            normalizedScope = PolicyFindingScope.Project(
+                NormalizePath(finding.Scope.ProjectPath));
+        }
+        else
+        {
+            throw new JsonException("A policy finding contains an invalid scope.");
+        }
+
+        IReadOnlyDictionary<string, string>? normalizedContext = null;
+        if (finding.Context is not null)
+        {
+            var context = new SortedDictionary<string, string>(StringComparer.Ordinal);
+            foreach (var pair in finding.Context)
+            {
+                if (string.IsNullOrWhiteSpace(pair.Key) || pair.Value is null)
+                {
+                    throw new JsonException(
+                        "A policy finding context contains an invalid key or value.");
+                }
+
+                context[pair.Key] = IsSensitiveContextKey(pair.Key)
+                    ? RedactedValue
+                    : pair.Value;
+            }
+
+            normalizedContext = context;
+        }
+
+        return new PolicyFinding(
+            finding.RuleCode,
+            finding.Severity,
+            finding.Message,
+            normalizedScope,
+            normalizedContext);
+    }
 
     private static InspectionDiagnostic NormalizeDiagnostic(InspectionDiagnostic diagnostic)
     {
@@ -155,7 +233,7 @@ public static class InspectionJsonSerializer
         SensitiveContextKeyFragments.Any(fragment =>
             key.Contains(fragment, StringComparison.OrdinalIgnoreCase));
 
-    private static string DiagnosticContextSortKey(
+    private static string ContextSortKey(
         IReadOnlyDictionary<string, string>? context) =>
         context is null
             ? string.Empty
@@ -190,7 +268,8 @@ public static class InspectionJsonSerializer
         if (report.Repository is null ||
             report.DotNetSdk is null ||
             report.Projects is null ||
-            report.Diagnostics is null)
+            report.Diagnostics is null ||
+            report.PolicyFindings is null)
         {
             throw new JsonException(
                 "The inspection payload is missing one or more required top-level properties.");
@@ -247,6 +326,26 @@ public static class InspectionJsonSerializer
             throw new JsonException(
                 "A diagnostic entry has an invalid code, severity, or message.");
         }
+    }
+
+    private static bool IsValidPolicyRuleCode(string? code)
+    {
+        if (code is null ||
+            code.Length != 7 ||
+            !code.StartsWith("DRP", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 3; index < code.Length; index++)
+        {
+            if (code[index] is < '0' or > '9')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static bool IsValidDiagnosticCode(string? code)
