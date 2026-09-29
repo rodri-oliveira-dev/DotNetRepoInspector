@@ -18,6 +18,7 @@ def make_publisher(root: pathlib.Path, mode: str) -> tuple[pathlib.Path, pathlib
     body = f"""#!/usr/bin/env python3
 import pathlib
 import sys
+import time
 
 state = pathlib.Path({str(state)!r})
 count = int(state.read_text() or "0") if state.exists() else 0
@@ -53,6 +54,21 @@ if mode == "semantic-failure":
     )
     raise SystemExit(1)
 
+if mode == "semantic-with-transient-text":
+    print(
+        "Error: validation failed: semantic rule rejected text containing "
+        "connection refused and status 500",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+if mode == "timeout-then-success":
+    if count == 1:
+        time.sleep(5)
+        raise SystemExit(1)
+    print("Validation successful after timed-out attempt.")
+    raise SystemExit(0)
+
 raise SystemExit("unsupported fake publisher mode")
 """
 
@@ -67,6 +83,8 @@ def run_case(
     mode: str,
     expected_exit_code: int,
     expected_attempts: int,
+    max_attempts: int = 3,
+    attempt_timeout_seconds: int = 1,
 ) -> None:
     publisher, state = make_publisher(root, mode)
 
@@ -81,7 +99,9 @@ def run_case(
             "-ManifestPath",
             str(manifest),
             "-MaxAttempts",
-            "3",
+            str(max_attempts),
+            "-AttemptTimeoutSeconds",
+            str(attempt_timeout_seconds),
             "-InitialDelaySeconds",
             "0",
             "-MaxDelaySeconds",
@@ -111,6 +131,16 @@ def main() -> None:
         run_case(root, manifest, "transient-then-success", 0, 3)
         run_case(root, manifest, "persistent-transient", 0, 3)
         run_case(root, manifest, "semantic-failure", 1, 1)
+        run_case(root, manifest, "semantic-with-transient-text", 1, 1)
+        run_case(
+            root,
+            manifest,
+            "timeout-then-success",
+            0,
+            2,
+            max_attempts=2,
+            attempt_timeout_seconds=1,
+        )
 
     print("MCP Registry resilience policy tests passed.")
 
