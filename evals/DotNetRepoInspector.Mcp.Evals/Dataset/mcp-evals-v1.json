@@ -52,6 +52,11 @@
           "projectPath": "Test/Test.csproj",
           "value": "test"
         }
+,        {
+          "kind": "project_classification",
+          "projectPath": "MultiTargeting/MultiTargeting.csproj",
+          "value": "library"
+        }
       ]
     },
     {
