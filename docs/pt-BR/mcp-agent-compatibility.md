@@ -119,11 +119,67 @@ As evidências do pacote RC estão registradas separadamente na [issue #137](htt
 | Cliente | Provider | Versão usada | Protocolo MCP | Configuração stdio | Configuração do root | Handshake | Discovery | Execução de tool | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` via servidor `ModelContextProtocol` | `codex mcp add dri -- <server> --root <root>` | argumento explícito `--root` | validado por execução real do cliente | validado por `mcp_tool_call` para `list_projects` | validado: `list_projects` retornou 6 projetos | Smoke histórico com binário local aprovado; artefato RC exato não validado |
-| Claude Code | Anthropic | não instalado neste ambiente | MCP stdio esperado | `claude mcp add --transport stdio dotnet-repo-inspector -- <server> --root <root>` | argumento explícito `--root` | pendente | pendente | pendente | Roteiro reproduzível documentado; não validado |
+| Claude Code | Anthropic | não observável no ambiente de execução da #149 (2026-09-29) | não observado live; o pacote usa stdio e o harness determinístico registra `2025-06-18` | `claude mcp add --transport stdio dotnet-repo-inspector -- dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` | argumento explícito `--root` | bloqueado pelo ambiente externo do cliente | bloqueado pelo ambiente externo do cliente | bloqueado antes de iniciar o cliente | Impedimento externo documentado pela #149; smoke live rastreado na #177 |
 | Gemini CLI | Google | não instalado neste ambiente | MCP stdio esperado | `settings.json` com `mcpServers.dotnetRepoInspector.command` + `args` | argumento explícito `--root` | pendente | pendente | pendente | Roteiro reproduzível documentado; não validado |
 | Harness determinístico MCP SDK | Harness de protocolo | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | argumento explícito `--root` por fixture | validado | validado | validado em todas as categorias factuais do MVP | Aprovado no eval determinístico de protocolo |
 
 Nota de release: o OpenAI Codex CLI foi validado com um executável local de desenvolvimento, mas a versão exata do artefato/pacote não foi registrada. Esse smoke histórico **não** comprova a validação do `1.2.0-rc.1`. O pacote exato `1.2.0-rc.1` passou nos evals determinísticos em feed local controlado, conforme registro acima; o smoke com Codex usando o **pacote RC exato publicado** permanece pendente até a publicação e deve ser registrado antes da promoção para GA. Claude Code e Gemini CLI não foram validados de forma independente; execuções com providers adicionais continuam como follow-ups não bloqueantes nas #133/#139.
+
+## Tentativa de validação com Claude Code da #149 (2026-09-29)
+
+A issue #149 usa uma fixture versionada e determinística como ground truth do smoke com cliente real:
+
+- root controlado: `tests/Fixtures/ProjectKinds`;
+- inventário esperado: exatamente 6 projetos: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj` e `Worker/Worker.csproj`;
+- ground truth de `list_projects`: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` usa `net10.0`; `MultiTargeting/MultiTargeting.csproj` usa `net8.0` e `net10.0`;
+- ground truth de `inspect_repository`: o mesmo inventário de seis projetos e os mesmos fatos canônicos de target framework/classificação por projeto projetados pelo `InspectionReport`;
+- fonte autoritativa: o dataset versionado `mcp-evals-v1.json` e os próprios projetos da fixture `ProjectKinds`.
+
+### Impedimento externo registrado pela #149
+
+O pacote estável selecionado para a execução é `DotNetRepoInspector.Mcp@1.5.2`, a release estável corrente no momento da tentativa. O comando pretendido do servidor é:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <caminho-absoluto>/tests/Fixtures/ProjectKinds
+```
+
+O ambiente disponível para executar a #149 expunha operações do repositório no GitHub, mas não expunha um shell de host executável nem uma sessão instalada/autenticada do Claude Code. Portanto:
+
+- versão do Claude Code: **não observável neste ambiente de execução**;
+- estado de autorização do Claude Code: **não observável**;
+- protocolo MCP negociado com Claude Code: **não observado**;
+- handshake: **não executado**;
+- discovery de tools: **não executado**;
+- `list_projects`: **não executado pelo Claude Code**;
+- `inspect_repository`: **não executado pelo Claude Code**.
+
+O protocolo `2025-06-18` do harness determinístico continua sendo evidência válida do repositório, mas deliberadamente **não** é apresentado como versão de protocolo observada no Claude Code. Nenhum código de produto ou específico de provider foi alterado para contornar o ambiente.
+
+A validação live exigida está registrada explicitamente na [#177](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/177). Quando esse follow-up for executado, devem ser registrados somente dados não sensíveis: versão do cliente, versão do pacote, protocolo negociado, resumo do discovery, resumo dos fatos estruturados e comparação pass/fail. Credenciais, tokens e transcripts brutos sensíveis não devem ser versionados.
+
+### Reprodução quando Claude Code estiver disponível
+
+```bash
+claude --version
+
+claude mcp add --transport stdio dotnet-repo-inspector -- \
+  dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- \
+  --root <caminho-absoluto>/tests/Fixtures/ProjectKinds
+
+claude mcp list
+```
+
+Depois use `/mcp` no Claude Code e execute ambos:
+
+```text
+Use dotnet-repo-inspector list_projects. Retorne os paths dos projetos, target frameworks e classificações vindos do resultado da tool.
+```
+
+```text
+Use dotnet-repo-inspector inspect_repository. Retorne a quantidade de projetos e os mesmos fatos por projeto de target framework e classificação vindos do resultado da tool.
+```
+
+Compare os fatos estruturados com o ground truth acima, registre o protocolo MCP negociado e as versões do cliente/pacote e, ao final, remova o registro MCP temporário.
 
 ## Smoke Tests Reproduzíveis
 
