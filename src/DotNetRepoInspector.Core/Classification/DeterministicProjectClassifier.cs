@@ -235,7 +235,7 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
             signals);
     }
 
-    private static IReadOnlyList<string> CreateConflictSignals(
+    private static System.Collections.ObjectModel.ReadOnlyCollection<string> CreateConflictSignals(
         string first,
         string second,
         string conflict) =>
