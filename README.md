@@ -28,13 +28,14 @@ The v1 surface includes:
 - `global.json` and resolved SDK metadata;
 - Git repository, commit, branch, remote, and dirty-state metadata when available;
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
-- versioned inspection JSON (`schemaVersion 1.3`);
+- optional `classification.subtype` contract field reserved for explicit subtype evidence;
+- versioned inspection JSON (`schemaVersion 1.4`);
 - optional repository configuration for exclusions and explicit classification overrides;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
 
-Application subtypes and the optional policy engine are post-v1 work and are not part of the v1 compatibility promise.
+Concrete subtype detection rules and the optional policy engine remain future work. The v1 contract includes the optional `classification.subtype` field, but the current engine leaves it absent unless approved subtype evidence is introduced later.
 
 ## Design principles
 
@@ -48,11 +49,11 @@ Application subtypes and the optional policy engine are post-v1 work and are not
 
 ## JSON contract
 
-The v1 contract currently uses inspection schema **1.3**. A representative payload is:
+The v1 contract currently uses inspection schema **1.4**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.3",
+  "schemaVersion": "1.4",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -296,7 +297,7 @@ Inspection Engine ----> InspectionReport ----> JSON output
                     HTTP/webhook
 
 Delivery hosts: CLI / .NET Tool, MCP server, GitHub Action, and container images
-Post-v1 adapters: additional sinks, policy/reporting, richer subtypes
+Post-v1 adapters: additional sinks, policy/reporting, concrete subtype rules
 ```
 
 `DotNetRepoInspector.Core` owns normalized contracts/classification. MSBuild and Git collection remain adapters. `DotNetRepoInspector.Persistence` owns provider-neutral snapshot/provenance contracts, and `DotNetRepoInspector.Persistence.Http` is the first concrete sink. Core and Engine remain independent from HTTP/database providers and credentials.
@@ -309,7 +310,7 @@ Classification changes require reproducible synthetic fixtures and evaluated evi
 
 ## Roadmap
 
-The v1 foundation and public distribution channels are established. Official publication remains an explicit protected operation. Ongoing work includes richer application subtypes, additional persistence adapters when justified, an optional policy layer over the normalized contract, and further interoperability evidence.
+The v1 foundation and public distribution channels are established. Official publication remains an explicit protected operation. Ongoing work includes concrete application subtype rules, additional persistence adapters when justified, an optional policy layer over the normalized contract, and further interoperability evidence.
 
 ## License
 

@@ -9,6 +9,111 @@
       ]
     },
     {
+      "id": "web-api-subtype-web-sdk-ambiguous",
+      "path": "WebApiSubtypeSignals/WebSdkExecutable",
+      "proves": [
+        "web-api-subtype-ambiguous-web-sdk"
+      ]
+    },
+    {
+      "id": "web-api-subtype-razor-overlap",
+      "path": "WebApiSubtypeSignals/RazorSupportOverlap",
+      "proves": [
+        "web-api-subtype-razor-overlap"
+      ]
+    },
+    {
+      "id": "mvc-subtype-web-sdk-implicit-razor-support",
+      "path": "MvcSubtypeSignals/WebSdkImplicitRazorSupport",
+      "proves": [
+        "mvc-subtype-web-sdk-implicit-razor-support"
+      ]
+    },
+    {
+      "id": "mvc-subtype-razor-class-library-overlap",
+      "path": "MvcSubtypeSignals/RazorClassLibrarySupport",
+      "proves": [
+        "mvc-subtype-razor-class-library-overlap"
+      ]
+    },
+    {
+      "id": "razor-pages-subtype-razor-generate-overlap",
+      "path": "RazorPagesSubtypeSignals/RazorGenerateOverlap",
+      "proves": [
+        "razor-pages-subtype-razor-generate-overlap"
+      ]
+    },
+    {
+      "id": "razor-pages-subtype-rcl-overlap",
+      "path": "RazorPagesSubtypeSignals/RazorClassLibraryOverlap",
+      "proves": [
+        "razor-pages-subtype-rcl-overlap"
+      ]
+    },
+    {
+      "id": "blazor-web-app-source-only",
+      "path": "BlazorServerSubtypeSignals/WebAppStaticSsr",
+      "proves": [
+        "blazor-web-app-source-only"
+      ]
+    },
+    {
+      "id": "blazor-interactive-server-source-only",
+      "path": "BlazorServerSubtypeSignals/InteractiveServer",
+      "proves": [
+        "blazor-interactive-server-source-only"
+      ]
+    },
+    {
+      "id": "blazor-webassembly-sdk",
+      "path": "BlazorWebAssemblySubtypeSignals/StandaloneSdk",
+      "proves": [
+        "blazor-webassembly-sdk"
+      ]
+    },
+    {
+      "id": "blazor-webassembly-razor-ambiguous",
+      "path": "BlazorWebAssemblySubtypeSignals/RazorLibraryAmbiguous",
+      "proves": [
+        "blazor-webassembly-razor-ambiguous"
+      ]
+    },
+    {
+      "id": "azure-functions-isolated-modern-sdk",
+      "path": "AzureFunctionsSubtypeSignals/IsolatedModernSdk",
+      "proves": [
+        "azure-functions-isolated-modern-sdk"
+      ]
+    },
+    {
+      "id": "azure-functions-isolated-legacy",
+      "path": "AzureFunctionsSubtypeSignals/IsolatedLegacy",
+      "proves": [
+        "azure-functions-isolated-legacy"
+      ]
+    },
+    {
+      "id": "azure-functions-in-process",
+      "path": "AzureFunctionsSubtypeSignals/InProcess",
+      "proves": [
+        "azure-functions-in-process"
+      ]
+    },
+    {
+      "id": "azure-functions-version-only",
+      "path": "AzureFunctionsSubtypeSignals/VersionOnly",
+      "proves": [
+        "azure-functions-version-only-non-match"
+      ]
+    },
+    {
+      "id": "azure-functions-mixed-models",
+      "path": "AzureFunctionsSubtypeSignals/MixedModels",
+      "proves": [
+        "azure-functions-model-conflict"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

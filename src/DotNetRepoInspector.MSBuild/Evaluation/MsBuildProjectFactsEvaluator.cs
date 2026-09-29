@@ -7,6 +7,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
 {
     private static readonly string[] EvaluatedPropertyNames =
     [
+        "AzureFunctionsVersion",
         "IsPackable",
         "IsTestProject",
         "IsTestingPlatformApplication",
@@ -117,7 +118,12 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
                 NormalizeBoolean(innerProperties, "IsTestProject"),
                 NormalizeBoolean(innerProperties, "IsTestingPlatformApplication"),
                 NormalizeBoolean(innerProperties, "UsingMicrosoftNETSdkWorker"),
-                NormalizePackageReferences(innerEvaluation.Items)));
+                NormalizePackageReferences(innerEvaluation.Items))
+            {
+                AzureFunctionsVersion = NormalizeScalar(
+                    innerProperties,
+                    "AzureFunctionsVersion")
+            });
         }
 
         var packageReferences = NormalizePackageReferences(evaluation.Items)
@@ -142,6 +148,9 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             UsingMicrosoftNETSdkWorker = NormalizeBoolean(
                 properties,
                 "UsingMicrosoftNETSdkWorker"),
+            AzureFunctionsVersion = NormalizeScalar(
+                properties,
+                "AzureFunctionsVersion"),
             PackageReferences = packageReferences,
             ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items),
             TargetFrameworkFacts = targetFrameworkFacts

@@ -5,9 +5,14 @@ namespace DotNetRepoInspector.Core.Classification;
 public sealed class DeterministicProjectClassifier : IProjectClassifier
 {
     public const string WebSdk = "Microsoft.NET.Sdk.Web";
+    public const string BlazorWebAssemblySdk = "Microsoft.NET.Sdk.BlazorWebAssembly";
+    public const string AzureFunctionsSdk = "Azure.Functions.Sdk";
     public const string WorkerSdk = "Microsoft.NET.Sdk.Worker";
     public const string MSTestSdk = "MSTest.Sdk";
     public const string MicrosoftNetTestSdkPackage = "Microsoft.NET.Test.Sdk";
+    public const string MicrosoftAzureFunctionsWorkerPackage = "Microsoft.Azure.Functions.Worker";
+    public const string MicrosoftAzureFunctionsWorkerSdkPackage = "Microsoft.Azure.Functions.Worker.Sdk";
+    public const string MicrosoftNetSdkFunctionsPackage = "Microsoft.NET.Sdk.Functions";
     public const string MicrosoftExtensionsHostingSystemdPackage = "Microsoft.Extensions.Hosting.Systemd";
     public const string MicrosoftExtensionsHostingWindowsServicesPackage =
         "Microsoft.Extensions.Hosting.WindowsServices";
@@ -26,6 +31,12 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
 
     private static readonly IReadOnlyList<string> WebSignals =
         Array.AsReadOnly(new[] { $"sdk:{WebSdk}" });
+
+    private static readonly IReadOnlyList<string> BlazorWebAssemblySignals =
+        Array.AsReadOnly(new[] { $"sdk:{BlazorWebAssemblySdk}" });
+
+    private static readonly IReadOnlyList<string> AzureFunctionsIsolatedSdkSignals =
+        Array.AsReadOnly(new[] { $"sdk:{AzureFunctionsSdk}" });
 
     private static readonly IReadOnlyList<string> WorkerSignals =
         Array.AsReadOnly(new[] { $"sdk:{WorkerSdk}" });
@@ -80,10 +91,31 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
         }
 
         var hasWebSdk = declaredSdks.Contains(WebSdk);
+        var hasBlazorWebAssemblySdk = declaredSdks.Contains(BlazorWebAssemblySdk);
+        var hasAzureFunctionsSdk = declaredSdks.Contains(AzureFunctionsSdk);
         var hasWorkerSdk = declaredSdks.Contains(WorkerSdk);
         var hasMSTestSdk = declaredSdks.Contains(MSTestSdk);
         var hasMicrosoftNetTestSdkPackage =
             packageReferences.Contains(MicrosoftNetTestSdkPackage);
+        var hasAzureFunctionsWorkerPackage =
+            packageReferences.Contains(MicrosoftAzureFunctionsWorkerPackage);
+        var hasAzureFunctionsWorkerSdkPackage =
+            packageReferences.Contains(MicrosoftAzureFunctionsWorkerSdkPackage);
+        var hasMicrosoftNetSdkFunctionsPackage =
+            packageReferences.Contains(MicrosoftNetSdkFunctionsPackage);
+        var azureFunctionsVersion = Normalize(facts.AzureFunctionsVersion);
+        var outputType = Normalize(facts.OutputType);
+        var hasLegacyAzureFunctionsIsolatedPackages =
+            hasAzureFunctionsWorkerPackage &&
+            hasAzureFunctionsWorkerSdkPackage;
+        var hasLegacyAzureFunctionsIsolatedShape =
+            azureFunctionsVersion is not null &&
+            hasLegacyAzureFunctionsIsolatedPackages &&
+            string.Equals(outputType, "Exe", StringComparison.OrdinalIgnoreCase);
+        var hasAzureFunctionsInProcessShape =
+            azureFunctionsVersion is not null &&
+            hasMicrosoftNetSdkFunctionsPackage &&
+            string.Equals(outputType, "Library", StringComparison.OrdinalIgnoreCase);
         var hasSystemdServiceLifetimePackage =
             packageReferences.Contains(MicrosoftExtensionsHostingSystemdPackage);
         var hasWindowsServiceLifetimePackage =
@@ -121,6 +153,72 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 MicrosoftNetTestSdkPackageSignals);
         }
 
+        if (hasAzureFunctionsSdk && hasMicrosoftNetSdkFunctionsPackage)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                new List<string>
+                {
+                    $"sdk:{AzureFunctionsSdk}",
+                    $"package:{MicrosoftNetSdkFunctionsPackage}",
+                    "conflict:azure-functions-model"
+                });
+        }
+
+        if (azureFunctionsVersion is not null &&
+            hasLegacyAzureFunctionsIsolatedPackages &&
+            hasMicrosoftNetSdkFunctionsPackage)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                new List<string>
+                {
+                    $"property:AzureFunctionsVersion={azureFunctionsVersion}",
+                    $"package:{MicrosoftAzureFunctionsWorkerPackage}",
+                    $"package:{MicrosoftAzureFunctionsWorkerSdkPackage}",
+                    $"package:{MicrosoftNetSdkFunctionsPackage}",
+                    "conflict:azure-functions-model"
+                });
+        }
+
+        if (hasAzureFunctionsSdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Worker,
+                ProjectClassificationConfidence.High,
+                AzureFunctionsIsolatedSdkSignals,
+                Subtype: ProjectClassificationSubtypes.AzureFunctionsIsolated);
+        }
+
+        if (hasLegacyAzureFunctionsIsolatedShape)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Worker,
+                ProjectClassificationConfidence.High,
+                new List<string>
+                {
+                    $"property:AzureFunctionsVersion={azureFunctionsVersion}",
+                    $"package:{MicrosoftAzureFunctionsWorkerPackage}",
+                    $"package:{MicrosoftAzureFunctionsWorkerSdkPackage}"
+                },
+                Subtype: ProjectClassificationSubtypes.AzureFunctionsIsolated);
+        }
+
+        if (hasAzureFunctionsInProcessShape)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Library,
+                ProjectClassificationConfidence.High,
+                new List<string>
+                {
+                    $"property:AzureFunctionsVersion={azureFunctionsVersion}",
+                    $"package:{MicrosoftNetSdkFunctionsPackage}"
+                },
+                Subtype: ProjectClassificationSubtypes.AzureFunctionsInProcess);
+        }
+
         if (hasWebSdk && hasWorkerSdk)
         {
             return new ProjectClassification(
@@ -129,12 +227,43 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 SpecializedSdkConflictSignals);
         }
 
+        if (hasBlazorWebAssemblySdk && hasWorkerSdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                CreateConflictSignals(
+                    $"sdk:{BlazorWebAssemblySdk}",
+                    $"sdk:{WorkerSdk}",
+                    "conflict:specialized-sdk"));
+        }
+
         if (hasWebSdk && facts.UsingMicrosoftNETSdkWorker is true)
         {
             return new ProjectClassification(
                 ProjectClassificationKinds.Unknown,
                 null,
                 WebAndWorkerPropertyConflictSignals);
+        }
+
+        if (hasBlazorWebAssemblySdk && facts.UsingMicrosoftNETSdkWorker is true)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                CreateConflictSignals(
+                    $"sdk:{BlazorWebAssemblySdk}",
+                    "property:UsingMicrosoftNETSdkWorker=true",
+                    "conflict:web-worker"));
+        }
+
+        if (hasBlazorWebAssemblySdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Web,
+                ProjectClassificationConfidence.High,
+                BlazorWebAssemblySignals,
+                Subtype: ProjectClassificationSubtypes.BlazorWebAssembly);
         }
 
         if (hasWebSdk)
@@ -161,7 +290,6 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 UsingWorkerPropertySignals);
         }
 
-        var outputType = Normalize(facts.OutputType);
         if (string.Equals(outputType, "Exe", StringComparison.OrdinalIgnoreCase))
         {
             var serviceLifetimeSignals = GetServiceLifetimeSignals(
@@ -198,6 +326,12 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
             null,
             signals);
     }
+
+    private static System.Collections.ObjectModel.ReadOnlyCollection<string> CreateConflictSignals(
+        string first,
+        string second,
+        string conflict) =>
+        Array.AsReadOnly(new[] { first, second, conflict });
 
     private static string? Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value)

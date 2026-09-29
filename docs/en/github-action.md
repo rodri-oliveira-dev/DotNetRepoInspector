@@ -66,7 +66,7 @@ The Action intentionally does not expose an `inspector-version` input. Each rele
       src/App/App.csproj=web
 ```
 
-A classification override changes only the effective classification interpretation. MSBuild facts remain untouched. Schema `1.3` exposes `classification.source` and `classification.automaticKind` when an override is active so downstream automation can distinguish the configured result from the automatic result.
+A classification override changes only the effective classification interpretation. MSBuild facts remain untouched. Schema `1.3` and later versions expose `classification.source` and `classification.automaticKind` when an override is active so downstream automation can distinguish the configured result from the automatic result.
 
 ## Fleet inventory exclusions
 

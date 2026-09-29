@@ -49,7 +49,7 @@ Built-in discovery exclusions such as normal build-output directories remain in 
 
 An override changes only the **effective interpretation of the project classification**. It does not alter SDKs, target frameworks, `OutputType`, test metadata, packability, runtime identifiers, references, or any other fact collected through MSBuild.
 
-When an override is applied, schema `1.3` makes it distinguishable from automatic classification:
+When an override is applied, schema `1.3` and later makes it distinguishable from automatic classification:
 
 ```json
 "classification": {

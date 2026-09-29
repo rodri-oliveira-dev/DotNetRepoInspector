@@ -116,5 +116,6 @@
     "docs/pt-BR/mcp-1.2.0-release-notes.md",
     "docs/en/container.md",
     "docs/pt-BR/container.md"
-  ]
+  ],
+  "currentSchemaVersion": "1.4"
 }

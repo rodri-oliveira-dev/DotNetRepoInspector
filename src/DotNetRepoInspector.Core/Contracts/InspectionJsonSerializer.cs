@@ -224,6 +224,11 @@ public static class InspectionJsonSerializer
             return false;
         }
 
+        if (classification.Subtype is not null && string.IsNullOrWhiteSpace(classification.Subtype))
+        {
+            return false;
+        }
+
         if (classification.Source is null)
         {
             return classification.AutomaticKind is null;

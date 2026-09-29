@@ -22,7 +22,7 @@ The public GitHub Action refs created from that release line are available, incl
 | GitHub Action minor alias | `v1.0` |
 | License | MIT |
 
-The machine-readable counterpart of this table is `.github/release-readiness-v1.json`. Repository tests compare that baseline with `action.yml`, `InspectionSchema`, the CLI package metadata, the canonical schema example, and the required governance/security files.
+The machine-readable counterpart of this table is `.github/release-readiness-v1.json`. Its `schemaVersion` preserves the immutable v1.0.0 baseline (`1.3`), while `currentSchemaVersion` tracks the current compatible v1 schema (`1.4`). Repository tests validate both roles alongside `action.yml`, `InspectionSchema`, the CLI package metadata, the canonical schema example, and the required governance/security files.
 
 For the current v1 release line, the same machine-readable file also records the official container distribution contract: published GHCR/Docker Hub identities, `linux/amd64` and `linux/arm64`, stable/prerelease tag policy, release evidence artifacts, and required non-root/read-only/offline/digest/SBOM/provenance controls. This extends release readiness without rewriting the historical v1.0.0 publication record.
 
@@ -35,7 +35,7 @@ The first stable release includes these supported surfaces:
 - repository/project discovery based on evaluated .NET/MSBuild metadata;
 - base classification: Web, Worker, Console, Library, Test, and Unknown;
 - normalized project references and Git repository metadata;
-- versioned inspection JSON, with `schemaVersion 1.3` as the first v1 release baseline;
+- versioned inspection JSON; v1.0.0 was published with `schemaVersion 1.3`, while the current compatible v1 contract is schema `1.4`;
 - optional `.dotnetrepoinspector.json`, exclusions, and explicit classification overrides;
 - CLI/.NET Tool with deterministic stdout/stderr separation and documented exit codes;
 - reusable Composite GitHub Action using the same .NET Tool;
@@ -43,7 +43,7 @@ The first stable release includes these supported surfaces:
 - compatibility validation for .NET 8/10 target repositories on Ubuntu, Windows, and macOS;
 - security/privacy boundaries, OSS governance, real-repository validation, and performance guardrails.
 
-Application subtypes and the optional policy engine remain post-v1 work. They are not part of the v1.0.0 compatibility promise.
+Concrete subtype detection rules and the optional policy engine remain post-v1 work. The v1 contract includes the optional `classification.subtype` field, but the v1.0.0 compatibility promise does not include concrete subtype classifications.
 
 ## Compatibility boundaries
 
@@ -66,7 +66,7 @@ The gate verifies:
 
 1. the product version in `.github/release-readiness-v1.json` defines the initial v1 baseline, while official release versions are supplied and validated by the Release workflow;
 2. product major, Action major alias, and inspection schema major are aligned for the v1 baseline;
-3. `InspectionSchema.CurrentVersion` is exactly the baseline schema version;
+3. the immutable v1.0.0 baseline remains schema `1.3`, while `InspectionSchema.CurrentVersion` matches `currentSchemaVersion`;
 4. the CLI project remains a packable .NET Tool with the expected package ID, command, target framework, license, README, and repository URL;
 5. the canonical schema example advertises the same `schemaVersion`;
 6. required license, security, contribution, conduct, issue/PR templates, and release documentation are present;
@@ -87,7 +87,7 @@ Before starting the official release, confirm on `main`:
 - package validation installs the exact `DotNetRepoInspector.1.0.0.nupkg` globally and locally and verifies `--help`, `--version`, and a real inspection;
 - MCP validation inspects the exact `.nupkg`/`.snupkg`, installs the tool, resolves it through local-source `dnx`, and performs a real stdio `inspect_repository` call;
 - the release candidate contains `release-manifest.json` and `SHA256SUMS`;
-- the manifest points to the exact release commit and reports schema `1.3`;
+- the manifest points to the exact release commit and reports schema `1.4`;
 - GitHub Action and compatibility smoke tests are green on Ubuntu, Windows, and macOS.
 
 A manual safe dry-run can be started with **Actions → Release → Run workflow**, version `1.0.0`, `publish=false`. The publication job must be skipped.

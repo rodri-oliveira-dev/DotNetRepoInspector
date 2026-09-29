@@ -17,6 +17,21 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | Fixture | Behavior |
 | --- | --- |
 | `ProjectKinds/Web` | `Microsoft.NET.Sdk.Web` |
+| `WebApiSubtypeSignals/WebSdkExecutable` | Web SDK + executable output remains ambiguous for Web API subtype |
+| `WebApiSubtypeSignals/RazorSupportOverlap` | Razor support can coexist with Web workloads and does not make Web API presence/absence deterministic |
+| `MvcSubtypeSignals/WebSdkImplicitRazorSupport` | Web SDK implicitly enables Razor MVC support, which is not specific to MVC applications |
+| `MvcSubtypeSignals/RazorClassLibrarySupport` | Razor SDK plus `AddRazorSupportForMvc=true` also represents a Razor Class Library, not a Web MVC app |
+| `RazorPagesSubtypeSignals/RazorGenerateOverlap` | Web SDK contains Razor Page/View source, but the current evaluation boundary does not expose `RazorGenerate` without target execution |
+| `RazorPagesSubtypeSignals/RazorClassLibraryOverlap` | Razor Class Libraries can contain Razor Page source and MVC support without being Web Razor Pages applications |
+| `BlazorServerSubtypeSignals/WebAppStaticSsr` | Real Blazor Web App source configuration remains indistinguishable from base Web through current structured classification facts |
+| `BlazorServerSubtypeSignals/InteractiveServer` | Interactive Server hosting is established only by source-level render-mode configuration |
+| `BlazorWebAssemblySubtypeSignals/StandaloneSdk` | Explicit `Microsoft.NET.Sdk.BlazorWebAssembly` deterministically identifies standalone/client Blazor WebAssembly |
+| `BlazorWebAssemblySubtypeSignals/RazorLibraryAmbiguous` | Razor component source without the Blazor WebAssembly SDK remains a non-match |
+| `AzureFunctionsSubtypeSignals/IsolatedModernSdk` | Current isolated-worker model identified by the dedicated `Azure.Functions.Sdk` project SDK |
+| `AzureFunctionsSubtypeSignals/IsolatedLegacy` | Legacy isolated-worker model requires Functions runtime property plus Worker and Worker.Sdk packages |
+| `AzureFunctionsSubtypeSignals/InProcess` | In-process model requires Functions runtime property plus `Microsoft.NET.Sdk.Functions` |
+| `AzureFunctionsSubtypeSignals/VersionOnly` | `AzureFunctionsVersion` alone is deliberately insufficient |
+| `AzureFunctionsSubtypeSignals/MixedModels` | Conflicting isolated/in-process package sets remain unknown |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

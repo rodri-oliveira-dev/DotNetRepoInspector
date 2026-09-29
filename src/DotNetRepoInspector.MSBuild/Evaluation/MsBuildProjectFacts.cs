@@ -22,6 +22,12 @@ public sealed record MsBuildProjectFacts(
         init;
     }
 
+    public string? AzureFunctionsVersion
+    {
+        get;
+        init;
+    }
+
     public IReadOnlyList<string> PackageReferences
     {
         get;

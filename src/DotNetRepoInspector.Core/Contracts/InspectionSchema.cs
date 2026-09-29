@@ -2,7 +2,7 @@ namespace DotNetRepoInspector.Core.Contracts;
 
 public static class InspectionSchema
 {
-    public const string CurrentVersion = "1.3";
+    public const string CurrentVersion = "1.4";
     public const int CurrentMajorVersion = 1;
 
     public static bool IsCompatibleVersion(string? schemaVersion)

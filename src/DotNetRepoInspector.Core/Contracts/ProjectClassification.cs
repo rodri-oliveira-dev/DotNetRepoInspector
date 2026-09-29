@@ -5,4 +5,5 @@ public sealed record ProjectClassification(
     string? Confidence,
     IReadOnlyList<string> Signals,
     string? Source = null,
-    string? AutomaticKind = null);
+    string? AutomaticKind = null,
+    string? Subtype = null);

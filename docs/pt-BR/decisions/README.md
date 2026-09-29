@@ -24,5 +24,11 @@ Um ADR deve registrar:
 - [ADR 0008: Limitar a concorrência de inspeções MCP e a telemetria operacional](0008-mcp-operational-reliability.md) — Aceito.
 - [ADR 0009: Detectar projetos de teste por sinais de VSTest e Microsoft.Testing.Platform](0009-test-project-detection-signals.md) — Aceito.
 - [ADR 0010: Detectar projetos Worker além do Worker SDK declarado](0010-worker-project-detection-signals.md) — Aceito.
+- [ADR 0011: Manter o subtipo Web API sem suporte na ausência de evidência estrutural determinística](0011-web-api-subtype-detection.md) — Aceito.
+- [ADR 0012: Manter o subtipo MVC sem suporte na ausência de evidência estrutural determinística](0012-mvc-subtype-detection.md) — Aceito.
+- [ADR 0013: Manter o subtipo Razor Pages sem suporte na ausência de evidência estrutural determinística](0013-razor-pages-subtype-detection.md) — Aceito.
+- [ADR 0014: Manter os subtipos Blazor Web App e server-side sem suporte na ausência de evidência estrutural determinística](0014-blazor-server-subtype-detection.md) — Aceito.
+- [ADR 0015: Detectar Blazor WebAssembly pelo project SDK dedicado](0015-blazor-webassembly-subtype-detection.md) — Aceito.
+- [ADR 0016: Detectar Azure Functions por SDK oficial e sinais do modelo de runtime](0016-azure-functions-subtype-detection.md) — Aceito.
 
 Decisões futuras prováveis incluem fronteiras da avaliação de políticas e transporte MCP remoto caso ele se torne um cenário suportado.

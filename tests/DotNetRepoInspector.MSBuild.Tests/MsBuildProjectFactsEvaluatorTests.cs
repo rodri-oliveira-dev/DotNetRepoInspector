@@ -29,6 +29,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
         Assert.Equal("Exe", result.Facts.OutputType);
         Assert.True(result.Facts.IsTestProject is true);
         Assert.Null(result.Facts.UsingMicrosoftNETSdkWorker);
+        Assert.Null(result.Facts.AzureFunctionsVersion);
         Assert.True(result.Facts.IsPackable is false);
         Assert.Equal(
             new[] { "linux-x64", "win-x64" },
@@ -91,6 +92,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
 
             var rawProperties = new Dictionary<string, string>(StringComparer.Ordinal)
             {
+                ["AzureFunctionsVersion"] = " v4 ",
                 ["TargetFramework"] = " net10.0 ",
                 ["TargetFrameworks"] = string.Empty,
                 ["OutputType"] = string.Empty,
@@ -122,6 +124,7 @@ public sealed class MsBuildProjectFactsEvaluatorTests
             Assert.Null(result.Facts.OutputType);
             Assert.Null(result.Facts.IsTestProject);
             Assert.True(result.Facts.UsingMicrosoftNETSdkWorker is true);
+            Assert.Equal("v4", result.Facts.AzureFunctionsVersion);
             Assert.True(result.Facts.IsPackable is true);
             Assert.Equal(new[] { "linux-x64" }, result.Facts.RuntimeIdentifiers);
             Assert.Equal(string.Empty, result.Facts.Properties["IsTestProject"]);

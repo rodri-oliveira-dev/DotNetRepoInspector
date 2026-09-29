@@ -88,6 +88,30 @@ public sealed class MsBuildProjectClassificationAdapterTests
     }
 
     [Fact]
+    public void Classify_MapsAzureFunctionsVersionToCoreClassifier()
+    {
+        var facts = CreateFacts(
+            new[] { new ProjectSdkReference("Microsoft.NET.Sdk") },
+            "Library",
+            false,
+            NoProperties) with
+        {
+            AzureFunctionsVersion = "v4",
+            PackageReferences =
+            [
+                DeterministicProjectClassifier.MicrosoftNetSdkFunctionsPackage
+            ]
+        };
+
+        var classification = _adapter.Classify(facts);
+
+        Assert.Equal(ProjectClassificationKinds.Library, classification.Kind);
+        Assert.Equal(
+            ProjectClassificationSubtypes.AzureFunctionsInProcess,
+            classification.Subtype);
+    }
+
+    [Fact]
     public void Classify_DoesNotUseSuggestiveRawPropertiesAsClassificationHeuristics()
     {
         var properties = new Dictionary<string, string>(StringComparer.Ordinal)

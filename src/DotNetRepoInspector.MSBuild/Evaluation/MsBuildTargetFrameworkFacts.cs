@@ -6,4 +6,11 @@ public sealed record MsBuildTargetFrameworkFacts(
     bool? IsTestProject,
     bool? IsTestingPlatformApplication,
     bool? UsingMicrosoftNETSdkWorker,
-    IReadOnlyList<string> PackageReferences);
+    IReadOnlyList<string> PackageReferences)
+{
+    public string? AzureFunctionsVersion
+    {
+        get;
+        init;
+    }
+}

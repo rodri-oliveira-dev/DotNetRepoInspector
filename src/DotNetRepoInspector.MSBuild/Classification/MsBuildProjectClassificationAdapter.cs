@@ -38,6 +38,7 @@ public sealed class MsBuildProjectClassificationAdapter
         {
             UsingMicrosoftNETSdkWorker = classificationFacts.UsingMicrosoftNETSdkWorker,
             IsTestingPlatformApplication = classificationFacts.IsTestingPlatformApplication,
+            AzureFunctionsVersion = classificationFacts.AzureFunctionsVersion,
             PackageReferences = classificationFacts.PackageReferences
         });
     }
@@ -51,6 +52,7 @@ public sealed class MsBuildProjectClassificationAdapter
                 facts.IsTestProject,
                 facts.IsTestingPlatformApplication,
                 facts.UsingMicrosoftNETSdkWorker,
+                facts.AzureFunctionsVersion,
                 facts.PackageReferences);
         }
 
@@ -75,6 +77,9 @@ public sealed class MsBuildProjectClassificationAdapter
             MergeBoolean(
                 facts.UsingMicrosoftNETSdkWorker,
                 facts.TargetFrameworkFacts.Select(target => target.UsingMicrosoftNETSdkWorker)),
+            MergeScalar(
+                facts.AzureFunctionsVersion,
+                facts.TargetFrameworkFacts.Select(target => target.AzureFunctionsVersion)),
             packageReferences);
     }
 
@@ -82,6 +87,20 @@ public sealed class MsBuildProjectClassificationAdapter
         innerValues.Any(value => value is true)
             ? true
             : outerValue;
+
+    private static string? MergeScalar(string? outerValue, IEnumerable<string?> innerValues)
+    {
+        var values = innerValues
+            .Append(outerValue)
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(value => value!.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        return values.Length == 1
+            ? values[0]
+            : null;
+    }
 
     private static bool IsServiceLifetimePackage(string packageReference) =>
         string.Equals(
@@ -98,5 +117,6 @@ public sealed class MsBuildProjectClassificationAdapter
         bool? IsTestProject,
         bool? IsTestingPlatformApplication,
         bool? UsingMicrosoftNETSdkWorker,
+        string? AzureFunctionsVersion,
         IReadOnlyList<string> PackageReferences);
 }

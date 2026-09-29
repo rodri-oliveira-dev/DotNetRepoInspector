@@ -6,6 +6,108 @@ DotNetRepoInspector classifies projects from evaluated structural facts instead 
 
 The classifications are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
+`projects[].classification.subtype` is a separate optional refinement of the base classification kind. Concrete subtypes are emitted only from approved deterministic rules. The currently supported subtypes are `blazor-webassembly`, `azure-functions-isolated`, and `azure-functions-in-process`; otherwise the field stays absent.
+
+## Web API subtype: intentionally unsupported
+
+Web API is **not** currently emitted as a subtype. The inspection model does not expose a project-level structural fact that uniquely distinguishes ASP.NET Core Web API projects from MVC, Razor Pages, Blazor, or mixed Web applications.
+
+The decision is documented in [ADR 0011](decisions/0011-web-api-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Authoritative for base `kind = web`, but shared by multiple ASP.NET Core application models. |
+| effective `OutputType == Exe` | Common to modern ASP.NET Core hosts and not API-specific. |
+| packages such as `Microsoft.AspNetCore.OpenApi` or `Swashbuckle.AspNetCore` | Optional API tooling, removable from valid APIs, and usable by mixed/non-API Web applications. |
+| Razor-related properties/items | They can prove Razor support, but cannot prove that API endpoints are absent; application models can coexist. |
+| launch profiles such as a `swagger` launch URL | Optional tooling configuration outside the normalized evaluated classification facts. |
+| source markers such as `MapGet`, `[ApiController]`, or `ControllerBase` | Would require source/semantic analysis, which is outside the subtype boundary for this issue. |
+
+Consequently, a project classified as `web` keeps `classification.subtype` absent even when it has common API-oriented package hints. `classification.confidence` continues to describe the base `web` classification; no subtype confidence is fabricated.
+
+## MVC subtype: intentionally unsupported
+
+MVC is **not** currently emitted as a subtype. The current evaluated project/MSBuild facts can prove Web or Razor capability, but they cannot prove that the application actually uses the MVC controller/view application model rather than Razor Pages, API endpoints, Blazor, a Razor Class Library, or a mixed model.
+
+The decision is documented in [ADR 0012](decisions/0012-mvc-subtype-detection.md). The main candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Proves only the base `web` workload and is shared by all major ASP.NET Core Web application models. |
+| effective `AddRazorSupportForMvc == true` | The Razor SDK uses it for MVC views **or Razor Pages**, and Web SDK projects on modern .NET set it implicitly. |
+| declared `Microsoft.NET.Sdk.Razor` plus `AddRazorSupportForMvc == true` | Also represents Razor Class Libraries and therefore is not evidence of a Web MVC application. |
+| MVC/Razor packages such as runtime compilation or JSON integration packages | Optional capabilities and cross-cutting MVC infrastructure; they do not establish controller/view usage. |
+| `Views/**`, `Controllers/**`, or project names | Convention/path/name heuristics; mixed applications remain valid and these signals are not authoritative. |
+| controller inheritance, `AddControllersWithViews`, routes, or view-returning actions | Would require source or semantic analysis, outside the supported subtype boundary. |
+
+Therefore a project with `kind = web` retains an absent `classification.subtype` even when Razor/MVC-oriented hints are present. A future MVC subtype requires an authoritative structured fact or an explicitly approved bounded semantic-analysis model.
+
+## Razor Pages subtype: intentionally unsupported
+
+Razor Pages is **not** currently emitted as a subtype. The current project/MSBuild model can identify Web and Razor build capabilities, but it cannot distinguish a Razor Page from an MVC Razor View without inspecting Razor source content.
+
+The decision is documented in [ADR 0013](decisions/0013-razor-pages-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Proves only the base `web` workload and is shared by MVC, Razor Pages, APIs, Blazor, and mixed applications. |
+| effective `AddRazorSupportForMvc == true` | The Razor SDK uses it for applications containing MVC views **or Razor Pages**, and modern Web SDK projects set it implicitly. |
+| `RazorGenerate` / `.cshtml` build inputs | The current property/item evaluation boundary does not expose default `RazorGenerate` items without additional target execution; even generic Razor inputs would not carry the `@page` semantic distinction. |
+| declared `Microsoft.NET.Sdk.Razor` | Proves Razor build capability, including Razor Class Libraries, not a Web Razor Pages application. |
+| a `Pages/**` path or `.cshtml.cs` companion file | File-system convention/path heuristic and explicitly outside the approved subtype boundary. |
+| `PageModel`, `AddRazorPages`, or `MapRazorPages` | Requires source or semantic inspection and can coexist with other ASP.NET Core application models. |
+| the Razor `@page` directive | This is the distinguishing Razor Pages marker, but detecting it requires reading Razor source content, which is outside the current inspection model. |
+
+Therefore a project with `kind = web` keeps `classification.subtype` absent even when Razor source is present. A future Razor Pages subtype requires an approved content/semantic inspection boundary or a new authoritative structured signal.
+
+## Blazor Web App / server-side subtypes: intentionally unsupported
+
+Blazor Web App and Blazor Server/server-side hosting are **not** currently emitted as subtypes. Both use the regular ASP.NET Core Web SDK on the server, while the hosting/render-mode distinction is configured through application code rather than an authoritative project-level MSBuild fact.
+
+The decision is documented in [ADR 0014](decisions/0014-blazor-server-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Shared by Blazor Web App, Blazor Server, MVC, Razor Pages, APIs, and mixed ASP.NET Core applications. |
+| `.razor` files as evaluated `Content` | Proves Razor component source exists, but components can be embedded in mixed ASP.NET Core apps and Razor Class Libraries. |
+| `RazorComponent` item | Materialized by Razor SDK targets after the basic evaluation boundary; even when available, it only proves component compilation, not hosting mode. |
+| implicit `Microsoft.AspNetCore.App` framework reference | Shared by ASP.NET Core Web applications and not Blazor-specific. |
+| `AddRazorComponents` / `MapRazorComponents` | Source-level application configuration and outside the current structural classification model. |
+| `AddInteractiveServerComponents` / `AddInteractiveServerRenderMode` | Meaningful for modern Interactive Server hosting, but source-level configuration. |
+| legacy `AddServerSideBlazor` / `MapBlazorHub` | Meaningful for classic Blazor Server hosting, but also source-level configuration. |
+| template paths/files such as `Components/**`, `App.razor`, `Routes.razor`, or `_Host.cshtml` | Convention heuristics, not authoritative application-model evidence. |
+
+Consequently, both a modern Blazor Web App and server-side/Interactive Server hosting remain `kind = web` with `classification.subtype` absent.
+
+## Blazor WebAssembly subtype
+
+Standalone/client Blazor WebAssembly **is supported deterministically**. The explicit project SDK `Microsoft.NET.Sdk.BlazorWebAssembly` is a workload-specific structural signal that distinguishes browser-hosted WebAssembly projects from server-hosted ASP.NET Core projects.
+
+The decision is documented in [ADR 0015](decisions/0015-blazor-webassembly-subtype-detection.md).
+
+| Evidence | Decision |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.BlazorWebAssembly` | Accepted: `kind = web`, `subtype = blazor-webassembly`, `confidence = high`. |
+| package `Microsoft.AspNetCore.Components.WebAssembly` without the SDK | Rejected as subtype evidence: package usage alone does not establish the project workload/hosting boundary. |
+| `.razor` files or Razor SDK | Rejected as subtype evidence: reusable component libraries and server-hosted applications can contain the same source shape. |
+| project/folder names such as `.Client` | Rejected naming heuristic. |
+
+Test-project signals retain higher precedence. A Blazor WebAssembly SDK combined with an independent Worker workload signal is treated as conflicting evidence and remains `unknown` rather than fabricating a subtype.
+
+## Azure Functions subtypes
+
+Azure Functions **is supported deterministically** for the current isolated-worker SDK model, the legacy isolated-worker build-package model, and the in-process model. The decision is documented in [ADR 0016](decisions/0016-azure-functions-subtype-detection.md).
+
+| Model | Required structural evidence | Classification |
+| --- | --- | --- |
+| isolated worker — current | declared `Azure.Functions.Sdk` | `kind = worker`, `subtype = azure-functions-isolated`, `confidence = high` |
+| isolated worker — legacy | effective `AzureFunctionsVersion`, `OutputType = Exe`, `Microsoft.Azure.Functions.Worker`, and `Microsoft.Azure.Functions.Worker.Sdk` | `kind = worker`, `subtype = azure-functions-isolated`, `confidence = high` |
+| in-process | effective `AzureFunctionsVersion`, `OutputType = Library`, and `Microsoft.NET.Sdk.Functions` | `kind = library`, `subtype = azure-functions-in-process`, `confidence = high` |
+
+The in-process model is still structurally detectable even though Microsoft support ends on November 10, 2026.
+
+The following are deliberately insufficient on their own: `AzureFunctionsVersion`, any one Functions package, `host.json`, `local.settings.json`, project/folder names, or source attributes. If isolated and in-process model-specific package sets coexist, classification returns `unknown` with `conflict:azure-functions-model`.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:
@@ -15,11 +117,12 @@ The classifier consumes normalized facts produced by the inspection pipeline:
 - effective `IsTestProject`;
 - effective `IsTestingPlatformApplication`;
 - effective `UsingMicrosoftNETSdkWorker`;
+- effective `AzureFunctionsVersion`;
 - evaluated `PackageReference` identities used by approved classification rules.
 
 The Core classifier has no dependency on MSBuild. `MsBuildProjectClassificationAdapter` maps `MsBuildProjectFacts` into the Core input model.
 
-For multi-targeted projects, classification facts are evaluated in each MSBuild inner build. Worker properties and package references are merged across target frameworks, while a service-lifetime package is paired with `OutputType == Exe` only when both facts occur in the same target framework.
+For multi-targeted projects, classification facts are evaluated in each MSBuild inner build. Worker properties, `AzureFunctionsVersion`, and package references are merged across target frameworks, while a service-lifetime package is paired with `OutputType == Exe` only when both facts occur in the same target framework. Conflicting non-empty `AzureFunctionsVersion` values are treated as indeterminate.
 
 The public `projects[].isTestProject` field keeps its original meaning: it is the evaluated MSBuild `IsTestProject` fact. A project can therefore be classified as `test` from another approved signal while `isTestProject` is `false` or absent.
 
@@ -46,14 +149,19 @@ Rules are evaluated in this order:
 2. `IsTestProject == true` -> `test`.
 3. declared `MSTest.Sdk` -> `test`.
 4. when `IsTestProject` is missing, evaluated `Microsoft.NET.Test.Sdk` -> `test`.
-5. `Microsoft.NET.Sdk.Web` plus a strong Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker == true`) -> `unknown` because the workload signals conflict.
-6. `Microsoft.NET.Sdk.Web` -> `web`; service-lifetime package hints do not override Web.
-7. `Microsoft.NET.Sdk.Worker` -> `worker`.
-8. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
-9. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
-10. `OutputType == Exe` -> `console` when no more specific signal matched.
-11. `OutputType == Library` -> `library` when no more specific signal matched.
-12. otherwise -> `unknown`.
+5. conflicting Azure Functions isolated/in-process model signals -> `unknown`.
+6. declared `Azure.Functions.Sdk` -> `worker` with `subtype = azure-functions-isolated`.
+7. legacy isolated Functions shape (`AzureFunctionsVersion` + executable output + Worker + Worker.Sdk) -> `worker` with `subtype = azure-functions-isolated`.
+8. in-process Functions shape (`AzureFunctionsVersion` + library output + `Microsoft.NET.Sdk.Functions`) -> `library` with `subtype = azure-functions-in-process`.
+9. Web-family SDK (`Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.BlazorWebAssembly`) plus a strong Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker == true`) -> `unknown` because the workload signals conflict.
+10. `Microsoft.NET.Sdk.BlazorWebAssembly` -> `web` with `subtype = blazor-webassembly`.
+11. `Microsoft.NET.Sdk.Web` -> `web`; service-lifetime package hints do not override Web.
+12. `Microsoft.NET.Sdk.Worker` -> `worker`.
+13. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
+14. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
+15. `OutputType == Exe` -> `console` when no more specific signal matched.
+16. `OutputType == Library` -> `library` when no more specific signal matched.
+17. otherwise -> `unknown`.
 
 A strong test signal therefore remains `test` even when the project is executable or declares a specialized workload SDK. Conflicting Web/Worker SDK declarations produce `unknown` only when no approved test signal has already matched.
 
@@ -67,6 +175,10 @@ A strong test signal therefore remains `test` even when the project is executabl
 | `test` | `IsTestProject == true` | `property:IsTestProject=true` | `high` |
 | `test` | declared `MSTest.Sdk` | `sdk:MSTest.Sdk` | `high` |
 | `test` | fallback `Microsoft.NET.Test.Sdk` with missing `IsTestProject` | `package:Microsoft.NET.Test.Sdk` | `medium` |
+| `worker` / `azure-functions-isolated` | declared `Azure.Functions.Sdk` | `sdk:Azure.Functions.Sdk` | `high` |
+| `worker` / `azure-functions-isolated` | legacy Functions runtime + Worker build package set | `property:AzureFunctionsVersion=...` + package signals | `high` |
+| `library` / `azure-functions-in-process` | Functions runtime + `Microsoft.NET.Sdk.Functions` | `property:AzureFunctionsVersion=...` + package signal | `high` |
+| `web` / `blazor-webassembly` | declared `Microsoft.NET.Sdk.BlazorWebAssembly` | `sdk:Microsoft.NET.Sdk.BlazorWebAssembly` | `high` |
 | `web` | declared `Microsoft.NET.Sdk.Web` | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | declared `Microsoft.NET.Sdk.Worker` | `sdk:Microsoft.NET.Sdk.Worker` | `high` |
 | `worker` | explicit Worker opt-in property | `property:UsingMicrosoftNETSdkWorker=true` | `high` |
@@ -89,3 +201,5 @@ The engine does not classify from:
 - arbitrary raw MSBuild properties that have not been promoted to normalized classification facts.
 
 New signals should only be added when the inspection model can collect them explicitly and their precedence is deterministic.
+
+Subtype rules follow the same bar: they must use approved evaluated metadata, avoid source-code inspection and name/path heuristics, and keep the base `classification.kind` semantics unchanged.
