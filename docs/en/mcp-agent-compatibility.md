@@ -56,7 +56,7 @@ The versioned eval dataset covers:
 | Case | Fixture | Expected tool | Objective facts |
 | --- | --- | --- | --- |
 | `tfm-project-index` | `ProjectKinds` | `list_projects` | target frameworks for Web and MultiTargeting projects |
-| `classification-project-kinds` | `ProjectKinds` | `list_projects` | Web, Worker, Console, Library, and Test classifications |
+| `classification-project-kinds` | `ProjectKinds` | `list_projects` | Web, Worker, Console, Library, Test, and MultiTargeting classifications |
 | `dependency-fan-out` | `ProjectReferences/FanOut` | `get_project_reference_graph` | A references B and C |
 | `diagnostics-missing-sdk` | `Compatibility/MissingSdk` | `get_repository_diagnostics` | diagnostic `DRI1002` |
 | `diagnostics-unresolved-reference` | `ProjectReferences/Unresolved` | `get_project_reference_graph` | missing reference plus `DRI1003` |
@@ -125,13 +125,35 @@ RC package evidence is recorded separately in [issue #137](https://github.com/ro
 
 Release note: OpenAI Codex CLI was validated against a local development executable, but its exact artifact/package version was not recorded. Do not treat that historical smoke as validation of `1.2.0-rc.1`. The exact `1.2.0-rc.1` package passed deterministic evals from a controlled local feed as recorded above; a Codex smoke against the **exact published RC package** remains pending until publication and must be recorded before GA promotion. Claude Code remains unvalidated because #149 recorded an external execution-environment impediment; its live smoke is tracked explicitly in #177. Gemini CLI likewise remains unvalidated because #160 recorded an external execution-environment impediment; its live smoke is tracked in #178.
 
+Before launching either live client, isolate NuGet package resolution so the evidence is attributable to the exact public stable package rather than a private/local feed or a previously populated global cache.
+
+Create a temporary NuGet configuration containing only NuGet.org:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+</configuration>
+```
+
+Then use a fresh, initially empty package cache for the live-client process:
+
+```bash
+export NUGET_PACKAGES="$(mktemp -d)"
+```
+
+The `dnx` arguments below also pass the exclusive config/source explicitly and disable the HTTP cache, matching the isolation strategy used by `.github/scripts/invoke_mcp_package_smoke.ps1`.
+
 ## Claude Code validation attempt for #149 (2026-09-29)
 
 Issue #149 uses a versioned, deterministic fixture as the ground truth for the live-client smoke:
 
 - controlled root: `tests/Fixtures/ProjectKinds`;
 - expected project inventory: exactly 6 projects: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj`, and `Worker/Worker.csproj`;
-- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
+- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`, MultiTargeting=`library`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
 - `inspect_repository` ground truth: the same six-project inventory and the same canonical per-project target-framework/classification facts projected by `InspectionReport`;
 - authoritative source: the versioned `mcp-evals-v1.json` dataset plus the `ProjectKinds` fixture projects themselves.
 
@@ -140,7 +162,12 @@ Issue #149 uses a versioned, deterministic fixture as the ground truth for the l
 The stable package selected for the run is `DotNetRepoInspector.Mcp@1.5.2`, the current stable release at the time of the attempt. The intended server command is:
 
 ```bash
-dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <absolute-path>/tests/Fixtures/ProjectKinds
+dnx DotNetRepoInspector.Mcp@1.5.2 \
+  --configfile /absolute/path/to/NuGet.Config \
+  --source https://api.nuget.org/v3/index.json \
+  --no-http-cache \
+  --yes -- \
+  --root <absolute-path>/tests/Fixtures/ProjectKinds
 ```
 
 The execution environment available for #149 exposed GitHub repository operations but did not expose an executable host shell or an installed/authenticated Claude Code session. Consequently:
@@ -163,7 +190,11 @@ The required live validation is tracked explicitly in [#177](https://github.com/
 claude --version
 
 claude mcp add --transport stdio dotnet-repo-inspector -- \
-  dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- \
+  dnx DotNetRepoInspector.Mcp@1.5.2 \
+  --configfile /absolute/path/to/NuGet.Config \
+  --source https://api.nuget.org/v3/index.json \
+  --no-http-cache \
+  --yes -- \
   --root <absolute-path>/tests/Fixtures/ProjectKinds
 
 claude mcp list
@@ -187,7 +218,7 @@ Issue #160 reuses the same deterministic ground truth established for Group 5:
 
 - controlled root: `tests/Fixtures/ProjectKinds`;
 - expected project inventory: exactly 6 projects: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj`, and `Worker/Worker.csproj`;
-- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
+- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`, MultiTargeting=`library`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
 - `inspect_repository` ground truth: the same six-project inventory and the same canonical per-project target-framework/classification facts projected by `InspectionReport`;
 - authoritative source: the versioned `mcp-evals-v1.json` dataset plus the `ProjectKinds` fixture projects themselves.
 
@@ -202,6 +233,11 @@ The stable package selected for the run is `DotNetRepoInspector.Mcp@1.5.2`, the 
       "command": "dnx",
       "args": [
         "DotNetRepoInspector.Mcp@1.5.2",
+        "--configfile",
+        "/absolute/path/to/NuGet.Config",
+        "--source",
+        "https://api.nuget.org/v3/index.json",
+        "--no-http-cache",
         "--yes",
         "--",
         "--root",
@@ -317,7 +353,7 @@ In Claude Code, run `/mcp` and ask:
 Use dotnet-repo-inspector list_projects and report the project count and classifications.
 ```
 
-Expected facts: six projects, including Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`.
+Expected facts: six projects, including Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`, and MultiTargeting=`library`.
 
 ### Gemini CLI
 
