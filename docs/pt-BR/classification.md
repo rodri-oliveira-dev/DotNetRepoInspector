@@ -25,6 +25,23 @@ A decisão está documentada na [ADR 0011](decisions/0011-web-api-subtype-detect
 
 Consequentemente, um projeto classificado como `web` mantém `classification.subtype` ausente mesmo quando possui hints de pacotes comuns em APIs. `classification.confidence` continua descrevendo a classificação base `web`; nenhuma confiança de subtipo é inventada.
 
+## Subtipo MVC: não suportado intencionalmente
+
+MVC **não** é emitido atualmente como subtipo. Os fatos de projeto/MSBuild avaliados atualmente podem comprovar capacidade Web ou Razor, mas não comprovam que a aplicação realmente usa o modelo MVC de controllers/views em vez de Razor Pages, endpoints de API, Blazor, uma Razor Class Library ou um modelo misto.
+
+A decisão está documentada na [ADR 0012](decisions/0012-mvc-subtype-detection.md). Os principais candidatos são rejeitados intencionalmente como regras de subtipo:
+
+| Evidência candidata | Por que é insuficiente |
+| --- | --- |
+| `Microsoft.NET.Sdk.Web` declarado | Comprova apenas o workload `web` base e é compartilhado pelos principais modelos de aplicação Web do ASP.NET Core. |
+| `AddRazorSupportForMvc == true` efetivo | O Razor SDK o usa para MVC Views **ou Razor Pages**, e projetos Web SDK no .NET moderno o definem implicitamente. |
+| `Microsoft.NET.Sdk.Razor` declarado mais `AddRazorSupportForMvc == true` | Também representa Razor Class Libraries e, portanto, não comprova uma aplicação Web MVC. |
+| pacotes MVC/Razor, como runtime compilation ou integração JSON | São capacidades opcionais e infraestrutura MVC transversal; não estabelecem uso de controllers/views. |
+| `Views/**`, `Controllers/**` ou nomes de projeto | Heurísticas de convenção/caminho/nome; aplicações mistas continuam válidas e esses sinais não são autoritativos. |
+| herança de controller, `AddControllersWithViews`, rotas ou actions que retornam views | Exigiriam análise de código ou semântica, fora da fronteira de subtipo suportada. |
+
+Portanto, um projeto com `kind = web` mantém `classification.subtype` ausente mesmo quando há hints orientados a Razor/MVC. Um futuro subtipo MVC exige um fato estrutural autoritativo ou um modelo de análise semântica limitada explicitamente aprovado.
+
 ## Entradas
 
 O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:

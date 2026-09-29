@@ -23,6 +23,20 @@
       ]
     },
     {
+      "id": "mvc-subtype-web-sdk-implicit-razor-support",
+      "path": "MvcSubtypeSignals/WebSdkImplicitRazorSupport",
+      "proves": [
+        "mvc-subtype-web-sdk-implicit-razor-support"
+      ]
+    },
+    {
+      "id": "mvc-subtype-razor-class-library-overlap",
+      "path": "MvcSubtypeSignals/RazorClassLibrarySupport",
+      "proves": [
+        "mvc-subtype-razor-class-library-overlap"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

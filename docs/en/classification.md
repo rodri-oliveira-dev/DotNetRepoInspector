@@ -25,6 +25,23 @@ The decision is documented in [ADR 0011](decisions/0011-web-api-subtype-detectio
 
 Consequently, a project classified as `web` keeps `classification.subtype` absent even when it has common API-oriented package hints. `classification.confidence` continues to describe the base `web` classification; no subtype confidence is fabricated.
 
+## MVC subtype: intentionally unsupported
+
+MVC is **not** currently emitted as a subtype. The current evaluated project/MSBuild facts can prove Web or Razor capability, but they cannot prove that the application actually uses the MVC controller/view application model rather than Razor Pages, API endpoints, Blazor, a Razor Class Library, or a mixed model.
+
+The decision is documented in [ADR 0012](decisions/0012-mvc-subtype-detection.md). The main candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Proves only the base `web` workload and is shared by all major ASP.NET Core Web application models. |
+| effective `AddRazorSupportForMvc == true` | The Razor SDK uses it for MVC views **or Razor Pages**, and Web SDK projects on modern .NET set it implicitly. |
+| declared `Microsoft.NET.Sdk.Razor` plus `AddRazorSupportForMvc == true` | Also represents Razor Class Libraries and therefore is not evidence of a Web MVC application. |
+| MVC/Razor packages such as runtime compilation or JSON integration packages | Optional capabilities and cross-cutting MVC infrastructure; they do not establish controller/view usage. |
+| `Views/**`, `Controllers/**`, or project names | Convention/path/name heuristics; mixed applications remain valid and these signals are not authoritative. |
+| controller inheritance, `AddControllersWithViews`, routes, or view-returning actions | Would require source or semantic analysis, outside the supported subtype boundary. |
+
+Therefore a project with `kind = web` retains an absent `classification.subtype` even when Razor/MVC-oriented hints are present. A future MVC subtype requires an authoritative structured fact or an explicitly approved bounded semantic-analysis model.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:

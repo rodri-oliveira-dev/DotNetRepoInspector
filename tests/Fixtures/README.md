@@ -19,6 +19,8 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `ProjectKinds/Web` | `Microsoft.NET.Sdk.Web` |
 | `WebApiSubtypeSignals/WebSdkExecutable` | Web SDK + executable output remains ambiguous for Web API subtype |
 | `WebApiSubtypeSignals/RazorSupportOverlap` | Razor support can coexist with Web workloads and does not make Web API presence/absence deterministic |
+| `MvcSubtypeSignals/WebSdkImplicitRazorSupport` | Web SDK implicitly enables Razor MVC support, which is not specific to MVC applications |
+| `MvcSubtypeSignals/RazorClassLibrarySupport` | Razor SDK plus `AddRazorSupportForMvc=true` also represents a Razor Class Library, not a Web MVC app |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

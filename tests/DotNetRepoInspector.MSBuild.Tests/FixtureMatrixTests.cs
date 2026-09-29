@@ -23,6 +23,8 @@ public sealed class FixtureMatrixTests
         "invalid-project",
         "library-output",
         "multi-targeting",
+        "mvc-subtype-razor-class-library-overlap",
+        "mvc-subtype-web-sdk-implicit-razor-support",
         "path-casing",
         "project-reference-chain",
         "project-reference-circular",

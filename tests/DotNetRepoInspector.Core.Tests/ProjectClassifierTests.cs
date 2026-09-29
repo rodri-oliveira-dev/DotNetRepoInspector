@@ -152,6 +152,27 @@ public sealed class ProjectClassifierTests
             Assert.Single(classification.Signals));
     }
 
+    [Theory]
+    [InlineData("Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation")]
+    [InlineData("Microsoft.AspNetCore.Mvc.NewtonsoftJson")]
+    public void Classify_MvcPackageHintsDoNotInferSubtype(string packageReference)
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            WebSdk,
+            "Exe",
+            false)
+        {
+            PackageReferences = [packageReference]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Web, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Null(classification.Subtype);
+        Assert.Equal(
+            $"sdk:{DeterministicProjectClassifier.WebSdk}",
+            Assert.Single(classification.Signals));
+    }
+
     [Fact]
     public void Classify_WorkerSdkIsRecognizedBeforeOutputType()
     {

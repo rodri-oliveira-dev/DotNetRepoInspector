@@ -25,5 +25,6 @@ Um ADR deve registrar:
 - [ADR 0009: Detectar projetos de teste por sinais de VSTest e Microsoft.Testing.Platform](0009-test-project-detection-signals.md) — Aceito.
 - [ADR 0010: Detectar projetos Worker além do Worker SDK declarado](0010-worker-project-detection-signals.md) — Aceito.
 - [ADR 0011: Manter o subtipo Web API sem suporte na ausência de evidência estrutural determinística](0011-web-api-subtype-detection.md) — Aceito.
+- [ADR 0012: Manter o subtipo MVC sem suporte na ausência de evidência estrutural determinística](0012-mvc-subtype-detection.md) — Aceito.
 
 Decisões futuras prováveis incluem fronteiras da avaliação de políticas e transporte MCP remoto caso ele se torne um cenário suportado.
