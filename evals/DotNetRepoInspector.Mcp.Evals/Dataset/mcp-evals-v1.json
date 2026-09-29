@@ -12,17 +12,12 @@
         {
           "kind": "project_target_frameworks",
           "projectPath": "Web/Web.csproj",
-          "values": [
-            "net10.0"
-          ]
+          "values": [ "net10.0" ]
         },
         {
           "kind": "project_target_frameworks",
           "projectPath": "MultiTargeting/MultiTargeting.csproj",
-          "values": [
-            "net8.0",
-            "net10.0"
-          ]
+          "values": [ "net8.0", "net10.0" ]
         }
       ]
     },
@@ -56,8 +51,8 @@
           "kind": "project_classification",
           "projectPath": "Test/Test.csproj",
           "value": "test"
-        },
-        {
+        }
+,        {
           "kind": "project_classification",
           "projectPath": "MultiTargeting/MultiTargeting.csproj",
           "value": "library"
@@ -73,10 +68,7 @@
         {
           "kind": "project_reference",
           "projectPath": "A/A.csproj",
-          "values": [
-            "B/B.csproj",
-            "C/C.csproj"
-          ]
+          "values": [ "B/B.csproj", "C/C.csproj" ]
         }
       ]
     },
@@ -101,9 +93,7 @@
         {
           "kind": "project_reference",
           "projectPath": "App/App.csproj",
-          "values": [
-            "Missing/Missing.csproj"
-          ]
+          "values": [ "Missing/Missing.csproj" ]
         },
         {
           "kind": "diagnostic_code",
@@ -120,16 +110,12 @@
         {
           "kind": "project_reference",
           "projectPath": "A/A.csproj",
-          "values": [
-            "B/B.csproj"
-          ]
+          "values": [ "B/B.csproj" ]
         },
         {
           "kind": "project_reference",
           "projectPath": "B/B.csproj",
-          "values": [
-            "C/C.csproj"
-          ]
+          "values": [ "C/C.csproj" ]
         }
       ]
     },
