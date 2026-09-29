@@ -106,7 +106,7 @@ public sealed class InspectionConfigurationTests
                 repositoryRoot,
                 """
                 {
-                  "schemaVersion": "2"
+                  "schemaVersion": "3"
                 }
                 """);
             var discoverer = new RecordingProjectDiscoverer("Stub.csproj");

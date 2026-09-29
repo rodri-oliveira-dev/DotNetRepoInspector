@@ -10,18 +10,25 @@ When present at the inspected repository root, `.dotnetrepoinspector.json` is lo
 
 ```json
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "exclude": [
     "generated",
     "samples/Legacy.csproj"
   ],
   "classificationOverrides": {
     "src/App/App.csproj": "web"
+  },
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
   }
 }
 ```
 
-`schemaVersion` is required and the current configuration schema is `1`. Unknown properties are rejected so misspelled configuration does not silently change inspection behavior.
+`schemaVersion` is required. Configuration schema `1` remains supported for exclusions and classification overrides; schema `2` is the current version and adds the optional `policies` section. A `policies` section in schema `1` is rejected instead of being interpreted implicitly. Unknown properties are rejected so misspelled configuration does not silently change inspection behavior.
 
 All configured paths are relative to the inspected repository root and must remain inside that root. Absolute paths and paths that escape through `..` are invalid. Paths use repository-relative semantics; `/` is recommended in versioned configuration.
 
@@ -65,6 +72,36 @@ When an override is applied, schema `1.3` and later makes it distinguishable fro
 The automatic signals remain present. `automaticKind` records the classifier's original result, `kind` contains the effective override, `source` identifies where the override came from, and automatic `confidence` is not reused as confidence for a manual decision.
 
 If an override references a project that is not discovered, the inspection continues and emits `DRI1014` with severity `warning`. This makes stale configuration visible without turning it into an inspection failure.
+
+## Policies
+
+Policies are opt-in. With no configuration file, with no `policies` section, or with `targetFramework.enabled: false`, no policy rule is registered and inspection behavior is unchanged.
+
+Configuration schema `2` introduces the first rule:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+The TargetFramework rule has stable code `DRP0001`. Its default severity is `error`; `severity` may explicitly be `warning` or `error`. When enabled, `allowed` must contain at least one non-empty target framework.
+
+The rule evaluates only normalized `ProjectInspection.TargetFrameworks` facts:
+
+- a single-target project produces no finding when its TFM is allowed and one project-scoped finding when it is not;
+- a multi-target project produces one project-scoped finding when any TFM is outside the allowlist; the finding context lists all target frameworks and the disallowed subset in deterministic order;
+- a project with no known target framework produces no policy finding because the rule does not invent a violation from missing inspection facts;
+- projects are evaluated in repository-relative path order, so finding order is deterministic.
+
+Policy findings are distinct from inspection diagnostics. At this Group 4 stage, configuration parsing and the rule are implemented; surfacing policy findings through the CLI/inspection output is the next integration step.
 
 ## CLI configuration
 
@@ -136,7 +173,9 @@ Invalid repository configuration is represented in the normal inspection contrac
 - an explicit config file that does not exist;
 - an absolute or escaping configured path;
 - an unsupported classification kind;
-- conflicting `--config` and `--no-config` semantics at the Engine boundary.
+- conflicting `--config` and `--no-config` semantics at the Engine boundary;
+- a `policies` section under legacy schema `1`;
+- missing `targetFramework.enabled`, an enabled rule without an `allowed` list, blank allowed TFMs, or an unsupported policy severity.
 
 The Engine returns an `InspectionReport` containing the diagnostic instead of throwing away the machine-readable result. The CLI therefore exits with code `1` and the GitHub Action preserves the same exit code while exposing the report path when available.
 

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 using DotNetRepoInspector.Core.Classification;
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 
 namespace DotNetRepoInspector.Engine;
 
@@ -11,19 +12,22 @@ internal sealed record EffectiveClassificationOverride(string Kind, string Sourc
 internal sealed record EffectiveInspectionConfiguration(
     IReadOnlyList<string> ExcludedPaths,
     IReadOnlyDictionary<string, EffectiveClassificationOverride> ClassificationOverrides,
+    IReadOnlyList<IPolicyRule> PolicyRules,
     InspectionDiagnostic? Error)
 {
     public bool Succeeded => Error is null;
 
     public static EffectiveInspectionConfiguration Success(
         IReadOnlyList<string> excludedPaths,
-        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides) =>
-        new(excludedPaths, classificationOverrides, null);
+        IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides,
+        IReadOnlyList<IPolicyRule> policyRules) =>
+        new(excludedPaths, classificationOverrides, policyRules, null);
 
     public static EffectiveInspectionConfiguration Failure(InspectionDiagnostic error) =>
         new(
             Array.Empty<string>(),
             new Dictionary<string, EffectiveClassificationOverride>(StringComparer.Ordinal),
+            Array.Empty<IPolicyRule>(),
             error);
 }
 
@@ -31,7 +35,8 @@ internal static class InspectionConfigurationResolver
 {
     public const string DefaultFileName = ".dotnetrepoinspector.json";
 
-    private const string SupportedConfigurationSchemaVersion = "1";
+    private const string LegacyConfigurationSchemaVersion = "1";
+    private const string CurrentConfigurationSchemaVersion = "2";
     private const string ConfigurationFileOverrideSource = "configuration";
     private const string RequestOverrideSource = "request";
 
@@ -62,6 +67,7 @@ internal static class InspectionConfigurationResolver
 
         var excludedPaths = new HashSet<string>(PathComparer);
         var classificationOverrides = new Dictionary<string, EffectiveClassificationOverride>(PathComparer);
+        var policyRules = new List<IPolicyRule>();
 
         if (!request.DisableConfigurationFile)
         {
@@ -120,13 +126,18 @@ internal static class InspectionConfigurationResolver
                     return Failure(configurationSource, reason);
                 }
 
-                if (document is null ||
-                    !string.Equals(
-                        document.SchemaVersion,
-                        SupportedConfigurationSchemaVersion,
-                        StringComparison.Ordinal))
+                if (document is null || !IsSupportedConfigurationSchemaVersion(document.SchemaVersion))
                 {
                     return Failure(configurationSource, "unsupported-config-schema");
+                }
+
+                if (document.Policies is not null &&
+                    !string.Equals(
+                        document.SchemaVersion,
+                        CurrentConfigurationSchemaVersion,
+                        StringComparison.Ordinal))
+                {
+                    return Failure(configurationSource, "policies-require-config-schema-2");
                 }
 
                 var exclusionError = AddExcludedPaths(
@@ -149,6 +160,15 @@ internal static class InspectionConfigurationResolver
                 if (overrideError is not null)
                 {
                     return EffectiveInspectionConfiguration.Failure(overrideError);
+                }
+
+                var policyError = AddPolicies(
+                    document.Policies,
+                    policyRules,
+                    configurationSource);
+                if (policyError is not null)
+                {
+                    return EffectiveInspectionConfiguration.Failure(policyError);
                 }
             }
         }
@@ -187,7 +207,8 @@ internal static class InspectionConfigurationResolver
 
         return EffectiveInspectionConfiguration.Success(
             excludedPaths.OrderBy(static path => path, StringComparer.Ordinal).ToArray(),
-            classificationOverrides);
+            classificationOverrides,
+            policyRules.ToArray());
     }
 
     private static InspectionDiagnostic? AddExcludedPaths(
@@ -251,6 +272,60 @@ internal static class InspectionConfigurationResolver
 
         return null;
     }
+
+    private static InspectionDiagnostic? AddPolicies(
+        PoliciesDocument? policies,
+        List<IPolicyRule> destination,
+        string? source)
+    {
+        var targetFramework = policies?.TargetFramework;
+        if (targetFramework is null)
+        {
+            return null;
+        }
+
+        if (targetFramework.Enabled is null)
+        {
+            return CreateError(source, "target-framework-policy-enabled-required");
+        }
+
+        var allowed = targetFramework.Allowed ?? Array.Empty<string>();
+        if (allowed.Any(static value => string.IsNullOrWhiteSpace(value)))
+        {
+            return CreateError(source, "invalid-target-framework-policy-allowed");
+        }
+
+        var normalizedAllowed = allowed
+            .Select(static value => value.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static value => value, StringComparer.Ordinal)
+            .ToArray();
+
+        var severity = targetFramework.Severity is null
+            ? TargetFrameworkPolicyRule.DefaultSeverity
+            : targetFramework.Severity.Trim().ToLowerInvariant();
+        if (!PolicySeverity.IsDefined(severity))
+        {
+            return CreateError(source, "invalid-target-framework-policy-severity");
+        }
+
+        if (!targetFramework.Enabled.Value)
+        {
+            return null;
+        }
+
+        if (normalizedAllowed.Length == 0)
+        {
+            return CreateError(source, "target-framework-policy-allowed-required");
+        }
+
+        destination.Add(new TargetFrameworkPolicyRule(normalizedAllowed, severity));
+        return null;
+    }
+
+    private static bool IsSupportedConfigurationSchemaVersion(string? value) =>
+        string.Equals(value, LegacyConfigurationSchemaVersion, StringComparison.Ordinal) ||
+        string.Equals(value, CurrentConfigurationSchemaVersion, StringComparison.Ordinal);
 
     private static bool TryNormalizeClassificationKind(string? value, out string normalizedKind)
     {
@@ -340,6 +415,42 @@ internal static class InspectionConfigurationResolver
         }
 
         public Dictionary<string, string>? ClassificationOverrides
+        {
+            get;
+            init;
+        }
+
+        public PoliciesDocument? Policies
+        {
+            get;
+            init;
+        }
+    }
+
+    private sealed class PoliciesDocument
+    {
+        public TargetFrameworkPolicyDocument? TargetFramework
+        {
+            get;
+            init;
+        }
+    }
+
+    private sealed class TargetFrameworkPolicyDocument
+    {
+        public bool? Enabled
+        {
+            get;
+            init;
+        }
+
+        public string[]? Allowed
+        {
+            get;
+            init;
+        }
+
+        public string? Severity
         {
             get;
             init;
