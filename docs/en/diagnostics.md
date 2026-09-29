@@ -27,7 +27,7 @@ Inspection diagnostics are part of the normalized result and are intended for bo
 
 Codes are stable identifiers. Existing codes must not be repurposed for a different meaning. Automation should use `code` and `severity`, not message text.
 
-For `DRI1013`, `context.reason` provides a stable non-sensitive reason such as `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path`, or `invalid-classification-kind`. Configuration details that could contain arbitrary repository content are not copied into diagnostics.
+For `DRI1013`, `context.reason` provides a stable non-sensitive reason such as `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path`, or `invalid-classification-kind`. Policy configuration adds stable reasons such as `policies-require-config-schema-2`, `target-framework-policy-enabled-required`, `target-framework-policy-allowed-required`, `invalid-target-framework-policy-allowed`, and `invalid-target-framework-policy-severity`. Configuration details that could contain arbitrary repository content are not copied into diagnostics.
 
 For `DRI1014`, `source` identifies the configured repository-relative project path and `context.overrideSource` identifies whether the stale override came from `configuration` or the direct `request` layer.
 

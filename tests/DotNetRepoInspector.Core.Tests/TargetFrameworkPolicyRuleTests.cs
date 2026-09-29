@@ -70,6 +70,27 @@ public sealed class TargetFrameworkPolicyRuleTests
     }
 
     [Fact]
+    public void Evaluate_OrdersProjectFindingsByRepositoryRelativePath()
+    {
+        var engine = new PolicyEngine(
+            [new TargetFrameworkPolicyRule(["net10.0"])]);
+
+        var result = engine.Evaluate(CreateReport(
+            CreateProject("src/Zeta/Zeta.csproj", ["net8.0"]),
+            CreateProject("src/Alpha/Alpha.csproj", ["net7.0"])));
+
+        Assert.Equal(
+            new[]
+            {
+                "src/Alpha/Alpha.csproj",
+                "src/Zeta/Zeta.csproj"
+            },
+            result.Findings
+                .Select(static finding => finding.Scope.ProjectPath)
+                .ToArray());
+    }
+
+    [Fact]
     public void Evaluate_ConfiguredWarningSeverity_IsPreserved()
     {
         var engine = new PolicyEngine(

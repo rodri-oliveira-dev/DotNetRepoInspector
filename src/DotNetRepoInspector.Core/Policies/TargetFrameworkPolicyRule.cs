@@ -13,22 +13,23 @@ public sealed class TargetFrameworkPolicyRule : IPolicyRule
     {
         ArgumentNullException.ThrowIfNull(allowedTargetFrameworks);
 
-        var normalizedAllowedTargetFrameworks = allowedTargetFrameworks
-            .Select(static value => value?.Trim().ToLowerInvariant())
-            .Where(static value => !string.IsNullOrWhiteSpace(value))
-            .Select(static value => value!)
+        var configuredTargetFrameworks = allowedTargetFrameworks.ToArray();
+        if (configuredTargetFrameworks.Length == 0 ||
+            configuredTargetFrameworks.Any(static value => string.IsNullOrWhiteSpace(value)))
+        {
+            throw new ArgumentException(
+                "Allowed target frameworks cannot be empty or contain blank values.",
+                nameof(allowedTargetFrameworks));
+        }
+
+        var normalizedAllowedTargetFrameworks = configuredTargetFrameworks
+            .Select(static value => value.Trim().ToLowerInvariant())
             .Distinct(StringComparer.Ordinal)
             .OrderBy(static value => value, StringComparer.Ordinal)
             .ToArray();
 
-        if (normalizedAllowedTargetFrameworks.Length == 0)
-        {
-            throw new ArgumentException(
-                "At least one allowed target framework is required.",
-                nameof(allowedTargetFrameworks));
-        }
-
-        if (!PolicySeverity.IsDefined(severity))
+        var normalizedSeverity = severity?.Trim().ToLowerInvariant();
+        if (!PolicySeverity.IsDefined(normalizedSeverity))
         {
             throw new ArgumentOutOfRangeException(
                 nameof(severity),
@@ -37,7 +38,7 @@ public sealed class TargetFrameworkPolicyRule : IPolicyRule
         }
 
         AllowedTargetFrameworks = normalizedAllowedTargetFrameworks;
-        Severity = severity;
+        Severity = normalizedSeverity!;
         _allowedTargetFrameworks = normalizedAllowedTargetFrameworks.ToHashSet(StringComparer.Ordinal);
     }
 

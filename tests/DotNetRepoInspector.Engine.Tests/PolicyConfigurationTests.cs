@@ -60,7 +60,7 @@ public sealed class PolicyConfigurationTests
             Assert.True(configuration.Succeeded);
             var rule = Assert.IsType<TargetFrameworkPolicyRule>(
                 Assert.Single(configuration.PolicyRules));
-            Assert.Equal(new[] { "net10.0", "net8.0" }, rule.AllowedTargetFrameworks);
+            Assert.Equal(new[] { "net10.0", "net8.0" }, rule.AllowedTargetFrameworks.ToArray());
             Assert.Equal(PolicySeverity.Warning, rule.Severity);
 
             var result = new PolicyEngine(configuration.PolicyRules).Evaluate(

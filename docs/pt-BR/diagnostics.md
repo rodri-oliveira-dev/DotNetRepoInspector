@@ -27,7 +27,7 @@ Os diagnósticos de inspeção fazem parte do resultado normalizado e são desti
 
 Os códigos são identificadores estáveis. Códigos existentes não devem ser reutilizados com outro significado. A automação deve utilizar `code` e `severity`, e não o texto de `message`.
 
-Para `DRI1013`, `context.reason` fornece um motivo estável e não sensível, como `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path` ou `invalid-classification-kind`. Detalhes da configuração que possam conter conteúdo arbitrário do repositório não são copiados para os diagnósticos.
+Para `DRI1013`, `context.reason` fornece um motivo estável e não sensível, como `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path` ou `invalid-classification-kind`. A configuração de policies adiciona motivos estáveis como `policies-require-config-schema-2`, `target-framework-policy-enabled-required`, `target-framework-policy-allowed-required`, `invalid-target-framework-policy-allowed` e `invalid-target-framework-policy-severity`. Detalhes da configuração que possam conter conteúdo arbitrário do repositório não são copiados para os diagnósticos.
 
 Para `DRI1014`, `source` identifica o caminho do projeto configurado, relativo ao repositório, e `context.overrideSource` informa se o override obsoleto veio de `configuration` ou da camada direta `request`.
 
