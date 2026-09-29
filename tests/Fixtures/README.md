@@ -23,6 +23,8 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `MvcSubtypeSignals/RazorClassLibrarySupport` | Razor SDK plus `AddRazorSupportForMvc=true` also represents a Razor Class Library, not a Web MVC app |
 | `RazorPagesSubtypeSignals/RazorGenerateOverlap` | Web SDK contains Razor Page/View source, but the current evaluation boundary does not expose `RazorGenerate` without target execution |
 | `RazorPagesSubtypeSignals/RazorClassLibraryOverlap` | Razor Class Libraries can contain Razor Page source and MVC support without being Web Razor Pages applications |
+| `BlazorServerSubtypeSignals/WebAppStaticSsr` | Real Blazor Web App source configuration remains indistinguishable from base Web through current structured classification facts |
+| `BlazorServerSubtypeSignals/InteractiveServer` | Interactive Server hosting is established only by source-level render-mode configuration |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

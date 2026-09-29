@@ -27,5 +27,6 @@ An ADR should capture:
 - [ADR 0011: Keep Web API subtype unsupported without deterministic structural evidence](0011-web-api-subtype-detection.md) — Accepted.
 - [ADR 0012: Keep MVC subtype unsupported without deterministic structural evidence](0012-mvc-subtype-detection.md) — Accepted.
 - [ADR 0013: Keep Razor Pages subtype unsupported without deterministic structural evidence](0013-razor-pages-subtype-detection.md) — Accepted.
+- [ADR 0014: Keep Blazor Web App and server-side subtypes unsupported without deterministic structural evidence](0014-blazor-server-subtype-detection.md) — Accepted.
 
 Likely next decisions include policy evaluation boundaries and remote MCP transport if it becomes a supported scenario.

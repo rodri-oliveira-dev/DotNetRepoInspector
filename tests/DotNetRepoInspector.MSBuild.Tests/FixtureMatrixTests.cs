@@ -12,6 +12,8 @@ public sealed class FixtureMatrixTests
 
     private static readonly string[] _expectedSignals =
     [
+        "blazor-interactive-server-source-only",
+        "blazor-web-app-source-only",
         "compatibility-net10",
         "compatibility-net8",
         "conditional-property",

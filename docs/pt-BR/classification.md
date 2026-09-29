@@ -60,6 +60,25 @@ A decisão está documentada na [ADR 0013](decisions/0013-razor-pages-subtype-de
 
 Portanto, um projeto com `kind = web` mantém `classification.subtype` ausente mesmo quando existe fonte Razor. Um futuro subtipo Razor Pages exige uma fronteira aprovada de inspeção de conteúdo/semântica ou um novo sinal estruturado autoritativo.
 
+## Subtipos Blazor Web App / server-side: não suportados intencionalmente
+
+Blazor Web App e Blazor Server/hosting server-side **não** são emitidos atualmente como subtipos. Ambos usam o Web SDK normal do ASP.NET Core no servidor, enquanto a distinção de hosting/render mode é configurada no código da aplicação, e não por um fato MSBuild autoritativo no nível do projeto.
+
+A decisão está documentada na [ADR 0014](decisions/0014-blazor-server-subtype-detection.md). Os candidatos avaliados são rejeitados intencionalmente como regras de subtipo:
+
+| Evidência candidata | Por que é insuficiente |
+| --- | --- |
+| `Microsoft.NET.Sdk.Web` declarado | É compartilhado por Blazor Web App, Blazor Server, MVC, Razor Pages, APIs e aplicações ASP.NET Core mistas. |
+| arquivos `.razor` como `Content` avaliado | Comprovam existência de fonte de componentes Razor, mas componentes podem existir em aplicações ASP.NET Core mistas e Razor Class Libraries. |
+| item `RazorComponent` | É materializado por targets do Razor SDK após a fronteira básica de avaliação; mesmo quando disponível, comprova compilação de componentes, não o modo de hosting. |
+| framework reference implícita `Microsoft.AspNetCore.App` | É compartilhada por aplicações Web ASP.NET Core e não é específica de Blazor. |
+| `AddRazorComponents` / `MapRazorComponents` | Configuração da aplicação em código-fonte, fora do modelo estrutural atual de classificação. |
+| `AddInteractiveServerComponents` / `AddInteractiveServerRenderMode` | Significativos para hosting Interactive Server moderno, mas estão no código-fonte. |
+| `AddServerSideBlazor` / `MapBlazorHub` legados | Significativos para Blazor Server clássico, mas também estão no código-fonte. |
+| caminhos/arquivos de template como `Components/**`, `App.razor`, `Routes.razor` ou `_Host.cshtml` | Heurísticas de convenção, não evidência autoritativa do modelo de aplicação. |
+
+Consequentemente, tanto um Blazor Web App moderno quanto hosting server-side/Interactive Server permanecem `kind = web` com `classification.subtype` ausente. Blazor WebAssembly será avaliado separadamente na #174 por possuir uma fronteira de SDK distinta.
+
 ## Entradas
 
 O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:

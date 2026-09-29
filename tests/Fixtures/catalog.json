@@ -51,6 +51,20 @@
       ]
     },
     {
+      "id": "blazor-web-app-source-only",
+      "path": "BlazorServerSubtypeSignals/WebAppStaticSsr",
+      "proves": [
+        "blazor-web-app-source-only"
+      ]
+    },
+    {
+      "id": "blazor-interactive-server-source-only",
+      "path": "BlazorServerSubtypeSignals/InteractiveServer",
+      "proves": [
+        "blazor-interactive-server-source-only"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

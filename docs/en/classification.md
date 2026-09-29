@@ -60,6 +60,25 @@ The decision is documented in [ADR 0013](decisions/0013-razor-pages-subtype-dete
 
 Therefore a project with `kind = web` keeps `classification.subtype` absent even when Razor source is present. A future Razor Pages subtype requires an approved content/semantic inspection boundary or a new authoritative structured signal.
 
+## Blazor Web App / server-side subtypes: intentionally unsupported
+
+Blazor Web App and Blazor Server/server-side hosting are **not** currently emitted as subtypes. Both use the regular ASP.NET Core Web SDK on the server, while the hosting/render-mode distinction is configured through application code rather than an authoritative project-level MSBuild fact.
+
+The decision is documented in [ADR 0014](decisions/0014-blazor-server-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Shared by Blazor Web App, Blazor Server, MVC, Razor Pages, APIs, and mixed ASP.NET Core applications. |
+| `.razor` files as evaluated `Content` | Proves Razor component source exists, but components can be embedded in mixed ASP.NET Core apps and Razor Class Libraries. |
+| `RazorComponent` item | Materialized by Razor SDK targets after the basic evaluation boundary; even when available, it only proves component compilation, not hosting mode. |
+| implicit `Microsoft.AspNetCore.App` framework reference | Shared by ASP.NET Core Web applications and not Blazor-specific. |
+| `AddRazorComponents` / `MapRazorComponents` | Source-level application configuration and outside the current structural classification model. |
+| `AddInteractiveServerComponents` / `AddInteractiveServerRenderMode` | Meaningful for modern Interactive Server hosting, but source-level configuration. |
+| legacy `AddServerSideBlazor` / `MapBlazorHub` | Meaningful for classic Blazor Server hosting, but also source-level configuration. |
+| template paths/files such as `Components/**`, `App.razor`, `Routes.razor`, or `_Host.cshtml` | Convention heuristics, not authoritative application-model evidence. |
+
+Consequently, both a modern Blazor Web App and server-side/Interactive Server hosting remain `kind = web` with `classification.subtype` absent. Blazor WebAssembly is evaluated separately in #174 because it has a distinct SDK boundary.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:
