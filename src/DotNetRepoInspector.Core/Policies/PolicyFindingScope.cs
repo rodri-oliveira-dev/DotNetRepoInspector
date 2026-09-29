@@ -5,8 +5,24 @@ public sealed record PolicyFindingScope
     public const string RepositoryKind = "repository";
     public const string ProjectKind = "project";
 
-    private PolicyFindingScope(string kind, string? projectPath)
+    public PolicyFindingScope(string kind, string? projectPath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(kind);
+
+        var repositoryScope =
+            string.Equals(kind, RepositoryKind, StringComparison.Ordinal) &&
+            projectPath is null;
+        var projectScope =
+            string.Equals(kind, ProjectKind, StringComparison.Ordinal) &&
+            !string.IsNullOrWhiteSpace(projectPath);
+
+        if (!repositoryScope && !projectScope)
+        {
+            throw new ArgumentException(
+                "Policy scope must be repository without a project path or project with a project path.",
+                nameof(projectPath));
+        }
+
         Kind = kind;
         ProjectPath = projectPath;
     }
