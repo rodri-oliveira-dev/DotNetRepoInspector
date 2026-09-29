@@ -14,7 +14,8 @@ public sealed class ReleaseReadinessTests
     {
         JsonElement baseline = LoadBaseline();
         string productVersion = RequiredString(baseline, "productVersion");
-        string schemaVersion = RequiredString(baseline, "schemaVersion");
+        string baselineSchemaVersion = RequiredString(baseline, "schemaVersion");
+        string currentSchemaVersion = RequiredString(baseline, "currentSchemaVersion");
         string actionMajorAlias = RequiredString(baseline, "actionMajorAlias");
 
         Assert.True(Version.TryParse(productVersion, out Version? parsedProductVersion));
@@ -26,11 +27,17 @@ public sealed class ReleaseReadinessTests
         string actionMetadata = File.ReadAllText(Path.Combine(RepositoryRoot, "action.yml"));
         Assert.DoesNotContain("DRI_TOOL_VERSION", actionMetadata, StringComparison.Ordinal);
 
-        Assert.Equal(InspectionSchema.CurrentVersion, schemaVersion);
-        Assert.True(Version.TryParse(schemaVersion, out Version? parsedSchemaVersion));
-        Assert.NotNull(parsedSchemaVersion);
-        Assert.Equal(parsedProductVersion.Major, parsedSchemaVersion.Major);
-        Assert.Equal(InspectionSchema.CurrentMajorVersion, parsedSchemaVersion.Major);
+        Assert.Equal("1.3", baselineSchemaVersion);
+        Assert.Equal(InspectionSchema.CurrentVersion, currentSchemaVersion);
+
+        Assert.True(Version.TryParse(baselineSchemaVersion, out Version? parsedBaselineSchemaVersion));
+        Assert.NotNull(parsedBaselineSchemaVersion);
+        Assert.Equal(parsedProductVersion.Major, parsedBaselineSchemaVersion.Major);
+
+        Assert.True(Version.TryParse(currentSchemaVersion, out Version? parsedCurrentSchemaVersion));
+        Assert.NotNull(parsedCurrentSchemaVersion);
+        Assert.Equal(parsedProductVersion.Major, parsedCurrentSchemaVersion.Major);
+        Assert.Equal(InspectionSchema.CurrentMajorVersion, parsedCurrentSchemaVersion.Major);
     }
 
     [Fact]
@@ -72,7 +79,7 @@ public sealed class ReleaseReadinessTests
             RequiredString(baseline, "schemaExample").Replace('/', Path.DirectorySeparatorChar));
         using JsonDocument example = JsonDocument.Parse(File.ReadAllText(examplePath));
         Assert.Equal(
-            RequiredString(baseline, "schemaVersion"),
+            RequiredString(baseline, "currentSchemaVersion"),
             example.RootElement.GetProperty("schemaVersion").GetString());
     }
 
@@ -99,13 +106,11 @@ public sealed class ReleaseReadinessTests
                     .GetProperty("schemaVersion")
                     .GetProperty("const")
                     .GetString());
-            Assert.Equal(
-                "string",
-                classification
-                    .GetProperty("properties")
-                    .GetProperty("subtype")
-                    .GetProperty("type")
-                    .GetString());
+            JsonElement subtype = classification
+                .GetProperty("properties")
+                .GetProperty("subtype");
+            Assert.Equal("string", subtype.GetProperty("type").GetString());
+            Assert.Equal("\\S", subtype.GetProperty("pattern").GetString());
 
             string[] required = classification
                 .GetProperty("required")

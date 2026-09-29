@@ -77,7 +77,7 @@
           "type": "array",
           "items": { "type": "string" }
         },
-        "subtype": { "type": "string" },
+        "subtype": { "type": "string", "pattern": "\\S" },
         "source": {
           "enum": ["configuration", "request"]
         },
