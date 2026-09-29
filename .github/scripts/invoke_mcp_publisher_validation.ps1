@@ -94,10 +94,13 @@ function Invoke-PublisherValidationAttempt {
                 $process.Kill($true)
             }
             catch {
-                Write-Warning "Could not terminate timed-out mcp-publisher process: $($_.Exception.Message)"
+                throw "Could not terminate timed-out mcp-publisher process: $($_.Exception.Message)"
             }
 
-            $process.WaitForExit()
+            if (-not $process.WaitForExit(5000)) {
+                throw "Timed-out mcp-publisher process did not terminate within 5 seconds after Kill(true)."
+            }
+
             return [pscustomobject]@{
                 ExitCode = $null
                 TimedOut = $true
