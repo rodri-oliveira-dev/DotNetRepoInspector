@@ -16,7 +16,7 @@ inputs:
     required: false
     default: normal
   config:
-    description: Repository-relative configuration file. Defaults to .dotnetrepoinspector.json when present.
+    description: Repository-relative configuration file for exclusions, classification overrides, and opt-in policies. Defaults to .dotnetrepoinspector.json when present.
     required: false
     default: ""
   no-config:
