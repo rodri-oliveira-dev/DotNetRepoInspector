@@ -1,4 +1,5 @@
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Git;
 using DotNetRepoInspector.MSBuild.Discovery;
 using DotNetRepoInspector.MSBuild.Evaluation;
@@ -159,9 +160,89 @@ public sealed class InspectionConfigurationTests
                 TestContext.Current.CancellationToken);
 
             Assert.Single(report.Projects);
+            Assert.Empty(report.PolicyFindings);
             Assert.DoesNotContain(
                 report.Diagnostics,
                 static diagnostic => diagnostic.Code == InspectionDiagnosticCodes.InvalidConfiguration);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InspectAsync_EnabledTargetFrameworkPolicyWithAllowedFramework_ProducesNoFinding()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Policy-").FullName;
+
+        try
+        {
+            await WriteConfigurationAsync(
+                repositoryRoot,
+                """
+                {
+                  "schemaVersion": "2",
+                  "policies": {
+                    "targetFramework": {
+                      "enabled": true,
+                      "allowed": ["net10.0"]
+                    }
+                  }
+                }
+                """);
+            var inspector = CreateInspector(
+                new RecordingProjectDiscoverer("Stub.csproj"),
+                new RecordingProjectFactsEvaluator());
+
+            var report = await inspector.InspectAsync(
+                repositoryRoot,
+                TestContext.Current.CancellationToken);
+
+            Assert.Single(report.Projects);
+            Assert.Empty(report.PolicyFindings);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InspectAsync_EnabledTargetFrameworkPolicyViolation_ProducesSeparateFinding()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Policy-").FullName;
+
+        try
+        {
+            await WriteConfigurationAsync(
+                repositoryRoot,
+                """
+                {
+                  "schemaVersion": "2",
+                  "policies": {
+                    "targetFramework": {
+                      "enabled": true,
+                      "allowed": ["net8.0"]
+                    }
+                  }
+                }
+                """);
+            var inspector = CreateInspector(
+                new RecordingProjectDiscoverer("Stub.csproj"),
+                new RecordingProjectFactsEvaluator());
+
+            var report = await inspector.InspectAsync(
+                repositoryRoot,
+                TestContext.Current.CancellationToken);
+
+            Assert.Empty(report.Diagnostics);
+            var finding = Assert.Single(report.PolicyFindings);
+            Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
+            Assert.Equal(PolicySeverity.Error, finding.Severity);
+            Assert.Equal(PolicyFindingScope.ProjectKind, finding.Scope.Kind);
+            Assert.Equal("Stub.csproj", finding.Scope.ProjectPath);
+            Assert.Equal("net10.0", finding.Context!["disallowedTargetFrameworks"]);
         }
         finally
         {

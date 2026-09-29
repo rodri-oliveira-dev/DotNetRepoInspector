@@ -1,4 +1,5 @@
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Engine;
 
 using Xunit;
@@ -26,6 +27,7 @@ public sealed class CliApplicationTests
         Assert.Equal(6, report.Projects.Count);
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "web");
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "worker");
+        Assert.Empty(report.PolicyFindings);
     }
 
     [Fact]
@@ -123,6 +125,72 @@ public sealed class CliApplicationTests
         Assert.Contains(
             deserialized.Diagnostics,
             static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public async Task RunAsync_PolicyWarningKeepsSuccessAndWritesFinding()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var report = CreateReport() with
+        {
+            PolicyFindings =
+            [
+                new PolicyFinding(
+                    TargetFrameworkPolicyRule.RuleCode,
+                    PolicySeverity.Warning,
+                    "Policy warning.",
+                    PolicyFindingScope.Project("src/App/App.csproj"))
+            ]
+        };
+        var application = new CliApplication(
+            StubInspector.Returning(report),
+            "1.0.0-test");
+
+        var exitCode = await application.RunAsync(
+            ["."],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        var deserialized = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Empty(deserialized.Diagnostics);
+        Assert.Equal(PolicySeverity.Warning, Assert.Single(deserialized.PolicyFindings).Severity);
+    }
+
+    [Fact]
+    public async Task RunAsync_PolicyErrorReturnsCompletedWithErrorsAndWritesFinding()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var report = CreateReport() with
+        {
+            PolicyFindings =
+            [
+                new PolicyFinding(
+                    TargetFrameworkPolicyRule.RuleCode,
+                    PolicySeverity.Error,
+                    "Policy error.",
+                    PolicyFindingScope.Project("src/App/App.csproj"))
+            ]
+        };
+        var application = new CliApplication(
+            StubInspector.Returning(report),
+            "1.0.0-test");
+
+        var exitCode = await application.RunAsync(
+            ["."],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
+        var deserialized = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Empty(deserialized.Diagnostics);
+        var finding = Assert.Single(deserialized.PolicyFindings);
+        Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
+        Assert.Equal(PolicySeverity.Error, finding.Severity);
     }
 
     [Fact]
