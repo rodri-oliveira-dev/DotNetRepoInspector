@@ -31,6 +31,67 @@ public sealed class CliApplicationTests
     }
 
     [Fact]
+    public async Task RunAsync_ConfiguredPolicyMatchReturnsSuccessWithNoFindings()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-CliPolicy-").FullName;
+
+        try
+        {
+            await WritePolicyFixtureAsync(repositoryRoot, "net10.0");
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+            var exitCode = await application.RunAsync(
+                [repositoryRoot],
+                output,
+                error,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(CliExitCodes.Success, exitCode);
+            var report = InspectionJsonSerializer.Deserialize(output.ToString());
+            Assert.Single(report.Projects);
+            Assert.Empty(report.PolicyFindings);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ConfiguredPolicyViolationReturnsCompletedWithErrors()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-CliPolicy-").FullName;
+
+        try
+        {
+            await WritePolicyFixtureAsync(repositoryRoot, "net8.0");
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+            var exitCode = await application.RunAsync(
+                [repositoryRoot],
+                output,
+                error,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
+            var report = InspectionJsonSerializer.Deserialize(output.ToString());
+            Assert.Empty(report.Diagnostics.Where(
+                static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error));
+            var finding = Assert.Single(report.PolicyFindings);
+            Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
+            Assert.Equal(PolicySeverity.Error, finding.Severity);
+            Assert.Equal("App.csproj", finding.Scope.ProjectPath);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+    [Fact]
     public async Task RunAsync_KeepsVerboseLogsOutOfJsonStdout()
     {
         using var output = new StringWriter();
@@ -337,6 +398,36 @@ public sealed class CliApplicationTests
         Assert.Contains("[error]", error.ToString(), StringComparison.Ordinal);
     }
 
+    private static async Task WritePolicyFixtureAsync(
+        string repositoryRoot,
+        string allowedTargetFramework)
+    {
+        await File.WriteAllTextAsync(
+            Path.Combine(repositoryRoot, "App.csproj"),
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """,
+            TestContext.Current.CancellationToken);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(repositoryRoot, ".dotnetrepoinspector.json"),
+            $"""
+            {
+              "schemaVersion": "2",
+              "policies": {
+                "targetFramework": {
+                  "enabled": true,
+                  "allowed": ["{{allowedTargetFramework}}"]
+                }
+              }
+            }
+            """,
+            TestContext.Current.CancellationToken);
+    }
     private static InspectionReport CreateReport(params InspectionDiagnostic[] diagnostics) =>
         InspectionReport.Create(
             new RepositoryMetadata("fixture", null, null, null, null),
