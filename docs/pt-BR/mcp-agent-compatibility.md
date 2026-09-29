@@ -120,10 +120,10 @@ As evidências do pacote RC estão registradas separadamente na [issue #137](htt
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` via servidor `ModelContextProtocol` | `codex mcp add dri -- <server> --root <root>` | argumento explícito `--root` | validado por execução real do cliente | validado por `mcp_tool_call` para `list_projects` | validado: `list_projects` retornou 6 projetos | Smoke histórico com binário local aprovado; artefato RC exato não validado |
 | Claude Code | Anthropic | não observável no ambiente de execução da #149 (2026-09-29) | não observado live; o pacote usa stdio e o harness determinístico registra `2025-06-18` | `claude mcp add --transport stdio dotnet-repo-inspector -- dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` | argumento explícito `--root` | bloqueado pelo ambiente externo do cliente | bloqueado pelo ambiente externo do cliente | bloqueado antes de iniciar o cliente | Impedimento externo documentado pela #149; smoke live rastreado na #177 |
-| Gemini CLI | Google | não instalado neste ambiente | MCP stdio esperado | `settings.json` com `mcpServers.dotnetRepoInspector.command` + `args` | argumento explícito `--root` | pendente | pendente | pendente | Roteiro reproduzível documentado; não validado |
+| Gemini CLI | Google | não observável no ambiente de execução da #160 (2026-09-29) | não observado live; o pacote usa stdio e o harness determinístico registra `2025-06-18` | `settings.json` com `command: dnx` e args `DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` | argumento explícito `--root` | bloqueado pelo ambiente externo do cliente | bloqueado pelo ambiente externo do cliente | bloqueado antes de iniciar o cliente | Impedimento externo documentado pela #160; smoke live rastreado na #178 |
 | Harness determinístico MCP SDK | Harness de protocolo | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | argumento explícito `--root` por fixture | validado | validado | validado em todas as categorias factuais do MVP | Aprovado no eval determinístico de protocolo |
 
-Nota de release: o OpenAI Codex CLI foi validado com um executável local de desenvolvimento, mas a versão exata do artefato/pacote não foi registrada. Esse smoke histórico **não** comprova a validação do `1.2.0-rc.1`. O pacote exato `1.2.0-rc.1` passou nos evals determinísticos em feed local controlado, conforme registro acima; o smoke com Codex usando o **pacote RC exato publicado** permanece pendente até a publicação e deve ser registrado antes da promoção para GA. Claude Code continua sem validação porque a #149 registrou um impedimento externo do ambiente de execução; seu smoke live está rastreado explicitamente na #177. Gemini CLI permanece pendente para a #160.
+Nota de release: o OpenAI Codex CLI foi validado com um executável local de desenvolvimento, mas a versão exata do artefato/pacote não foi registrada. Esse smoke histórico **não** comprova a validação do `1.2.0-rc.1`. O pacote exato `1.2.0-rc.1` passou nos evals determinísticos em feed local controlado, conforme registro acima; o smoke com Codex usando o **pacote RC exato publicado** permanece pendente até a publicação e deve ser registrado antes da promoção para GA. Claude Code continua sem validação porque a #149 registrou um impedimento externo do ambiente de execução; seu smoke live está rastreado explicitamente na #177. Gemini CLI também continua sem validação porque a #160 registrou um impedimento externo do ambiente de execução; seu smoke live está rastreado na #178.
 
 ## Tentativa de validação com Claude Code da #149 (2026-09-29)
 
@@ -180,6 +180,72 @@ Use dotnet-repo-inspector inspect_repository. Retorne a quantidade de projetos e
 ```
 
 Compare os fatos estruturados com o ground truth acima, registre o protocolo MCP negociado e as versões do cliente/pacote e, ao final, remova o registro MCP temporário.
+
+## Tentativa de validação com Gemini CLI da #160 (2026-09-29)
+
+A issue #160 reutiliza o mesmo ground truth determinístico estabelecido para o Grupo 5:
+
+- root controlado: `tests/Fixtures/ProjectKinds`;
+- inventário esperado: exatamente 6 projetos: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj` e `Worker/Worker.csproj`;
+- ground truth de `list_projects`: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` usa `net10.0`; `MultiTargeting/MultiTargeting.csproj` usa `net8.0` e `net10.0`;
+- ground truth de `inspect_repository`: o mesmo inventário de seis projetos e os mesmos fatos canônicos de target framework/classificação por projeto projetados pelo `InspectionReport`;
+- fonte autoritativa: o dataset versionado `mcp-evals-v1.json` e os próprios projetos da fixture `ProjectKinds`.
+
+### Impedimento externo registrado pela #160
+
+O pacote estável selecionado para a execução é `DotNetRepoInspector.Mcp@1.5.2`, a release estável corrente no momento da tentativa. A configuração pretendida do servidor usa `dnx` sobre stdio:
+
+```json
+{
+  "mcpServers": {
+    "dotnetRepoInspector": {
+      "command": "dnx",
+      "args": [
+        "DotNetRepoInspector.Mcp@1.5.2",
+        "--yes",
+        "--",
+        "--root",
+        "<caminho-absoluto>/tests/Fixtures/ProjectKinds"
+      ],
+      "trust": false
+    }
+  }
+}
+```
+
+O ambiente disponível para executar a #160 expunha operações do repositório no GitHub, mas não expunha um shell de host executável nem uma sessão instalada/autenticada do Gemini CLI. Portanto:
+
+- versão do Gemini CLI: **não observável neste ambiente de execução**;
+- estado de autorização do Gemini CLI: **não observável**;
+- protocolo MCP negociado com Gemini CLI: **não observado**;
+- handshake: **não executado**;
+- discovery de tools: **não executado**;
+- `list_projects`: **não executado pelo Gemini CLI**;
+- `inspect_repository`: **não executado pelo Gemini CLI**.
+
+O protocolo `2025-06-18` do harness determinístico continua sendo evidência válida do repositório, mas deliberadamente **não** é apresentado como versão de protocolo observada no Gemini CLI. Nenhum código de produto ou específico de provider foi alterado para contornar o ambiente.
+
+A validação live exigida está registrada explicitamente na [#178](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/178). Quando esse follow-up for executado, devem ser registrados somente dados não sensíveis: versão do cliente, versão do pacote, protocolo negociado, resumo do discovery, resumo dos fatos estruturados e comparação pass/fail. Credenciais, tokens e transcripts brutos sensíveis não devem ser versionados.
+
+### Reprodução quando Gemini CLI estiver disponível
+
+Registre a versão do cliente:
+
+```bash
+gemini --version
+```
+
+Configure o MCP server com o pacote estável exato conforme mostrado acima, inicie o Gemini CLI e execute ambos:
+
+```text
+Use the dotnetRepoInspector MCP server list_projects tool. Retorne os paths dos projetos, target frameworks e classificações vindos do resultado da tool.
+```
+
+```text
+Use the dotnetRepoInspector MCP server inspect_repository tool. Retorne a quantidade de projetos e os mesmos fatos por projeto de target framework e classificação vindos do resultado da tool.
+```
+
+Compare os fatos estruturados com o ground truth acima e registre o protocolo MCP negociado e as versões do cliente/pacote.
 
 ## Smoke Tests Reproduzíveis
 
@@ -281,5 +347,5 @@ Fatos esperados: seis projetos; `MultiTargeting/MultiTargeting.csproj` tem `net8
 
 - O runner determinístico prova compatibilidade de protocolo e assertions factuais, não comportamento real de LLM.
 - Codex CLI foi o único cliente externo de provider instalado e autorizado no ambiente de validação.
-- A validação live do Claude Code está bloqueada pelo ambiente externo registrado na #149 e rastreada na #177; Gemini CLI permanece pendente para a #160.
+- A validação live do Claude Code está bloqueada pelo ambiente externo registrado na #149 e rastreada na #177; a validação live do Gemini CLI está bloqueada pelo ambiente externo registrado na #160 e rastreada na #178.
 - Transcripts live devem ser reduzidos a evidência não sensível, como versão do cliente, evento de tool call, resumo do resultado estruturado e fatos pass/fail.
