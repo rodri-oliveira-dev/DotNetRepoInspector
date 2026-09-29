@@ -25,11 +25,23 @@ public sealed record PolicyRuleFinding
         Context = context;
     }
 
-    public string Severity { get; }
+    public string Severity
+    {
+        get;
+    }
 
-    public string Message { get; }
+    public string Message
+    {
+        get;
+    }
 
-    public PolicyFindingScope Scope { get; }
+    public PolicyFindingScope Scope
+    {
+        get;
+    }
 
-    public IReadOnlyDictionary<string, string>? Context { get; }
+    public IReadOnlyDictionary<string, string>? Context
+    {
+        get;
+    }
 }

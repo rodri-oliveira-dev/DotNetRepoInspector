@@ -27,12 +27,20 @@ public sealed record PolicyFindingScope
         ProjectPath = projectPath;
     }
 
-    public string Kind { get; }
+    public string Kind
+    {
+        get;
+    }
 
-    public string? ProjectPath { get; }
+    public string? ProjectPath
+    {
+        get;
+    }
 
-    public static PolicyFindingScope Repository { get; } =
-        new(RepositoryKind, null);
+    public static PolicyFindingScope Repository
+    {
+        get;
+    } = new(RepositoryKind, null);
 
     public static PolicyFindingScope Project(string projectPath)
     {

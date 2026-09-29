@@ -79,8 +79,9 @@ public sealed class CliApplicationTests
 
             Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
             var report = InspectionJsonSerializer.Deserialize(output.ToString());
-            Assert.Empty(report.Diagnostics.Where(
-                static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error));
+            Assert.DoesNotContain(
+                report.Diagnostics,
+                static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
             var finding = Assert.Single(report.PolicyFindings);
             Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
             Assert.Equal(PolicySeverity.Error, finding.Severity);
@@ -428,6 +429,7 @@ public sealed class CliApplicationTests
             """,
             TestContext.Current.CancellationToken);
     }
+
     private static InspectionReport CreateReport(params InspectionDiagnostic[] diagnostics) =>
         InspectionReport.Create(
             new RepositoryMetadata("fixture", null, null, null, null),

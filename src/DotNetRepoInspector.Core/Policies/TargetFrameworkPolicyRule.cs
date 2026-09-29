@@ -44,9 +44,15 @@ public sealed class TargetFrameworkPolicyRule : IPolicyRule
 
     public string Code => RuleCode;
 
-    public IReadOnlyList<string> AllowedTargetFrameworks { get; }
+    public IReadOnlyList<string> AllowedTargetFrameworks
+    {
+        get;
+    }
 
-    public string Severity { get; }
+    public string Severity
+    {
+        get;
+    }
 
     public IReadOnlyList<PolicyRuleFinding> Evaluate(PolicyEvaluationContext context)
     {
