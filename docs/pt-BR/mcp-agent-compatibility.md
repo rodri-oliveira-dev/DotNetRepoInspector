@@ -123,7 +123,7 @@ As evidências do pacote RC estão registradas separadamente na [issue #137](htt
 | Gemini CLI | Google | não instalado neste ambiente | MCP stdio esperado | `settings.json` com `mcpServers.dotnetRepoInspector.command` + `args` | argumento explícito `--root` | pendente | pendente | pendente | Roteiro reproduzível documentado; não validado |
 | Harness determinístico MCP SDK | Harness de protocolo | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | argumento explícito `--root` por fixture | validado | validado | validado em todas as categorias factuais do MVP | Aprovado no eval determinístico de protocolo |
 
-Nota de release: o OpenAI Codex CLI foi validado com um executável local de desenvolvimento, mas a versão exata do artefato/pacote não foi registrada. Esse smoke histórico **não** comprova a validação do `1.2.0-rc.1`. O pacote exato `1.2.0-rc.1` passou nos evals determinísticos em feed local controlado, conforme registro acima; o smoke com Codex usando o **pacote RC exato publicado** permanece pendente até a publicação e deve ser registrado antes da promoção para GA. Claude Code e Gemini CLI não foram validados de forma independente; execuções com providers adicionais continuam como follow-ups não bloqueantes nas #133/#139.
+Nota de release: o OpenAI Codex CLI foi validado com um executável local de desenvolvimento, mas a versão exata do artefato/pacote não foi registrada. Esse smoke histórico **não** comprova a validação do `1.2.0-rc.1`. O pacote exato `1.2.0-rc.1` passou nos evals determinísticos em feed local controlado, conforme registro acima; o smoke com Codex usando o **pacote RC exato publicado** permanece pendente até a publicação e deve ser registrado antes da promoção para GA. Claude Code continua sem validação porque a #149 registrou um impedimento externo do ambiente de execução; seu smoke live está rastreado explicitamente na #177. Gemini CLI permanece pendente para a #160.
 
 ## Tentativa de validação com Claude Code da #149 (2026-09-29)
 
@@ -281,5 +281,5 @@ Fatos esperados: seis projetos; `MultiTargeting/MultiTargeting.csproj` tem `net8
 
 - O runner determinístico prova compatibilidade de protocolo e assertions factuais, não comportamento real de LLM.
 - Codex CLI foi o único cliente externo de provider instalado e autorizado no ambiente de validação.
-- Os smokes de Claude Code e Gemini CLI permanecem pendentes até as CLIs serem instaladas e autenticadas quando necessário.
+- A validação live do Claude Code está bloqueada pelo ambiente externo registrado na #149 e rastreada na #177; Gemini CLI permanece pendente para a #160.
 - Transcripts live devem ser reduzidos a evidência não sensível, como versão do cliente, evento de tool call, resumo do resultado estruturado e fatos pass/fail.
