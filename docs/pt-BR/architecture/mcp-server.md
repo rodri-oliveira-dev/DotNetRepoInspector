@@ -78,7 +78,7 @@ Um resultado bem-sucedido define `isError` do MCP como `false`. `data.report` é
   "ok": true,
   "data": {
     "report": {
-      "schemaVersion": "1.4"
+      "schemaVersion": "1.5"
     }
   },
   "error": null
