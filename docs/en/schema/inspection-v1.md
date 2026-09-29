@@ -15,7 +15,7 @@ Every payload contains these properties:
 - `dotNetSdk`: SDK configuration and the version resolved by the environment.
 - `projects`: normalized projects, always emitted as an array.
 - `diagnostics`: repository-level diagnostics, always emitted as an array.
-- `policyFindings`: policy evaluation results, always emitted as an array and structurally separate from inspection diagnostics.
+- `policyFindings`: optional policy evaluation results, structurally separate from inspection diagnostics. The canonical `1.5` serializer always emits it as an array; older compatible `1.x` payloads may omit it.
 
 The machine-readable schema is [`inspection-v1.schema.json`](inspection-v1.schema.json). A canonical payload is available at [`examples/inspection-v1.example.json`](examples/inspection-v1.example.json).
 
