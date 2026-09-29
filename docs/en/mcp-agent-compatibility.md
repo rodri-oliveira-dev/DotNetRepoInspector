@@ -119,11 +119,67 @@ RC package evidence is recorded separately in [issue #137](https://github.com/ro
 | Client | Provider | Version used | MCP protocol | Stdio config | Root config | Handshake | Discovery | Tool execution | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` through `ModelContextProtocol` server | `codex mcp add dri -- <server> --root <root>` | explicit `--root` argument | validated by real client run | validated by `mcp_tool_call` to `list_projects` | validated: `list_projects` returned 6 projects | Passed historical local-binary Codex smoke; exact RC artifact not validated |
-| Claude Code | Anthropic | not installed in this environment | expected MCP stdio | `claude mcp add --transport stdio dotnet-repo-inspector -- <server> --root <root>` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
+| Claude Code | Anthropic | not observable in the #149 execution environment (2026-09-29) | not observed live; package uses stdio and deterministic harness records `2025-06-18` | `claude mcp add --transport stdio dotnet-repo-inspector -- dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` | explicit `--root` argument | blocked by external client environment | blocked by external client environment | blocked before client launch | External impediment documented by #149; live smoke tracked in #177 |
 | Gemini CLI | Google | not installed in this environment | expected MCP stdio | `settings.json` `mcpServers.dotnetRepoInspector.command` + `args` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
 | MCP SDK deterministic harness | Protocol harness | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | explicit `--root` argument per fixture | validated | validated | validated across all MVP fact categories | Passed deterministic protocol eval |
 
 Release note: OpenAI Codex CLI was validated against a local development executable, but its exact artifact/package version was not recorded. Do not treat that historical smoke as validation of `1.2.0-rc.1`. The exact `1.2.0-rc.1` package passed deterministic evals from a controlled local feed as recorded above; a Codex smoke against the **exact published RC package** remains pending until publication and must be recorded before GA promotion. Claude Code and Gemini CLI are not independently validated here; additional-provider runs remain non-blocking interoperability follow-ups in #133/#139.
+
+## Claude Code validation attempt for #149 (2026-09-29)
+
+Issue #149 uses a versioned, deterministic fixture as the ground truth for the live-client smoke:
+
+- controlled root: `tests/Fixtures/ProjectKinds`;
+- expected project inventory: exactly 6 projects: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj`, and `Worker/Worker.csproj`;
+- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
+- `inspect_repository` ground truth: the same six-project inventory and the same canonical per-project target-framework/classification facts projected by `InspectionReport`;
+- authoritative source: the versioned `mcp-evals-v1.json` dataset plus the `ProjectKinds` fixture projects themselves.
+
+### External impediment recorded by #149
+
+The stable package selected for the run is `DotNetRepoInspector.Mcp@1.5.2`, the current stable release at the time of the attempt. The intended server command is:
+
+```bash
+dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <absolute-path>/tests/Fixtures/ProjectKinds
+```
+
+The execution environment available for #149 exposed GitHub repository operations but did not expose an executable host shell or an installed/authenticated Claude Code session. Consequently:
+
+- Claude Code version: **not observable in this execution environment**;
+- Claude Code authorization state: **not observable**;
+- MCP protocol negotiated with Claude Code: **not observed**;
+- handshake: **not executed**;
+- tool discovery: **not executed**;
+- `list_projects`: **not executed by Claude Code**;
+- `inspect_repository`: **not executed by Claude Code**.
+
+The deterministic harness protocol `2025-06-18` remains useful repository evidence, but it is deliberately **not** presented as a protocol version observed from Claude Code. No product or provider-specific code was changed to work around the environment.
+
+The required live validation is tracked explicitly in [#177](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/177). Only non-sensitive evidence should be recorded when that follow-up runs: client version, package version, negotiated protocol, tool discovery summary, structured fact summary, and pass/fail comparison. Credentials, tokens, and raw sensitive transcripts must not be committed.
+
+### Reproduction when Claude Code is available
+
+```bash
+claude --version
+
+claude mcp add --transport stdio dotnet-repo-inspector -- \
+  dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- \
+  --root <absolute-path>/tests/Fixtures/ProjectKinds
+
+claude mcp list
+```
+
+Then use `/mcp` in Claude Code and execute both:
+
+```text
+Use dotnet-repo-inspector list_projects. Return the project paths, target frameworks, and classifications from the tool result.
+```
+
+```text
+Use dotnet-repo-inspector inspect_repository. Return the project count and the same per-project target framework and classification facts from the tool result.
+```
+
+Compare the structured facts with the ground truth above, record the negotiated MCP protocol and client/package versions, then remove the temporary MCP registration.
 
 ## Reproducible Smoke Tests
 
