@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Engine;
 using DotNetRepoInspector.Persistence;
 
@@ -223,27 +224,36 @@ public sealed class CliApplication
         }
 
         var health = InspectionHealthEvaluator.Evaluate(report);
+        var policyErrorCount = report.PolicyFindings.Count(
+            static finding =>
+                string.Equals(
+                    finding.Severity,
+                    PolicySeverity.Error,
+                    StringComparison.Ordinal));
+
         if (string.Equals(
                 health.OverallStatus,
                 InspectionHealthStatus.Error,
-                StringComparison.Ordinal))
+                StringComparison.Ordinal) ||
+            policyErrorCount > 0)
         {
             console.Logger.Warning(
                 "inspection.completed-with-errors",
-                "Repository inspection completed with error diagnostics.",
-                InspectionHealthContext(health));
+                "Repository inspection completed with error diagnostics or policy findings.",
+                CompletionContext(health, report));
             return CliExitCodes.CompletedWithErrors;
         }
 
         console.Logger.Verbose(
             "inspection.completed",
             "Repository inspection completed successfully.",
-            InspectionHealthContext(health));
+            CompletionContext(health, report));
         return CliExitCodes.Success;
     }
 
-    private static Dictionary<string, string> InspectionHealthContext(
-        InspectionHealthSummary health) =>
+    private static Dictionary<string, string> CompletionContext(
+        InspectionHealthSummary health,
+        InspectionReport report) =>
         new(StringComparer.Ordinal)
         {
             ["overallStatus"] = health.OverallStatus,
@@ -257,7 +267,25 @@ public sealed class CliApplication
             ["projectsWithWarnings"] =
                 health.ProjectsWithWarnings.ToString(CultureInfo.InvariantCulture),
             ["projectsWithErrors"] =
-                health.ProjectsWithErrors.ToString(CultureInfo.InvariantCulture)
+                health.ProjectsWithErrors.ToString(CultureInfo.InvariantCulture),
+            ["policyFindings"] =
+                report.PolicyFindings.Count.ToString(CultureInfo.InvariantCulture),
+            ["policyWarnings"] =
+                report.PolicyFindings.Count(
+                    static finding =>
+                        string.Equals(
+                            finding.Severity,
+                            PolicySeverity.Warning,
+                            StringComparison.Ordinal))
+                    .ToString(CultureInfo.InvariantCulture),
+            ["policyErrors"] =
+                report.PolicyFindings.Count(
+                    static finding =>
+                        string.Equals(
+                            finding.Severity,
+                            PolicySeverity.Error,
+                            StringComparison.Ordinal))
+                    .ToString(CultureInfo.InvariantCulture)
         };
 
     private static Dictionary<string, string> ExceptionContext(Exception exception) =>

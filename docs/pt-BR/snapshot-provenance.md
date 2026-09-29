@@ -10,7 +10,7 @@ Um snapshot serializado contém:
 
 ```json
 {
-  "schemaVersion": "1.4",
+  "schemaVersion": "1.5",
   "inspectorVersion": "1.0.0",
   "repositoryIdentity": "github.com/owner/repository",
   "commitSha": "0123456789012345678901234567890123456789",
@@ -25,7 +25,7 @@ Um snapshot serializado contém:
   "idempotencyKey": "dri1:<64 caracteres hexadecimais em lowercase>",
   "idempotencyScope": "repositoryState",
   "report": {
-    "schemaVersion": "1.4"
+    "schemaVersion": "1.5"
   }
 }
 ```

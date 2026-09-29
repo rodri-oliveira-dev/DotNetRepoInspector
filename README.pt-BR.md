@@ -29,13 +29,13 @@ A superfície da v1 inclui:
 - metadados Git de repositório, commit, branch, remote e dirty state quando disponíveis;
 - classificação base determinística: Web, Worker, Console, Library, Test e Unknown;
 - campo opcional de contrato `classification.subtype` reservado para evidência explícita de subtipo;
-- JSON de inspeção versionado (`schemaVersion 1.4`);
-- configuração opcional do repositório para exclusões e overrides explícitos de classificação;
+- JSON de inspeção versionado (`schemaVersion 1.5`);
+- configuração opcional do repositório para exclusões, overrides explícitos de classificação e policies opt-in;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
 - diagnósticos estruturados, cancelamento, compatibilidade cross-platform, hardening de segurança, guardrails de performance e validação contra repositórios públicos fixados.
 
-Regras concretas de detecção de subtipo e a camada opcional de políticas continuam como trabalho futuro. O contrato v1 inclui o campo opcional `classification.subtype`, mas o engine atual o mantém ausente até que evidência de subtipo aprovada seja introduzida depois.
+A detecção concreta de subtypes permanece orientada por evidência e conservadora. A linha v1 atual inclui avaliação opt-in de policies com `policyFindings` estruturados; `classification.subtype` permanece ausente quando não há evidência de subtipo aprovada.
 
 ## Princípios de design
 
@@ -49,11 +49,11 @@ Regras concretas de detecção de subtipo e a camada opcional de políticas cont
 
 ## Contrato JSON
 
-O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload representativo é:
+O contrato v1 usa atualmente o schema de inspeção **1.5**. Um payload representativo é:
 
 ```json
 {
-  "schemaVersion": "1.4",
+  "schemaVersion": "1.5",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -92,7 +92,8 @@ O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload represen
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "policyFindings": []
 }
 ```
 
@@ -194,6 +195,23 @@ O repositório contém uma Composite Action reutilizável que executa exatamente
 ```
 
 Os outputs incluem `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action não exige permissão de escrita nem token do GitHub para inspecionar um repositório que já tenha sido feito checkout.
+
+Policies usam a mesma configuração de repositório da CLI. Por exemplo:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Salve esse conteúdo como `.dotnetrepoinspector.json` e invoque a Action normalmente. O relatório expõe os resultados em `policyFindings` no nível superior; um finding `error` propaga exit code `1`, enquanto warnings de policy não falham uma inspeção que esteja saudável.
 
 O alias público `@v1` já está disponível para uso direto no GitHub Actions. Fixe uma tag completa imutável ou commit SHA quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
 

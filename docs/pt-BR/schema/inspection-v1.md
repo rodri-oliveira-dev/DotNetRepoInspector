@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` define o resultado estável da inspeção de forma independente dos detalhes internos do MSBuild, GitHub Actions, persistência ou qualquer mecanismo específico de delivery.
 
-A versão atual do schema é `1.4`.
+A versão atual do schema é `1.5`.
 
 ## Contrato de nível superior
 
@@ -15,6 +15,7 @@ Todo payload contém estas propriedades:
 - `dotNetSdk`: configuração do SDK e versão resolvida pelo ambiente.
 - `projects`: projetos normalizados, sempre emitidos como array.
 - `diagnostics`: diagnósticos no nível do repositório, sempre emitidos como array.
+- `policyFindings`: resultados opcionais da avaliação de policies, estruturalmente separados dos diagnósticos da inspeção. O serializer canônico `1.5` sempre o emite como array; payloads compatíveis `1.x` mais antigos podem omiti-lo.
 
 O schema legível por máquina está em [`inspection-v1.schema.json`](inspection-v1.schema.json). Um payload canônico está disponível em [`examples/inspection-v1.example.json`](examples/inspection-v1.example.json).
 
@@ -66,6 +67,20 @@ O escopo do diagnóstico é representado pela posição no contrato. `diagnostic
 
 O catálogo estável de diagnósticos e as regras de logging operacional estão documentados em [`../diagnostics.md`](../diagnostics.md).
 
+## Findings de policy
+
+O schema `1.5` adiciona `policyFindings` no nível superior. Findings de policy representam decisões de governança avaliadas depois que os fatos normalizados da inspeção foram coletados; eles não são falhas de inspeção e nunca são inseridos em `diagnostics` do repositório ou dos projetos.
+
+Cada finding contém:
+
+- `ruleCode`: identificador estável da rule no formato `DRPxxxx`;
+- `severity`: `warning` ou `error`;
+- `message`: descrição humana estável;
+- `scope`: `repository` ou `project`; o escopo de projeto também contém o `projectPath` normalizado e relativo ao repositório;
+- `context` opcional: valores estruturados em string que descrevem os fatos avaliados pela policy.
+
+A policy inicial de TargetFramework usa o código `DRP0001`. Um array `policyFindings` vazio significa que nenhuma policy habilitada produziu finding ou que nenhuma policy foi habilitada; consumidores que precisam distinguir a intenção de configuração devem usar a configuração do repositório como fonte de verdade.
+
 ## Caminhos
 
 Caminhos no contrato normalizado usam `/` como separador e não devem conter caminhos absolutos do workspace específicos da máquina.
@@ -85,6 +100,8 @@ A raiz da work tree descoberta pelo adapter Git é um valor operacional interno 
 - sinais de classificação são ordenados ordinalmente;
 - diagnósticos são ordenados por severidade, código, source, message, details e contexto canônico;
 - chaves de contexto dos diagnósticos são ordenadas ordinalmente;
+- findings de policy são ordenados por código da rule, severidade, escopo, caminho do projeto, message e contexto canônico;
+- chaves de contexto dos findings de policy são ordenadas ordinalmente;
 - separadores de caminho são normalizados para `/`;
 - nomes de propriedades usam `camelCase`;
 - propriedades opcionais com valor `null` são omitidas.
@@ -100,6 +117,7 @@ As versões do schema seguem uma política major/minor.
 - O schema `1.2` adicionou o booleano opcional `repository.isDirty`, preenchido pela inspeção de metadados Git.
 - O schema `1.3` adicionou os campos opcionais `classification.source` e `classification.automaticKind` para distinguir overrides explícitos da classificação automática.
 - O schema `1.4` adiciona `classification.subtype` opcional como refinamento do tipo base de classificação sem adicionar regras concretas de detecção de subtipo.
+- O schema `1.5` adiciona `policyFindings` no nível superior para que violações de policy permaneçam estruturalmente separadas dos diagnósticos da inspeção.
 - Consumidores do schema `1.x` devem ignorar campos desconhecidos e preservar a semântica documentada dos campos existentes.
 - Remover ou renomear um campo, alterar seu tipo, tornar obrigatório um campo opcional ou alterar seu significado é uma breaking change e exige uma nova versão major do schema, como `2.0`.
 - `InspectionSchema.IsCompatibleVersion` aceita versões com a major atual e rejeita uma major diferente.
@@ -130,6 +148,7 @@ O contrato estável intencionalmente não expõe tipos de resultado específicos
 | Resultado do classificador automático | `projects[].classification.kind` sem override; caso contrário `projects[].classification.automaticKind` |
 | Evidência aprovada de subtipo | `projects[].classification.subtype` opcional quando houver evidência suportada |
 | Override explícito de classificação | `projects[].classification.kind` efetivo mais `projects[].classification.source` |
+| Avaliação de policy | `policyFindings[]` no nível superior, separado dos diagnósticos da inspeção |
 
 O dicionário bruto `Properties` do MSBuild vindo da camada de avaliação é intencionalmente excluído. Ele é uma fonte interna de evidência, não parte do contrato público estável.
 

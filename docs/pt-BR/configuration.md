@@ -10,18 +10,25 @@ Quando presente na raiz do repositório inspecionado, `.dotnetrepoinspector.json
 
 ```json
 {
-  "schemaVersion": "1",
+  "schemaVersion": "2",
   "exclude": [
     "generated",
     "samples/Legacy.csproj"
   ],
   "classificationOverrides": {
     "src/App/App.csproj": "web"
+  },
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
   }
 }
 ```
 
-`schemaVersion` é obrigatório e o schema atual de configuração é `1`. Propriedades desconhecidas são rejeitadas para que erros de digitação não alterem silenciosamente o comportamento da inspeção.
+`schemaVersion` é obrigatório. O schema de configuração `1` continua suportado para exclusões e overrides de classificação; o schema `2` é a versão atual e adiciona a seção opcional `policies`. Uma seção `policies` no schema `1` é rejeitada em vez de ser interpretada implicitamente. Propriedades desconhecidas são rejeitadas para que erros de digitação não alterem silenciosamente o comportamento da inspeção.
 
 Todos os caminhos configurados são relativos à raiz do repositório inspecionado e devem permanecer dentro dela. Caminhos absolutos e caminhos que escapem por `..` são inválidos. Os caminhos seguem semântica relativa ao repositório; `/` é recomendado em configuração versionada.
 
@@ -65,6 +72,36 @@ Quando um override é aplicado, o schema `1.3` e posteriores o tornam distinguí
 Os sinais automáticos continuam presentes. `automaticKind` registra o resultado original do classificador, `kind` contém o override efetivo, `source` identifica a origem do override e a `confidence` automática não é reutilizada como confiança de uma decisão manual.
 
 Se um override apontar para um projeto que não foi descoberto, a inspeção continua e emite `DRI1014` com severidade `warning`. Isso torna configuração obsoleta visível sem transformá-la em falha de inspeção.
+
+## Policies
+
+Policies são opt-in. Sem arquivo de configuração, sem a seção `policies` ou com `targetFramework.enabled: false`, nenhuma rule é registrada e o comportamento da inspeção permanece inalterado.
+
+O schema de configuração `2` introduz a primeira rule:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+A rule de TargetFramework possui o código estável `DRP0001`. A severidade padrão é `error`; `severity` pode ser explicitamente `warning` ou `error`. Quando habilitada, `allowed` deve conter pelo menos um target framework não vazio.
+
+A rule avalia somente fatos normalizados de `ProjectInspection.TargetFrameworks`:
+
+- um projeto single-target não gera finding quando seu TFM é permitido e gera um finding com escopo de projeto quando não é;
+- um projeto multi-target gera um único finding com escopo de projeto quando qualquer TFM estiver fora da allowlist; o contexto lista todos os target frameworks e o subconjunto não permitido em ordem determinística;
+- um projeto sem target framework conhecido não gera finding de policy, pois a rule não inventa violação a partir de fatos ausentes da inspeção;
+- os projetos são avaliados em ordem de caminho relativo ao repositório, mantendo a ordem dos findings determinística.
+
+Findings de policy são distintos de diagnostics da inspeção. Rules habilitadas são avaliadas depois que o relatório normalizado de inspeção é construído, e seus resultados são emitidos em `policyFindings` no nível superior do schema de inspeção `1.5`. A CLI e a GitHub Action retornam exit code `1` quando qualquer finding de policy possui severidade `error`; warnings de policy não falham uma inspeção que esteja saudável.
 
 ## Configuração pela CLI
 
@@ -136,7 +173,9 @@ Configuração inválida do repositório é representada no contrato normal da i
 - arquivo explícito de configuração inexistente;
 - caminho configurado absoluto ou que escape da raiz;
 - tipo de classificação não suportado;
-- semântica conflitante de `--config` e `--no-config` na fronteira da Engine.
+- semântica conflitante de `--config` e `--no-config` na fronteira da Engine;
+- seção `policies` usando o schema legado `1`;
+- ausência de `targetFramework.enabled`, rule habilitada sem lista `allowed`, TFMs permitidos em branco ou severidade de policy não suportada.
 
 A Engine retorna um `InspectionReport` contendo o diagnóstico em vez de descartar o resultado legível por máquina. A CLI, portanto, termina com código `1`, e a GitHub Action preserva o mesmo código enquanto expõe o caminho do relatório quando disponível.
 

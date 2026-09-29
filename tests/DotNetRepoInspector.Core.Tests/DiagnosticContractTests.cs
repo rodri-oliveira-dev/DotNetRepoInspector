@@ -102,12 +102,13 @@ public sealed class DiagnosticContractTests
     [Fact]
     public void SchemaVersion_RemainsCompatibleWithEarlierAdditiveChanges()
     {
-        Assert.Equal("1.4", InspectionSchema.CurrentVersion);
+        Assert.Equal("1.5", InspectionSchema.CurrentVersion);
         Assert.True(InspectionSchema.IsCompatibleVersion("1.0"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.1"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.2"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.3"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.4"));
+        Assert.True(InspectionSchema.IsCompatibleVersion("1.5"));
     }
 
     private static InspectionReport CreateReport(InspectionDiagnostic diagnostic) =>

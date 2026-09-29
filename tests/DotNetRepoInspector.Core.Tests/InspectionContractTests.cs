@@ -1,6 +1,7 @@
 using System.Text.Json;
 
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 
 using Xunit;
 
@@ -20,7 +21,7 @@ public sealed class InspectionContractTests
 
         Assert.Equal(InspectionSchema.CurrentVersion, root.GetProperty("schemaVersion").GetString());
         Assert.Equal(
-            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics" },
+            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings" },
             root.EnumerateObject().Select(property => property.Name).ToArray());
 
         var repository = root.GetProperty("repository");
@@ -55,6 +56,48 @@ public sealed class InspectionContractTests
                 .Select(element => element.GetString())
                 .ToArray());
         Assert.False(projects[0].GetProperty("classification").TryGetProperty("subtype", out _));
+        Assert.Empty(root.GetProperty("policyFindings").EnumerateArray());
+    }
+
+    [Fact]
+    public void Serialize_EmitsPolicyFindingsSeparateFromDiagnostics()
+    {
+        var report = CreateReport(reverseCollections: false) with
+        {
+            PolicyFindings =
+            [
+                new PolicyFinding(
+                    TargetFrameworkPolicyRule.RuleCode,
+                    PolicySeverity.Error,
+                    "Project targets one or more frameworks that are not allowed by policy.",
+                    PolicyFindingScope.Project("src\\App\\App.csproj"),
+                    new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["targetFrameworks"] = "net7.0",
+                        ["allowedTargetFrameworks"] = "net8.0,net10.0"
+                    })
+            ]
+        };
+
+        var json = InspectionJsonSerializer.Serialize(report);
+
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+        Assert.Equal(2, root.GetProperty("diagnostics").GetArrayLength());
+
+        var finding = root.GetProperty("policyFindings")[0];
+        Assert.Equal("DRP0001", finding.GetProperty("ruleCode").GetString());
+        Assert.Equal("error", finding.GetProperty("severity").GetString());
+        Assert.Equal("project", finding.GetProperty("scope").GetProperty("kind").GetString());
+        Assert.Equal(
+            "src/App/App.csproj",
+            finding.GetProperty("scope").GetProperty("projectPath").GetString());
+        Assert.Equal(
+            new[] { "allowedTargetFrameworks", "targetFrameworks" },
+            finding.GetProperty("context")
+                .EnumerateObject()
+                .Select(static property => property.Name)
+                .ToArray());
     }
 
     [Fact]
@@ -125,10 +168,46 @@ public sealed class InspectionContractTests
     }
 
     [Fact]
+    public void Deserialize_AcceptsOlderPayloadWithoutPolicyFindings()
+    {
+        var json = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false))
+            .Replace(
+                $"\"schemaVersion\": \"{InspectionSchema.CurrentVersion}\"",
+                "\"schemaVersion\": \"1.4\"",
+                StringComparison.Ordinal)
+            .Replace(
+                ",\n  \"policyFindings\": []",
+                string.Empty,
+                StringComparison.Ordinal);
+
+        var report = InspectionJsonSerializer.Deserialize(json);
+
+        Assert.Equal("1.4", report.SchemaVersion);
+        Assert.Empty(report.PolicyFindings);
+    }
+
+    [Fact]
     public void Serialize_IsDeterministicAcrossCollectionOrder()
     {
-        var first = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: true));
-        var second = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false));
+        var firstReport = CreateReport(reverseCollections: true) with
+        {
+            PolicyFindings =
+            [
+                CreatePolicyFinding("DRP0002", "src/Zeta/Zeta.csproj"),
+                CreatePolicyFinding("DRP0001", "src/Alpha/Alpha.csproj")
+            ]
+        };
+        var secondReport = CreateReport(reverseCollections: false) with
+        {
+            PolicyFindings =
+            [
+                CreatePolicyFinding("DRP0001", "src/Alpha/Alpha.csproj"),
+                CreatePolicyFinding("DRP0002", "src/Zeta/Zeta.csproj")
+            ]
+        };
+
+        var first = InspectionJsonSerializer.Serialize(firstReport);
+        var second = InspectionJsonSerializer.Serialize(secondReport);
 
         Assert.Equal(first, second);
     }
@@ -187,6 +266,13 @@ public sealed class InspectionContractTests
             references,
             name => name!.StartsWith("Microsoft.Build", StringComparison.Ordinal));
     }
+
+    private static PolicyFinding CreatePolicyFinding(string ruleCode, string projectPath) =>
+        new(
+            ruleCode,
+            PolicySeverity.Warning,
+            "Policy finding.",
+            PolicyFindingScope.Project(projectPath));
 
     private static InspectionReport CreateReport(bool reverseCollections)
     {

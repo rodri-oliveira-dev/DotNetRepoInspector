@@ -133,7 +133,7 @@ Automation and fleet-inventory consumers should treat the Inspector report's `pr
 
 ## Repository configuration
 
-When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions and explicit classification overrides. It is completely optional; when absent, the existing zero-configuration behavior is preserved.
+When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions, explicit classification overrides, and opt-in policies. It is completely optional; when absent, the existing zero-configuration behavior is preserved.
 
 Use `--config` to select another repository-relative file, or `--no-config` to skip automatic loading of the default file. `--config` and `--no-config` are mutually exclusive.
 
@@ -150,6 +150,23 @@ dotnet repo-inspect . \
 dotnet repo-inspect . --config config/inspector.json
 dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
 ```
+
+Policies use the same configuration file; there is no separate CLI policy parser. For example:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+When enabled, policy evaluation runs after inspection and is emitted as top-level `policyFindings`. Findings remain separate from `diagnostics`; see [`configuration.md`](configuration.md) for policy semantics.
 
 Malformed CLI option values are rejected before inspection and return exit code `2`. Invalid repository configuration discovered by the Engine produces a normal JSON report containing `DRI1013/error` and returns exit code `1`.
 
@@ -198,14 +215,14 @@ With `--output`, the JSON is written to the requested UTF-8 file and stdout rema
 dotnet repo-inspect . --output artifacts/inspection.json
 ```
 
-Persistence does not change the inspection JSON contract. The JSON is produced by `InspectionJsonSerializer` and follows the same versioned and deterministic contract documented under [`schema/inspection-v1.md`](schema/inspection-v1.md).
+Persistence does not change the inspection JSON contract. The JSON is produced by `InspectionJsonSerializer` and follows the same versioned and deterministic contract documented under [`schema/inspection-v1.md`](schema/inspection-v1.md). Policy findings, when present, are emitted in the top-level `policyFindings` array and never merged into `diagnostics`.
 
 ## Exit codes
 
 | Code | Meaning |
 | ---: | --- |
-| `0` | Inspection completed and no error-severity diagnostics were produced. |
-| `1` | A report was produced, but it contains one or more error-severity diagnostics, including invalid repository configuration. |
+| `0` | Inspection completed with no error-severity inspection diagnostics and no error-severity policy findings. Policy warnings do not fail the command. |
+| `1` | A report was produced, but it contains one or more error-severity inspection diagnostics or policy findings, including invalid repository configuration. |
 | `2` | Command-line arguments are invalid. |
 | `3` | A fatal inspection or serialization failure prevented a usable report. |
 | `4` | The report could not be written to stdout or the requested file. |
@@ -214,7 +231,7 @@ Persistence does not change the inspection JSON contract. The JSON is produced b
 
 A code of `1` is intentionally different from a fatal failure: the JSON report still exists and contains the structured diagnostics that explain the partial inspection result. Code `5` also occurs after the inspection report has been produced; it represents failure to deliver the optional snapshot, not a mutation of inspection diagnostics.
 
-Exit code `1` is aggregate: it is returned when an `error` diagnostic exists either in top-level `diagnostics` or in any `projects[].diagnostics`. It is not a per-project status. Consumers must derive each project's health only from that project's own `diagnostics` collection and must use top-level `diagnostics` independently for repository/inspection health. See [`diagnostics.md`](diagnostics.md) for the aggregation rules and examples.
+Exit code `1` is aggregate: it is returned when an inspection `error` diagnostic exists either in top-level `diagnostics` or in any `projects[].diagnostics`, or when any top-level `policyFindings[]` entry has severity `error`. It is not a per-project inspection status. Consumers must derive each project's inspection health only from that project's own `diagnostics`; policy compliance must be derived independently from `policyFindings`. See [`diagnostics.md`](diagnostics.md) for inspection-health aggregation.
 
 ## Cancellation
 

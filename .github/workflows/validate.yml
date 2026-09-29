@@ -443,8 +443,8 @@ jobs:
             throw "Expected Inspector version '$env:ACTION_TEST_TOOL_VERSION', actual '$env:INSPECTOR_VERSION'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.4") {
-            throw "Expected schema version 1.4, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected schema version 1.5, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -500,8 +500,8 @@ jobs:
             throw "Expected propagated CLI exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.4") {
-            throw "Expected schema version 1.4 from the partial report, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected schema version 1.5 from the partial report, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -512,6 +512,94 @@ jobs:
           $diagnostic = @($report.diagnostics) | Where-Object { $_.code -eq "DRI1002" } | Select-Object -First 1
           if ($null -eq $diagnostic -or $diagnostic.severity -ne "error") {
             throw "Expected DRI1002/error in the report produced by the failing Action invocation."
+          }
+
+      - name: Run Action with compliant TargetFramework policy
+        if: matrix.os == 'ubuntu-latest'
+        id: policy-ok
+        uses: ./
+        with:
+          path: ./tests/Fixtures/ProjectKinds
+          config: policy-ok.json
+          output: ./artifacts/action-smoke/policy-ok.json
+
+      - name: Validate compliant policy result
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        env:
+          EXIT_CODE: "${{ steps.policy-ok.outputs.exit-code }}"
+          REPORT_PATH: "${{ steps.policy-ok.outputs.report-path }}"
+          SCHEMA_VERSION: "${{ steps.policy-ok.outputs.schema-version }}"
+        run: |
+          if ($env:EXIT_CODE -ne "0") {
+            throw "Expected policy success exit code 0, actual '$env:EXIT_CODE'."
+          }
+
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected policy success schema 1.5, actual '$env:SCHEMA_VERSION'."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if (@($report.policyFindings).Count -ne 0) {
+            throw "Expected no policy findings for the compliant policy scenario."
+          }
+
+      - name: Run Action with TargetFramework policy violation
+        if: matrix.os == 'ubuntu-latest'
+        id: policy-violation
+        continue-on-error: true
+        uses: ./
+        with:
+          path: ./tests/Fixtures/ProjectKinds
+          config: policy-violation.json
+          output: ./artifacts/action-smoke/policy-violation.json
+
+      - name: Validate policy violation propagation
+        if: matrix.os == 'ubuntu-latest' && always()
+        shell: pwsh
+        env:
+          STEP_OUTCOME: "${{ steps.policy-violation.outcome }}"
+          EXIT_CODE: "${{ steps.policy-violation.outputs.exit-code }}"
+          REPORT_PATH: "${{ steps.policy-violation.outputs.report-path }}"
+          SCHEMA_VERSION: "${{ steps.policy-violation.outputs.schema-version }}"
+        run: |
+          if ($env:STEP_OUTCOME -ne "failure") {
+            throw "Expected the policy violation Action invocation to fail, actual outcome '$env:STEP_OUTCOME'."
+          }
+
+          if ($env:EXIT_CODE -ne "1") {
+            throw "Expected policy violation exit code 1, actual '$env:EXIT_CODE'."
+          }
+
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected policy violation schema 1.5, actual '$env:SCHEMA_VERSION'."
+          }
+
+          if (-not (Test-Path -LiteralPath $env:REPORT_PATH -PathType Leaf)) {
+            throw "Policy violation report '$env:REPORT_PATH' was not created."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          $findings = @($report.policyFindings)
+          if ($findings.Count -ne 1) {
+            throw "Expected exactly one policy finding, actual '$($findings.Count)'."
+          }
+
+          $finding = $findings[0]
+          if ($finding.ruleCode -ne "DRP0001" -or $finding.severity -ne "error") {
+            throw "Expected DRP0001/error for the TargetFramework policy violation."
+          }
+
+          if ($finding.scope.kind -ne "project" -or
+              $finding.scope.projectPath -ne "MultiTargeting/MultiTargeting.csproj") {
+            throw "Expected the policy finding to target MultiTargeting/MultiTargeting.csproj."
+          }
+
+          $errorDiagnostics = @(
+            @($report.diagnostics) | Where-Object { $_.severity -eq "error" }
+          )
+          if ($errorDiagnostics.Count -ne 0) {
+            throw "Policy violation must remain structurally separate from inspection error diagnostics."
           }
 
   compatibility:

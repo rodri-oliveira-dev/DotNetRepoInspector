@@ -29,13 +29,13 @@ The v1 surface includes:
 - Git repository, commit, branch, remote, and dirty-state metadata when available;
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
 - optional `classification.subtype` contract field reserved for explicit subtype evidence;
-- versioned inspection JSON (`schemaVersion 1.4`);
-- optional repository configuration for exclusions and explicit classification overrides;
+- versioned inspection JSON (`schemaVersion 1.5`);
+- optional repository configuration for exclusions, explicit classification overrides, and opt-in policies;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
 
-Concrete subtype detection rules and the optional policy engine remain future work. The v1 contract includes the optional `classification.subtype` field, but the current engine leaves it absent unless approved subtype evidence is introduced later.
+Concrete subtype detection remains evidence-driven and conservative. The current v1 line includes opt-in policy evaluation with structured `policyFindings`; `classification.subtype` remains absent unless approved subtype evidence is available.
 
 ## Design principles
 
@@ -49,11 +49,11 @@ Concrete subtype detection rules and the optional policy engine remain future wo
 
 ## JSON contract
 
-The v1 contract currently uses inspection schema **1.4**. A representative payload is:
+The v1 contract currently uses inspection schema **1.5**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.4",
+  "schemaVersion": "1.5",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -92,7 +92,8 @@ The v1 contract currently uses inspection schema **1.4**. A representative paylo
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "policyFindings": []
 }
 ```
 
@@ -194,6 +195,23 @@ The repository contains a reusable Composite Action that runs the exact .NET Too
 ```
 
 Outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action does not require write permissions or a GitHub token for inspection of an already checked-out repository.
+
+Policies use the same repository configuration as the CLI. For example:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Save that as `.dotnetrepoinspector.json` and invoke the Action normally. The report exposes policy results in top-level `policyFindings`; an `error` finding propagates exit code `1`, while policy warnings do not fail an otherwise healthy inspection.
 
 The public `@v1` alias is available for direct use in GitHub Actions. Pin an immutable full release tag or commit SHA when exact reproducibility is preferred. See [`docs/en/github-action.md`](docs/en/github-action.md).
 

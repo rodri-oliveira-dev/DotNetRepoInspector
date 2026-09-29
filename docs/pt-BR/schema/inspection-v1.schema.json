@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DotNetRepoInspector inspection schema 1.4",
+  "title": "DotNetRepoInspector inspection schema 1.5",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.4"
+      "const": "1.5"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -30,79 +30,155 @@
       "items": {
         "$ref": "#/$defs/diagnostic"
       }
+    },
+    "policyFindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/policyFinding"
+      }
     }
   },
   "$defs": {
     "repository": {
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "commitSha": { "type": "string" },
-        "branch": { "type": "string" },
-        "remoteUrl": { "type": "string" },
-        "isDirty": { "type": "boolean" }
+        "name": {
+          "type": "string"
+        },
+        "commitSha": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "remoteUrl": {
+          "type": "string"
+        },
+        "isDirty": {
+          "type": "boolean"
+        }
       }
     },
     "configuredSdk": {
       "type": "object",
       "properties": {
-        "version": { "type": "string" },
-        "rollForward": { "type": "string" },
-        "allowPrerelease": { "type": "boolean" }
+        "version": {
+          "type": "string"
+        },
+        "rollForward": {
+          "type": "string"
+        },
+        "allowPrerelease": {
+          "type": "boolean"
+        }
       }
     },
     "dotNetSdk": {
       "type": "object",
       "properties": {
-        "globalJsonPath": { "type": "string" },
-        "configured": { "$ref": "#/$defs/configuredSdk" },
-        "resolvedVersion": { "type": "string" }
+        "globalJsonPath": {
+          "type": "string"
+        },
+        "configured": {
+          "$ref": "#/$defs/configuredSdk"
+        },
+        "resolvedVersion": {
+          "type": "string"
+        }
       }
     },
     "projectSdk": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
-        "name": { "type": "string" },
-        "version": { "type": "string" }
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
       }
     },
     "classification": {
       "type": "object",
-      "required": ["kind", "signals"],
+      "required": [
+        "kind",
+        "signals"
+      ],
       "properties": {
-        "kind": { "type": "string" },
-        "confidence": { "type": "string" },
+        "kind": {
+          "type": "string"
+        },
+        "confidence": {
+          "type": "string"
+        },
         "signals": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "subtype": { "type": "string", "pattern": "\\S" },
+        "subtype": {
+          "type": "string",
+          "pattern": "\\S"
+        },
         "source": {
-          "enum": ["configuration", "request"]
+          "enum": [
+            "configuration",
+            "request"
+          ]
         },
-        "automaticKind": { "type": "string" }
+        "automaticKind": {
+          "type": "string"
+        }
       }
     },
     "projectReference": {
       "type": "object",
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "properties": {
-        "path": { "type": "string" }
+        "path": {
+          "type": "string"
+        }
       }
     },
     "diagnostic": {
       "type": "object",
-      "required": ["code", "severity", "message"],
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
       "properties": {
-        "code": { "type": "string", "pattern": "^DRI[0-9]{4}$" },
-        "severity": { "enum": ["info", "warning", "error"] },
-        "message": { "type": "string" },
-        "source": { "type": "string" },
-        "details": { "type": "string" },
+        "code": {
+          "type": "string",
+          "pattern": "^DRI[0-9]{4}$"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "details": {
+          "type": "string"
+        },
         "context": {
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -117,32 +193,130 @@
         "diagnostics"
       ],
       "properties": {
-        "path": { "type": "string" },
-        "name": { "type": "string" },
-        "resolvedSdkVersion": { "type": "string" },
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "resolvedSdkVersion": {
+          "type": "string"
+        },
         "sdks": {
           "type": "array",
-          "items": { "$ref": "#/$defs/projectSdk" }
+          "items": {
+            "$ref": "#/$defs/projectSdk"
+          }
         },
         "targetFrameworks": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "outputType": { "type": "string" },
-        "isTestProject": { "type": "boolean" },
-        "isPackable": { "type": "boolean" },
+        "outputType": {
+          "type": "string"
+        },
+        "isTestProject": {
+          "type": "boolean"
+        },
+        "isPackable": {
+          "type": "boolean"
+        },
         "runtimeIdentifiers": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
-        "classification": { "$ref": "#/$defs/classification" },
+        "classification": {
+          "$ref": "#/$defs/classification"
+        },
         "references": {
           "type": "array",
-          "items": { "$ref": "#/$defs/projectReference" }
+          "items": {
+            "$ref": "#/$defs/projectReference"
+          }
         },
         "diagnostics": {
           "type": "array",
-          "items": { "$ref": "#/$defs/diagnostic" }
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        }
+      }
+    },
+    "policyScope": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "repository",
+            "project"
+          ]
+        },
+        "projectPath": {
+          "type": "string"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "repository"
+            }
+          },
+          "not": {
+            "required": [
+              "projectPath"
+            ]
+          }
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "project"
+            }
+          },
+          "required": [
+            "projectPath"
+          ]
+        }
+      ]
+    },
+    "policyFinding": {
+      "type": "object",
+      "required": [
+        "ruleCode",
+        "severity",
+        "message",
+        "scope"
+      ],
+      "properties": {
+        "ruleCode": {
+          "type": "string",
+          "pattern": "^DRP[0-9]{4}$"
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "scope": {
+          "$ref": "#/$defs/policyScope"
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     }

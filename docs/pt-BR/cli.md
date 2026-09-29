@@ -133,7 +133,7 @@ Automações e consumidores de inventário de frota devem tratar a coleção `pr
 
 ## Configuração do repositório
 
-Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório e overrides explícitos de classificação. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.
+Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório, overrides explícitos de classificação e policies opt-in. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.
 
 Use `--config` para selecionar outro arquivo relativo ao repositório, ou `--no-config` para ignorar o carregamento automático do arquivo padrão. `--config` e `--no-config` são mutuamente exclusivos.
 
@@ -150,6 +150,23 @@ dotnet repo-inspect . \
 dotnet repo-inspect . --config config/inspector.json
 dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
 ```
+
+Policies usam o mesmo arquivo de configuração; não existe um parser separado de policy na CLI. Por exemplo:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Quando habilitada, a avaliação de policy ocorre depois da inspeção e é emitida em `policyFindings` no nível superior. Findings permanecem separados de `diagnostics`; consulte [`configuration.md`](configuration.md) para a semântica das policies.
 
 Valores malformados das opções da CLI são rejeitados antes da inspeção e retornam código `2`. Configuração inválida do repositório identificada pela Engine produz um relatório JSON normal com `DRI1013/error` e retorna código `1`.
 
@@ -198,14 +215,14 @@ Com `--output`, o JSON é gravado no arquivo UTF-8 solicitado e stdout permanece
 dotnet repo-inspect . --output artifacts/inspection.json
 ```
 
-Persistência não altera o contrato JSON de inspeção. O JSON é produzido por `InspectionJsonSerializer` e segue o mesmo contrato versionado e determinístico documentado em [`schema/inspection-v1.md`](schema/inspection-v1.md).
+Persistência não altera o contrato JSON de inspeção. O JSON é produzido por `InspectionJsonSerializer` e segue o mesmo contrato versionado e determinístico documentado em [`schema/inspection-v1.md`](schema/inspection-v1.md). Findings de policy, quando existirem, são emitidos no array `policyFindings` no nível superior e nunca são mesclados a `diagnostics`.
 
 ## Códigos de saída
 
 | Código | Significado |
 | ---: | --- |
-| `0` | A inspeção foi concluída e nenhum diagnóstico com severidade de erro foi produzido. |
-| `1` | Um relatório foi produzido, mas contém um ou mais diagnósticos com severidade de erro, incluindo configuração inválida do repositório. |
+| `0` | A inspeção foi concluída sem diagnostics de inspeção com severidade de erro e sem findings de policy com severidade de erro. Warnings de policy não falham o comando. |
+| `1` | Um relatório foi produzido, mas contém um ou mais diagnostics de inspeção ou findings de policy com severidade de erro, incluindo configuração inválida do repositório. |
 | `2` | Os argumentos da linha de comando são inválidos. |
 | `3` | Uma falha fatal de inspeção ou serialização impediu a produção de um relatório utilizável. |
 | `4` | O relatório não pôde ser gravado em stdout ou no arquivo solicitado. |
@@ -214,7 +231,7 @@ Persistência não altera o contrato JSON de inspeção. O JSON é produzido por
 
 O código `1` é intencionalmente diferente de uma falha fatal: o relatório JSON ainda existe e contém os diagnósticos estruturados que explicam o resultado parcial da inspeção. O código `5` também ocorre depois que o relatório de inspeção já foi produzido; ele representa falha no delivery do snapshot opcional, e não uma alteração nos diagnósticos da inspeção.
 
-O código de saída `1` é agregado: ele é retornado quando existe um diagnóstico `error` em `diagnostics` no nível superior ou em qualquer `projects[].diagnostics`. Ele não representa o status de cada projeto. Consumidores devem derivar a saúde de cada projeto somente da coleção `diagnostics` daquele projeto e usar `diagnostics` de nível superior de forma independente para a saúde do repositório/inspeção. Consulte [`diagnostics.md`](diagnostics.md) para as regras de agregação e exemplos.
+O código de saída `1` é agregado: ele é retornado quando existe um diagnostic de inspeção `error` em `diagnostics` no nível superior ou em qualquer `projects[].diagnostics`, ou quando qualquer entrada de `policyFindings[]` no nível superior possui severidade `error`. Ele não representa o status de inspeção de cada projeto. Consumidores devem derivar a saúde de inspeção de cada projeto somente de seus próprios `diagnostics`; conformidade de policy deve ser derivada de forma independente por `policyFindings`. Consulte [`diagnostics.md`](diagnostics.md) para as regras de agregação da saúde da inspeção.
 
 ## Cancelamento
 

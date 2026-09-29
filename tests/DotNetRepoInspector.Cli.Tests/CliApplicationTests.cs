@@ -1,4 +1,5 @@
 using DotNetRepoInspector.Core.Contracts;
+using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Engine;
 
 using Xunit;
@@ -26,8 +27,71 @@ public sealed class CliApplicationTests
         Assert.Equal(6, report.Projects.Count);
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "web");
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "worker");
+        Assert.Empty(report.PolicyFindings);
     }
 
+    [Fact]
+    public async Task RunAsync_ConfiguredPolicyMatchReturnsSuccessWithNoFindings()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-CliPolicy-").FullName;
+
+        try
+        {
+            await WritePolicyFixtureAsync(repositoryRoot, "net10.0");
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+            var exitCode = await application.RunAsync(
+                [repositoryRoot],
+                output,
+                error,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(CliExitCodes.Success, exitCode);
+            var report = InspectionJsonSerializer.Deserialize(output.ToString());
+            Assert.Single(report.Projects);
+            Assert.Empty(report.PolicyFindings);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_ConfiguredPolicyViolationReturnsCompletedWithErrors()
+    {
+        var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-CliPolicy-").FullName;
+
+        try
+        {
+            await WritePolicyFixtureAsync(repositoryRoot, "net8.0");
+            using var output = new StringWriter();
+            using var error = new StringWriter();
+            var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+            var exitCode = await application.RunAsync(
+                [repositoryRoot],
+                output,
+                error,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
+            var report = InspectionJsonSerializer.Deserialize(output.ToString());
+            Assert.DoesNotContain(
+                report.Diagnostics,
+                static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
+            var finding = Assert.Single(report.PolicyFindings);
+            Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
+            Assert.Equal(PolicySeverity.Error, finding.Severity);
+            Assert.Equal("App.csproj", finding.Scope.ProjectPath);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
     [Fact]
     public async Task RunAsync_KeepsVerboseLogsOutOfJsonStdout()
     {
@@ -123,6 +187,72 @@ public sealed class CliApplicationTests
         Assert.Contains(
             deserialized.Diagnostics,
             static diagnostic => diagnostic.Severity == InspectionDiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public async Task RunAsync_PolicyWarningKeepsSuccessAndWritesFinding()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var report = CreateReport() with
+        {
+            PolicyFindings =
+            [
+                new PolicyFinding(
+                    TargetFrameworkPolicyRule.RuleCode,
+                    PolicySeverity.Warning,
+                    "Policy warning.",
+                    PolicyFindingScope.Project("src/App/App.csproj"))
+            ]
+        };
+        var application = new CliApplication(
+            StubInspector.Returning(report),
+            "1.0.0-test");
+
+        var exitCode = await application.RunAsync(
+            ["."],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        var deserialized = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Empty(deserialized.Diagnostics);
+        Assert.Equal(PolicySeverity.Warning, Assert.Single(deserialized.PolicyFindings).Severity);
+    }
+
+    [Fact]
+    public async Task RunAsync_PolicyErrorReturnsCompletedWithErrorsAndWritesFinding()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var report = CreateReport() with
+        {
+            PolicyFindings =
+            [
+                new PolicyFinding(
+                    TargetFrameworkPolicyRule.RuleCode,
+                    PolicySeverity.Error,
+                    "Policy error.",
+                    PolicyFindingScope.Project("src/App/App.csproj"))
+            ]
+        };
+        var application = new CliApplication(
+            StubInspector.Returning(report),
+            "1.0.0-test");
+
+        var exitCode = await application.RunAsync(
+            ["."],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.CompletedWithErrors, exitCode);
+        var deserialized = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Empty(deserialized.Diagnostics);
+        var finding = Assert.Single(deserialized.PolicyFindings);
+        Assert.Equal(TargetFrameworkPolicyRule.RuleCode, finding.RuleCode);
+        Assert.Equal(PolicySeverity.Error, finding.Severity);
     }
 
     [Fact]
@@ -267,6 +397,37 @@ public sealed class CliApplicationTests
         Assert.Equal(CliExitCodes.OutputFailed, exitCode);
         Assert.Equal(string.Empty, output.ToString());
         Assert.Contains("[error]", error.ToString(), StringComparison.Ordinal);
+    }
+
+    private static async Task WritePolicyFixtureAsync(
+        string repositoryRoot,
+        string allowedTargetFramework)
+    {
+        await File.WriteAllTextAsync(
+            Path.Combine(repositoryRoot, "App.csproj"),
+            """
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net10.0</TargetFramework>
+              </PropertyGroup>
+            </Project>
+            """,
+            TestContext.Current.CancellationToken);
+
+        await File.WriteAllTextAsync(
+            Path.Combine(repositoryRoot, ".dotnetrepoinspector.json"),
+            $$"""
+            {
+              "schemaVersion": "2",
+              "policies": {
+                "targetFramework": {
+                  "enabled": true,
+                  "allowed": ["{{allowedTargetFramework}}"]
+                }
+              }
+            }
+            """,
+            TestContext.Current.CancellationToken);
     }
 
     private static InspectionReport CreateReport(params InspectionDiagnostic[] diagnostics) =>

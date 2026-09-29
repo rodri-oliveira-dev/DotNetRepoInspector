@@ -1,3 +1,5 @@
+using DotNetRepoInspector.Core.Policies;
+
 namespace DotNetRepoInspector.Core.Contracts;
 
 public sealed record InspectionReport(
@@ -7,6 +9,12 @@ public sealed record InspectionReport(
     IReadOnlyList<ProjectInspection> Projects,
     IReadOnlyList<InspectionDiagnostic> Diagnostics)
 {
+    public IReadOnlyList<PolicyFinding> PolicyFindings
+    {
+        get;
+        init;
+    } = Array.Empty<PolicyFinding>();
+
     public static InspectionReport Create(
         RepositoryMetadata repository,
         DotNetSdkMetadata dotNetSdk,

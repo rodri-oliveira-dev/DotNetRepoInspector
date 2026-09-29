@@ -44,11 +44,46 @@ The Action itself does not require a GitHub token or write permission to inspect
 
 Supported classification kinds are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
-`exclude` values are additive to exclusions from the configuration file. A direct `classify` input wins over a file override for the same project. The Action passes these values to the same CLI/Engine configuration contract; it does not implement independent classification logic. See [`configuration.md`](configuration.md).
+`exclude` values are additive to exclusions from the configuration file. A direct `classify` input wins over a file override for the same project. The Action passes these values to the same CLI/Engine configuration contract; it does not implement independent classification or policy logic. See [`configuration.md`](configuration.md).
 
 `exclude-repositories` is intentionally different from project-path `exclude`. It belongs to aggregated fleet inventory workflows that decide which repositories are part of the population before invoking inspection. Each value must be the complete GitHub repository identifier, such as `rodri-oliveira-dev/DotNetRepoInspector`; partial names, substrings, and path fragments are rejected. When the current `github.repository` matches, the Action exits successfully with `repository-excluded=true`, no report path, no schema version, and no Inspector invocation.
 
 The Action intentionally does not expose an `inspector-version` input. Each released Action revision pins one exact .NET Tool version so a specific Action ref remains reproducible.
+
+## Use policies
+
+Policies use the existing repository configuration contract. The Action deliberately does **not** add policy-specific inputs such as allowed TFMs or severity; doing so would duplicate configuration logic that already belongs to the Engine.
+
+For example, commit a configuration file such as `config/inspector-policy.json`:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Then point the existing `config` input to it:
+
+```yaml
+- name: Inspect with architecture policy
+  id: inspect
+  uses: rodri-oliveira-dev/DotNetRepoInspector@v1
+  with:
+    path: .
+    config: config/inspector-policy.json
+    output: artifacts/inspection.json
+```
+
+If `.dotnetrepoinspector.json` at the inspected repository root contains the policy, omit `config`; the default file is loaded automatically.
+
+No policy-specific output is required. The existing `report-path` points to schema `1.5` JSON containing top-level `policyFindings`, while `exit-code` is `1` when any policy finding has severity `error`. Policy warnings keep exit code `0` when inspection diagnostics are otherwise clean.
 
 ## Configure exclusions and overrides
 
@@ -146,8 +181,8 @@ The Action preserves the CLI exit codes:
 
 | Code | Meaning |
 | ---: | --- |
-| `0` | Inspection completed without error diagnostics. |
-| `1` | A report was produced but contains one or more `error` diagnostics, including invalid repository configuration (`DRI1013`). |
+| `0` | Inspection completed without `error` diagnostics or `error` policy findings. Policy warnings do not fail the Action. |
+| `1` | A report was produced but contains one or more `error` diagnostics or `error` policy findings, including invalid repository configuration (`DRI1013`). |
 | `2` | Invalid CLI/Action arguments reached the CLI boundary. |
 | `3` | Fatal inspection failure prevented a normal report. |
 | `4` | The report could not be written. |
@@ -186,4 +221,4 @@ The Action follows [ADR 0002](decisions/0002-github-action-distribution-strategy
 
 ## CI validation
 
-Repository CI exercises the composite Action itself with `uses: ./` on Ubuntu, Windows, and macOS. The smoke test packs the exact Action version locally, installs it through the same isolated bootstrap path, runs a real fixture inspection, validates outputs, and exercises `exclude` plus `classify` inputs. An additional Ubuntu scenario verifies propagation of a non-zero Inspector result and its partial report.
+Repository CI exercises the composite Action itself with `uses: ./` on Ubuntu, Windows, and macOS. The smoke test packs the exact Action version locally, installs it through the same isolated bootstrap path, runs a real fixture inspection, validates outputs, and exercises `exclude` plus `classify` inputs. Ubuntu E2E scenarios also execute a compliant TargetFramework policy and a deliberate `DRP0001/error` violation, validating `policyFindings`, exit-code propagation, and the structural separation from inspection diagnostics.

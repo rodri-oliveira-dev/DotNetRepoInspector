@@ -369,7 +369,7 @@ public sealed class ReleaseReadinessTests
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "README.pt-BR.md"));
 
         Assert.Contains("stable v1 contract", english, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.4\"", english, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.5\"", english, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", english, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", english, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", english, StringComparison.Ordinal);
@@ -380,7 +380,7 @@ public sealed class ReleaseReadinessTests
         Assert.DoesNotContain("release candidate", english, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("contrato v1 estável", portuguese, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.4\"", portuguese, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.5\"", portuguese, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", portuguese, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", portuguese, StringComparison.Ordinal);
