@@ -196,6 +196,23 @@ O repositório contém uma Composite Action reutilizável que executa exatamente
 
 Os outputs incluem `report-path`, `schema-version`, `inspector-version` e `exit-code`. A Action não exige permissão de escrita nem token do GitHub para inspecionar um repositório que já tenha sido feito checkout.
 
+Policies usam a mesma configuração de repositório da CLI. Por exemplo:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Salve esse conteúdo como `.dotnetrepoinspector.json` e invoque a Action normalmente. O relatório expõe os resultados em `policyFindings` no nível superior; um finding `error` propaga exit code `1`, enquanto warnings de policy não falham uma inspeção que esteja saudável.
+
 O alias público `@v1` já está disponível para uso direto no GitHub Actions. Fixe uma tag completa imutável ou commit SHA quando for necessária reprodutibilidade exata. Consulte [`docs/pt-BR/github-action.md`](docs/pt-BR/github-action.md).
 
 ## Imagens de container

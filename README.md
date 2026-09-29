@@ -196,6 +196,23 @@ The repository contains a reusable Composite Action that runs the exact .NET Too
 
 Outputs include `report-path`, `schema-version`, `inspector-version`, and `exit-code`. The Action does not require write permissions or a GitHub token for inspection of an already checked-out repository.
 
+Policies use the same repository configuration as the CLI. For example:
+
+```json
+{
+  "schemaVersion": "2",
+  "policies": {
+    "targetFramework": {
+      "enabled": true,
+      "allowed": ["net8.0", "net10.0"],
+      "severity": "error"
+    }
+  }
+}
+```
+
+Save that as `.dotnetrepoinspector.json` and invoke the Action normally. The report exposes policy results in top-level `policyFindings`; an `error` finding propagates exit code `1`, while policy warnings do not fail an otherwise healthy inspection.
+
 The public `@v1` alias is available for direct use in GitHub Actions. Pin an immutable full release tag or commit SHA when exact reproducibility is preferred. See [`docs/en/github-action.md`](docs/en/github-action.md).
 
 ## Container images

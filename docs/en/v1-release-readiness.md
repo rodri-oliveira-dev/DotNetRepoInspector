@@ -36,14 +36,14 @@ The first stable release includes these supported surfaces:
 - base classification: Web, Worker, Console, Library, Test, and Unknown;
 - normalized project references and Git repository metadata;
 - versioned inspection JSON; v1.0.0 was published with `schemaVersion 1.3`, while the current compatible v1 contract is schema `1.5`;
-- optional `.dotnetrepoinspector.json`, exclusions, and explicit classification overrides;
+- optional `.dotnetrepoinspector.json`, exclusions, explicit classification overrides, and opt-in policy configuration;
 - CLI/.NET Tool with deterministic stdout/stderr separation and documented exit codes;
 - reusable Composite GitHub Action using the same .NET Tool;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - compatibility validation for .NET 8/10 target repositories on Ubuntu, Windows, and macOS;
 - security/privacy boundaries, OSS governance, real-repository validation, and performance guardrails.
 
-Concrete subtype detection rules and the optional policy engine remain post-v1 work. The v1 contract includes the optional `classification.subtype` field, but the v1.0.0 compatibility promise does not include concrete subtype classifications.
+Concrete subtype detection remains evidence-driven and conservative. The current compatible v1 line also includes the opt-in policy engine, TargetFramework policy, and schema `1.5` `policyFindings`; these additions do not alter the immutable v1.0.0 baseline.
 
 ## Compatibility boundaries
 
