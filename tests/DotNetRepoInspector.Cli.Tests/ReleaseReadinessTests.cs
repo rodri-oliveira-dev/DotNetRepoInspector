@@ -446,7 +446,11 @@ public sealed class ReleaseReadinessTests
             ".github",
             "scripts",
             "invoke_mcp_publisher_validation.ps1"));
+        Assert.Contains("AttemptTimeoutSeconds", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("error sending request", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("server returned status", resilienceValidator, StringComparison.Ordinal);
         Assert.Contains("connection refused", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("TimedOut", resilienceValidator, StringComparison.Ordinal);
         Assert.Contains("Transient MCP Registry failure detected", resilienceValidator, StringComparison.Ordinal);
         Assert.Contains("schema/semantic rejections remain fatal", resilienceValidator, StringComparison.Ordinal);
 
