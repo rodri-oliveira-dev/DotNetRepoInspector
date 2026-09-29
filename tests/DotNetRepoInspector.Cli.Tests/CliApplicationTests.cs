@@ -416,7 +416,7 @@ public sealed class CliApplicationTests
 
         await File.WriteAllTextAsync(
             Path.Combine(repositoryRoot, ".dotnetrepoinspector.json"),
-            $"""
+            $$"""
             {
               "schemaVersion": "2",
               "policies": {
