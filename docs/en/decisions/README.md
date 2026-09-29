@@ -29,5 +29,6 @@ An ADR should capture:
 - [ADR 0013: Keep Razor Pages subtype unsupported without deterministic structural evidence](0013-razor-pages-subtype-detection.md) — Accepted.
 - [ADR 0014: Keep Blazor Web App and server-side subtypes unsupported without deterministic structural evidence](0014-blazor-server-subtype-detection.md) — Accepted.
 - [ADR 0015: Detect Blazor WebAssembly from its dedicated project SDK](0015-blazor-webassembly-subtype-detection.md) — Accepted.
+- [ADR 0016: Detect Azure Functions from official SDK and runtime model signals](0016-azure-functions-subtype-detection.md) — Accepted.
 
 Likely next decisions include policy evaluation boundaries and remote MCP transport if it becomes a supported scenario.

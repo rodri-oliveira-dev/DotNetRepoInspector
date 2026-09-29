@@ -27,6 +27,11 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `BlazorServerSubtypeSignals/InteractiveServer` | Interactive Server hosting is established only by source-level render-mode configuration |
 | `BlazorWebAssemblySubtypeSignals/StandaloneSdk` | Explicit `Microsoft.NET.Sdk.BlazorWebAssembly` deterministically identifies standalone/client Blazor WebAssembly |
 | `BlazorWebAssemblySubtypeSignals/RazorLibraryAmbiguous` | Razor component source without the Blazor WebAssembly SDK remains a non-match |
+| `AzureFunctionsSubtypeSignals/IsolatedModernSdk` | Current isolated-worker model identified by the dedicated `Azure.Functions.Sdk` project SDK |
+| `AzureFunctionsSubtypeSignals/IsolatedLegacy` | Legacy isolated-worker model requires Functions runtime property plus Worker and Worker.Sdk packages |
+| `AzureFunctionsSubtypeSignals/InProcess` | In-process model requires Functions runtime property plus `Microsoft.NET.Sdk.Functions` |
+| `AzureFunctionsSubtypeSignals/VersionOnly` | `AzureFunctionsVersion` alone is deliberately insufficient |
+| `AzureFunctionsSubtypeSignals/MixedModels` | Conflicting isolated/in-process package sets remain unknown |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

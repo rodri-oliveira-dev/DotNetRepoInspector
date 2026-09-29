@@ -6,7 +6,7 @@ O DotNetRepoInspector classifica projetos a partir de fatos estruturais avaliado
 
 As classificações são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
-`projects[].classification.subtype` é um refinamento opcional separado do tipo base de classificação. Subtipos concretos só são emitidos por regras determinísticas aprovadas. O subtipo atualmente suportado é `blazor-webassembly`; nos demais casos o campo permanece ausente.
+`projects[].classification.subtype` é um refinamento opcional separado do tipo base de classificação. Subtipos concretos só são emitidos por regras determinísticas aprovadas. Os subtipos atualmente suportados são `blazor-webassembly`, `azure-functions-isolated` e `azure-functions-in-process`; nos demais casos o campo permanece ausente.
 
 ## Subtipo Web API: não suportado intencionalmente
 
@@ -94,6 +94,20 @@ A decisão está documentada na [ADR 0015](decisions/0015-blazor-webassembly-sub
 
 Sinais de projeto de teste mantêm precedência superior. Um SDK Blazor WebAssembly combinado com um sinal independente de workload Worker é tratado como evidência conflitante e permanece `unknown`, em vez de inventar um subtipo.
 
+## Subtipos Azure Functions
+
+Azure Functions **é suportado deterministicamente** para o modelo isolated worker atual por SDK, o modelo isolated worker legado por package de build e o modelo in-process. A decisão está documentada na [ADR 0016](decisions/0016-azure-functions-subtype-detection.md).
+
+| Modelo | Evidência estrutural necessária | Classificação |
+| --- | --- | --- |
+| isolated worker — atual | `Azure.Functions.Sdk` declarado | `kind = worker`, `subtype = azure-functions-isolated`, `confidence = high` |
+| isolated worker — legado | `AzureFunctionsVersion` efetivo, `OutputType = Exe`, `Microsoft.Azure.Functions.Worker` e `Microsoft.Azure.Functions.Worker.Sdk` | `kind = worker`, `subtype = azure-functions-isolated`, `confidence = high` |
+| in-process | `AzureFunctionsVersion` efetivo, `OutputType = Library` e `Microsoft.NET.Sdk.Functions` | `kind = library`, `subtype = azure-functions-in-process`, `confidence = high` |
+
+O modelo in-process continua estruturalmente detectável mesmo com o encerramento do suporte da Microsoft em 10 de novembro de 2026.
+
+Os seguintes sinais são deliberadamente insuficientes isoladamente: `AzureFunctionsVersion`, qualquer package de Functions isolado, `host.json`, `local.settings.json`, nomes de projeto/pasta ou atributos de código-fonte. Se os conjuntos de packages específicos de isolated e in-process coexistirem, a classificação retorna `unknown` com `conflict:azure-functions-model`.
+
 ## Entradas
 
 O classificador consome fatos normalizados produzidos pelo pipeline de inspeção:
@@ -103,11 +117,12 @@ O classificador consome fatos normalizados produzidos pelo pipeline de inspeçã
 - `IsTestProject` efetivo;
 - `IsTestingPlatformApplication` efetivo;
 - `UsingMicrosoftNETSdkWorker` efetivo;
+- `AzureFunctionsVersion` efetivo;
 - identidades avaliadas de `PackageReference` usadas pelas regras de classificação aprovadas.
 
 O classificador do Core não possui dependência de MSBuild. `MsBuildProjectClassificationAdapter` converte `MsBuildProjectFacts` para o modelo de entrada do Core.
 
-Para projetos multi-target, os fatos de classificação são avaliados em cada inner build do MSBuild. Propriedades de Worker e referências de pacote são combinadas entre os target frameworks, enquanto um pacote de lifetime de serviço só é associado a `OutputType == Exe` quando ambos os fatos ocorrem no mesmo target framework.
+Para projetos multi-target, os fatos de classificação são avaliados em cada inner build do MSBuild. Propriedades de Worker, `AzureFunctionsVersion` e referências de pacote são combinadas entre os target frameworks, enquanto um pacote de lifetime de serviço só é associado a `OutputType == Exe` quando ambos os fatos ocorrem no mesmo target framework. Valores não vazios conflitantes de `AzureFunctionsVersion` são tratados como indeterminados.
 
 O campo público `projects[].isTestProject` mantém o significado original: ele representa o fato MSBuild avaliado `IsTestProject`. Assim, um projeto pode ser classificado como `test` por outro sinal aprovado enquanto `isTestProject` é `false` ou está ausente.
 
@@ -134,15 +149,19 @@ As regras são avaliadas nesta ordem:
 2. `IsTestProject == true` -> `test`.
 3. `MSTest.Sdk` declarado -> `test`.
 4. quando `IsTestProject` está ausente, `Microsoft.NET.Test.Sdk` avaliado -> `test`.
-5. SDK da família Web (`Microsoft.NET.Sdk.Web` ou `Microsoft.NET.Sdk.BlazorWebAssembly`) mais um sinal Worker forte (`Microsoft.NET.Sdk.Worker` ou `UsingMicrosoftNETSdkWorker == true`) -> `unknown`, pois os sinais de workload entram em conflito.
-6. `Microsoft.NET.Sdk.BlazorWebAssembly` -> `web` com `subtype = blazor-webassembly`.
-7. `Microsoft.NET.Sdk.Web` -> `web`; hints de pacote de lifetime de serviço não sobrepõem Web.
-8. `Microsoft.NET.Sdk.Worker` -> `worker`.
-9. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
-10. `OutputType == Exe` mais `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
-11. `OutputType == Exe` -> `console` quando nenhum sinal mais específico correspondeu.
-12. `OutputType == Library` -> `library` quando nenhum sinal mais específico correspondeu.
-13. caso contrário -> `unknown`.
+5. sinais conflitantes dos modelos Azure Functions isolated/in-process -> `unknown`.
+6. `Azure.Functions.Sdk` declarado -> `worker` com `subtype = azure-functions-isolated`.
+7. forma isolated legado (`AzureFunctionsVersion` + saída executável + Worker + Worker.Sdk) -> `worker` com `subtype = azure-functions-isolated`.
+8. forma in-process (`AzureFunctionsVersion` + saída library + `Microsoft.NET.Sdk.Functions`) -> `library` com `subtype = azure-functions-in-process`.
+9. SDK da família Web (`Microsoft.NET.Sdk.Web` ou `Microsoft.NET.Sdk.BlazorWebAssembly`) mais um sinal Worker forte (`Microsoft.NET.Sdk.Worker` ou `UsingMicrosoftNETSdkWorker == true`) -> `unknown`, pois os sinais de workload entram em conflito.
+10. `Microsoft.NET.Sdk.BlazorWebAssembly` -> `web` com `subtype = blazor-webassembly`.
+11. `Microsoft.NET.Sdk.Web` -> `web`; hints de pacote de lifetime de serviço não sobrepõem Web.
+12. `Microsoft.NET.Sdk.Worker` -> `worker`.
+13. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
+14. `OutputType == Exe` mais `Microsoft.Extensions.Hosting.Systemd` ou `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
+15. `OutputType == Exe` -> `console` quando nenhum sinal mais específico correspondeu.
+16. `OutputType == Library` -> `library` quando nenhum sinal mais específico correspondeu.
+17. caso contrário -> `unknown`.
 
 Portanto, um sinal forte de teste permanece `test` mesmo quando o projeto é executável ou declara um SDK de workload especializado. Declarações conflitantes dos SDKs Web/Worker produzem `unknown` somente quando nenhum sinal aprovado de teste já correspondeu.
 
@@ -156,6 +175,9 @@ Portanto, um sinal forte de teste permanece `test` mesmo quando o projeto é exe
 | `test` | `IsTestProject == true` | `property:IsTestProject=true` | `high` |
 | `test` | `MSTest.Sdk` declarado | `sdk:MSTest.Sdk` | `high` |
 | `test` | fallback `Microsoft.NET.Test.Sdk` com `IsTestProject` ausente | `package:Microsoft.NET.Test.Sdk` | `medium` |
+| `worker` / `azure-functions-isolated` | `Azure.Functions.Sdk` declarado | `sdk:Azure.Functions.Sdk` | `high` |
+| `worker` / `azure-functions-isolated` | runtime Functions + conjunto de packages Worker legado | `property:AzureFunctionsVersion=...` + sinais de package | `high` |
+| `library` / `azure-functions-in-process` | runtime Functions + `Microsoft.NET.Sdk.Functions` | `property:AzureFunctionsVersion=...` + sinal de package | `high` |
 | `web` / `blazor-webassembly` | `Microsoft.NET.Sdk.BlazorWebAssembly` declarado | `sdk:Microsoft.NET.Sdk.BlazorWebAssembly` | `high` |
 | `web` | `Microsoft.NET.Sdk.Web` declarado | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | `Microsoft.NET.Sdk.Worker` declarado | `sdk:Microsoft.NET.Sdk.Worker` | `high` |

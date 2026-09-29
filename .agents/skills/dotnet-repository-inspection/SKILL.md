@@ -47,7 +47,9 @@ Classification precedence must be explicit and covered by tests. A reasonable ba
 
 Treat `Microsoft.NET.Sdk.Web` as Web by default. Do not claim Web API, Razor Pages, MVC, or server-side Blazor solely from the Web SDK; those are subtypes requiring additional reliable signals. The explicitly declared `Microsoft.NET.Sdk.BlazorWebAssembly` SDK is an authoritative signal for the `blazor-webassembly` subtype.
 
-When adding Functions or other workloads, document the exact signals and add isolated fixtures before adding the classification.
+For Azure Functions, treat declared `Azure.Functions.Sdk` as authoritative for `azure-functions-isolated`. For the legacy isolated model, require effective `AzureFunctionsVersion`, executable output, and both `Microsoft.Azure.Functions.Worker` and `Microsoft.Azure.Functions.Worker.Sdk`. For in-process, require effective `AzureFunctionsVersion`, library output, and `Microsoft.NET.Sdk.Functions`. Do not infer Functions from any one package or property alone.
+
+When adding other workloads, document the exact signals and add isolated fixtures before adding the classification.
 
 ## Discovery
 

@@ -17,6 +17,12 @@ public sealed record ProjectClassificationFacts(
         init;
     }
 
+    public string? AzureFunctionsVersion
+    {
+        get;
+        init;
+    }
+
     public IReadOnlyList<string> PackageReferences
     {
         get;

@@ -79,6 +79,41 @@
       ]
     },
     {
+      "id": "azure-functions-isolated-modern-sdk",
+      "path": "AzureFunctionsSubtypeSignals/IsolatedModernSdk",
+      "proves": [
+        "azure-functions-isolated-modern-sdk"
+      ]
+    },
+    {
+      "id": "azure-functions-isolated-legacy",
+      "path": "AzureFunctionsSubtypeSignals/IsolatedLegacy",
+      "proves": [
+        "azure-functions-isolated-legacy"
+      ]
+    },
+    {
+      "id": "azure-functions-in-process",
+      "path": "AzureFunctionsSubtypeSignals/InProcess",
+      "proves": [
+        "azure-functions-in-process"
+      ]
+    },
+    {
+      "id": "azure-functions-version-only",
+      "path": "AzureFunctionsSubtypeSignals/VersionOnly",
+      "proves": [
+        "azure-functions-version-only-non-match"
+      ]
+    },
+    {
+      "id": "azure-functions-mixed-models",
+      "path": "AzureFunctionsSubtypeSignals/MixedModels",
+      "proves": [
+        "azure-functions-model-conflict"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

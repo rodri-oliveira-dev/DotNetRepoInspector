@@ -12,6 +12,11 @@ public sealed class FixtureMatrixTests
 
     private static readonly string[] _expectedSignals =
     [
+        "azure-functions-in-process",
+        "azure-functions-isolated-legacy",
+        "azure-functions-isolated-modern-sdk",
+        "azure-functions-model-conflict",
+        "azure-functions-version-only-non-match",
         "blazor-interactive-server-source-only",
         "blazor-web-app-source-only",
         "blazor-webassembly-razor-ambiguous",
@@ -235,6 +240,75 @@ public sealed class FixtureMatrixTests
 
         string relativePath = Path.GetRelativePath(_fixtureRoot, projectFile)
             .Replace(Path.DirectorySeparatorChar, '/');
+
+        if (string.Equals(
+                relativePath,
+                "AzureFunctionsSubtypeSignals/IsolatedModernSdk/IsolatedModernSdk.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.Azure.Functions.Worker",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("2.52.0", packageReference.Attribute("Version")?.Value);
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "AzureFunctionsSubtypeSignals/IsolatedLegacy/IsolatedLegacy.csproj",
+                StringComparison.Ordinal))
+        {
+            Assert.Equal(2, packageReferences.Length);
+            Assert.Contains(
+                packageReferences,
+                reference =>
+                    reference.Attribute("Include")?.Value == "Microsoft.Azure.Functions.Worker" &&
+                    reference.Attribute("Version")?.Value == "2.52.0");
+            Assert.Contains(
+                packageReferences,
+                reference =>
+                    reference.Attribute("Include")?.Value == "Microsoft.Azure.Functions.Worker.Sdk" &&
+                    reference.Attribute("Version")?.Value == "2.0.7");
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "AzureFunctionsSubtypeSignals/InProcess/InProcess.csproj",
+                StringComparison.Ordinal))
+        {
+            XElement packageReference = Assert.Single(packageReferences);
+            Assert.Equal(
+                "Microsoft.NET.Sdk.Functions",
+                packageReference.Attribute("Include")?.Value);
+            Assert.Equal("4.4.0", packageReference.Attribute("Version")?.Value);
+            return;
+        }
+
+        if (string.Equals(
+                relativePath,
+                "AzureFunctionsSubtypeSignals/MixedModels/MixedModels.csproj",
+                StringComparison.Ordinal))
+        {
+            Assert.Equal(3, packageReferences.Length);
+            Assert.Contains(
+                packageReferences,
+                reference =>
+                    reference.Attribute("Include")?.Value == "Microsoft.Azure.Functions.Worker" &&
+                    reference.Attribute("Version")?.Value == "2.52.0");
+            Assert.Contains(
+                packageReferences,
+                reference =>
+                    reference.Attribute("Include")?.Value == "Microsoft.Azure.Functions.Worker.Sdk" &&
+                    reference.Attribute("Version")?.Value == "2.0.7");
+            Assert.Contains(
+                packageReferences,
+                reference =>
+                    reference.Attribute("Include")?.Value == "Microsoft.NET.Sdk.Functions" &&
+                    reference.Attribute("Version")?.Value == "4.4.0");
+            return;
+        }
 
         if (string.Equals(
                 relativePath,
