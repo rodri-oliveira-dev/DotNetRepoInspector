@@ -21,8 +21,8 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `WebApiSubtypeSignals/RazorSupportOverlap` | Razor support can coexist with Web workloads and does not make Web API presence/absence deterministic |
 | `MvcSubtypeSignals/WebSdkImplicitRazorSupport` | Web SDK implicitly enables Razor MVC support, which is not specific to MVC applications |
 | `MvcSubtypeSignals/RazorClassLibrarySupport` | Razor SDK plus `AddRazorSupportForMvc=true` also represents a Razor Class Library, not a Web MVC app |
-| `RazorPagesSubtypeSignals/RazorGenerateOverlap` | Web SDK exposes both Razor Pages and MVC Views through the same `RazorGenerate` item type |
-| `RazorPagesSubtypeSignals/RazorClassLibraryOverlap` | Razor Class Libraries can expose `RazorGenerate` and MVC support without being Web Razor Pages applications |
+| `RazorPagesSubtypeSignals/RazorGenerateOverlap` | Web SDK contains Razor Page/View source, but the current evaluation boundary does not expose `RazorGenerate` without target execution |
+| `RazorPagesSubtypeSignals/RazorClassLibraryOverlap` | Razor Class Libraries can contain Razor Page source and MVC support without being Web Razor Pages applications |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

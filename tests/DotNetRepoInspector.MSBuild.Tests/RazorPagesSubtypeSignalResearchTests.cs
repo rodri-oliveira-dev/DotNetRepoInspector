@@ -21,7 +21,7 @@ public sealed class RazorPagesSubtypeSignalResearchTests
     ];
 
     [Fact]
-    public async Task RazorGenerate_ContainsRazorPageAndMvcViewWithoutSubtypeEvidence()
+    public async Task RazorGenerate_IsNotAvailableAtCurrentEvaluationBoundary()
     {
         string projectPath = FixturePath(
             "RazorPagesSubtypeSignals",
@@ -47,25 +47,7 @@ public sealed class RazorPagesSubtypeSignalResearchTests
         Assert.True(raw.Succeeded, raw.Error?.Message ?? "MSBuild evaluation failed.");
         Assert.Equal("Exe", raw.Properties["OutputType"]);
         Assert.Equal("true", raw.Properties["AddRazorSupportForMvc"]);
-
-        IReadOnlyList<MsBuildEvaluationItem> razorItems = raw.Items["RazorGenerate"];
-        Assert.Equal(2, razorItems.Count);
-
-        string[] identities = razorItems
-            .Select(item => NormalizeIdentity(item.Identity))
-            .OrderBy(identity => identity, StringComparer.Ordinal)
-            .ToArray();
-
-        Assert.Contains(
-            identities,
-            identity => identity.EndsWith(
-                "Pages/PageSample.cshtml",
-                StringComparison.Ordinal));
-        Assert.Contains(
-            identities,
-            identity => identity.EndsWith(
-                "Views/ViewSample.cshtml",
-                StringComparison.Ordinal));
+        Assert.Empty(raw.Items["RazorGenerate"]);
 
         MsBuildProjectFacts facts = await EvaluateSuccessfulFactsAsync(projectPath);
         ProjectClassification classification =
@@ -80,7 +62,7 @@ public sealed class RazorPagesSubtypeSignalResearchTests
     }
 
     [Fact]
-    public async Task RazorClassLibrary_CanExposeRazorPageBuildSignalsWithoutWebSubtype()
+    public async Task RazorClassLibrary_HasSameEvaluationBoundaryWithoutWebSubtype()
     {
         string projectPath = FixturePath(
             "RazorPagesSubtypeSignals",
@@ -92,12 +74,7 @@ public sealed class RazorPagesSubtypeSignalResearchTests
         Assert.True(raw.Succeeded, raw.Error?.Message ?? "MSBuild evaluation failed.");
         Assert.Equal("Library", raw.Properties["OutputType"]);
         Assert.Equal("true", raw.Properties["AddRazorSupportForMvc"]);
-
-        MsBuildEvaluationItem razorItem = Assert.Single(raw.Items["RazorGenerate"]);
-        Assert.EndsWith(
-            "Pages/LibraryPage.cshtml",
-            NormalizeIdentity(razorItem.Identity),
-            StringComparison.Ordinal);
+        Assert.Empty(raw.Items["RazorGenerate"]);
 
         MsBuildProjectFacts facts = await EvaluateSuccessfulFactsAsync(projectPath);
         ProjectClassification classification =
@@ -131,9 +108,6 @@ public sealed class RazorPagesSubtypeSignalResearchTests
         Assert.True(result.Succeeded, result.Error?.Message ?? "Project facts evaluation failed.");
         return Assert.IsType<MsBuildProjectFacts>(result.Facts);
     }
-
-    private static string NormalizeIdentity(string identity) =>
-        identity.Replace('\\', '/');
 
     private static string FixturePath(params string[] segments) =>
         segments.Aggregate(

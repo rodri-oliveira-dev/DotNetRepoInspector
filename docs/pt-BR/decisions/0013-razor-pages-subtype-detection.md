@@ -18,7 +18,7 @@ Razor Pages e MVC Views compartilham o pipeline do Razor SDK. Na camada MSBuild,
 | --- | --- |
 | `Microsoft.NET.Sdk.Web` | Autoritativo apenas para a classificação Web base; compartilhado pelos principais modelos Web do ASP.NET Core. |
 | `AddRazorSupportForMvc == true` | Dá suporte explicitamente a aplicações contendo MVC Views ou Razor Pages e é habilitado implicitamente por projetos Web SDK modernos. |
-| itens `RazorGenerate` avaliados | Representam entradas Razor `.cshtml` tanto de MVC Views quanto de Razor Pages; o tipo de item não carrega distinção semântica entre página e view. |
+| itens `RazorGenerate` | A fronteira atual de avaliação com `-getItem` não retorna itens `RazorGenerate` padrão sem execução adicional de targets; mesmo que coletados futuramente, itens Razor genéricos não carregam a distinção semântica da diretiva `@page`. |
 | `Microsoft.NET.Sdk.Razor` | Comprova capacidade de build Razor e também é usado por Razor Class Libraries. |
 | `Pages/**`, `.cshtml.cs` ou nomes de projeto/pasta | Heurísticas de convenção/caminho/nome, não evidência autoritativa do modelo de aplicação. |
 | `PageModel`, `AddRazorPages` ou `MapRazorPages` | Exigem inspeção C#/semântica e podem coexistir com MVC, APIs ou outros modelos Web. |
@@ -39,8 +39,8 @@ Para projetos Web:
 
 As fixtures em `tests/Fixtures/RazorPagesSubtypeSignals` registram a fronteira de ambiguidade:
 
-1. um projeto Web SDK contém uma Razor Page real (com `@page`) e uma MVC Razor View comum, enquanto o MSBuild expõe ambas pelo mesmo tipo de item `RazorGenerate`;
-2. uma Razor Class Library pode expor `RazorGenerate` mais `AddRazorSupportForMvc=true` e continuar sendo `library`, demonstrando que esses fatos não implicam um subtipo Web Razor Pages.
+1. um projeto Web SDK contém uma Razor Page real (com `@page`) e uma MVC Razor View comum, enquanto a avaliação atual com `-getItem:RazorGenerate` não expõe nenhuma delas sem execução adicional de targets;
+2. uma Razor Class Library pode conter fonte Razor Page mais `AddRazorSupportForMvc=true` e continuar sendo `library`, demonstrando que suporte Razor em nível de projeto não implica um subtipo Web Razor Pages.
 
 Os testes de pesquisa inspecionam o conteúdo das fixtures apenas para estabelecer o ground truth. A classificação permanece baseada exclusivamente nos fatos estruturados existentes e, portanto, não emite subtipo.
 

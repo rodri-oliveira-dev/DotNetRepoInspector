@@ -18,7 +18,7 @@ Razor Pages and MVC Views share the Razor SDK pipeline. At the MSBuild layer, bo
 | --- | --- |
 | `Microsoft.NET.Sdk.Web` | Authoritative for base Web classification only; shared by all major ASP.NET Core Web application models. |
 | `AddRazorSupportForMvc == true` | Explicitly supports applications containing MVC views or Razor Pages and is implicitly enabled by modern Web SDK projects. |
-| evaluated `RazorGenerate` items | Represents Razor `.cshtml` inputs for both MVC Views and Razor Pages; the item type carries no page-vs-view semantic distinction. |
+| `RazorGenerate` items | The current `-getItem` evaluation boundary returns no default `RazorGenerate` items without additional target execution; even if collected later, generic Razor items do not carry the `@page` semantic distinction. |
 | `Microsoft.NET.Sdk.Razor` | Proves Razor build capability and is also used by Razor Class Libraries. |
 | `Pages/**`, `.cshtml.cs`, or project/folder names | Convention/path/name heuristics rather than authoritative application-model evidence. |
 | `PageModel`, `AddRazorPages`, or `MapRazorPages` | Requires C#/semantic inspection and can coexist with MVC, APIs, or other Web models. |
@@ -39,8 +39,8 @@ For Web projects:
 
 The fixtures under `tests/Fixtures/RazorPagesSubtypeSignals` capture the ambiguity boundary:
 
-1. a Web SDK project contains both a real Razor Page (with `@page`) and a regular MVC Razor View, while MSBuild exposes both through the same `RazorGenerate` item type;
-2. a Razor Class Library can expose `RazorGenerate` plus `AddRazorSupportForMvc=true` while remaining a `library`, demonstrating that these facts do not imply a Web Razor Pages subtype.
+1. a Web SDK project contains both a real Razor Page (with `@page`) and a regular MVC Razor View, while the current `-getItem:RazorGenerate` evaluation exposes neither without additional target execution;
+2. a Razor Class Library can contain Razor Page source plus `AddRazorSupportForMvc=true` while remaining a `library`, demonstrating that project-level Razor support does not imply a Web Razor Pages subtype.
 
 The research tests inspect fixture contents only to establish ground truth. Classification itself remains based exclusively on the existing structured facts and therefore emits no subtype.
 

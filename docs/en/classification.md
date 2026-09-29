@@ -52,13 +52,13 @@ The decision is documented in [ADR 0013](decisions/0013-razor-pages-subtype-dete
 | --- | --- |
 | declared `Microsoft.NET.Sdk.Web` | Proves only the base `web` workload and is shared by MVC, Razor Pages, APIs, Blazor, and mixed applications. |
 | effective `AddRazorSupportForMvc == true` | The Razor SDK uses it for applications containing MVC views **or Razor Pages**, and modern Web SDK projects set it implicitly. |
-| evaluated `RazorGenerate` items / `.cshtml` files | Both MVC Razor Views and Razor Pages are represented as Razor-generated `.cshtml` inputs; Razor Class Libraries can expose the same items. |
+| `RazorGenerate` / `.cshtml` build inputs | The current property/item evaluation boundary does not expose default `RazorGenerate` items without additional target execution; even generic Razor inputs would not carry the `@page` semantic distinction. |
 | declared `Microsoft.NET.Sdk.Razor` | Proves Razor build capability, including Razor Class Libraries, not a Web Razor Pages application. |
 | a `Pages/**` path or `.cshtml.cs` companion file | File-system convention/path heuristic and explicitly outside the approved subtype boundary. |
 | `PageModel`, `AddRazorPages`, or `MapRazorPages` | Requires source or semantic inspection and can coexist with other ASP.NET Core application models. |
 | the Razor `@page` directive | This is the distinguishing Razor Pages marker, but detecting it requires reading Razor source content, which is outside the current inspection model. |
 
-Therefore a project with `kind = web` keeps `classification.subtype` absent even when Razor build items are present. A future Razor Pages subtype requires an approved content/semantic inspection boundary or a new authoritative structured signal.
+Therefore a project with `kind = web` keeps `classification.subtype` absent even when Razor source is present. A future Razor Pages subtype requires an approved content/semantic inspection boundary or a new authoritative structured signal.
 
 ## Inputs
 
