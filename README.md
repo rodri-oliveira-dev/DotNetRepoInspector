@@ -30,12 +30,12 @@ The v1 surface includes:
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
 - optional `classification.subtype` contract field reserved for explicit subtype evidence;
 - versioned inspection JSON (`schemaVersion 1.5`);
-- optional repository configuration for exclusions and explicit classification overrides;
+- optional repository configuration for exclusions, explicit classification overrides, and opt-in policies;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
 
-Concrete subtype detection rules and the optional policy engine remain future work. The v1 contract includes the optional `classification.subtype` field, but the current engine leaves it absent unless approved subtype evidence is introduced later.
+Concrete subtype detection remains evidence-driven and conservative. The current v1 line includes opt-in policy evaluation with structured `policyFindings`; `classification.subtype` remains absent unless approved subtype evidence is available.
 
 ## Design principles
 

@@ -100,6 +100,8 @@ A raiz da work tree descoberta pelo adapter Git é um valor operacional interno 
 - sinais de classificação são ordenados ordinalmente;
 - diagnósticos são ordenados por severidade, código, source, message, details e contexto canônico;
 - chaves de contexto dos diagnósticos são ordenadas ordinalmente;
+- findings de policy são ordenados por código da rule, severidade, escopo, caminho do projeto, message e contexto canônico;
+- chaves de contexto dos findings de policy são ordenadas ordinalmente;
 - separadores de caminho são normalizados para `/`;
 - nomes de propriedades usam `camelCase`;
 - propriedades opcionais com valor `null` são omitidas.

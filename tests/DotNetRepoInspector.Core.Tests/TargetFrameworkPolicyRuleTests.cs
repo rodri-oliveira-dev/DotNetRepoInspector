@@ -34,7 +34,7 @@ public sealed class TargetFrameworkPolicyRuleTests
         Assert.Equal(PolicySeverity.Error, finding.Severity);
         Assert.Equal(PolicyFindingScope.ProjectKind, finding.Scope.Kind);
         Assert.Equal("src/Legacy/Legacy.csproj", finding.Scope.ProjectPath);
-        Assert.Equal("net8.0,net10.0", finding.Context!["allowedTargetFrameworks"]);
+        Assert.Equal("net10.0,net8.0", finding.Context!["allowedTargetFrameworks"]);
         Assert.Equal("net7.0", finding.Context["targetFrameworks"]);
         Assert.Equal("net7.0", finding.Context["disallowedTargetFrameworks"]);
     }
@@ -51,7 +51,7 @@ public sealed class TargetFrameworkPolicyRuleTests
                 ["net9.0", "net8.0", "NET9.0"])));
 
         var finding = Assert.Single(result.Findings);
-        Assert.Equal("net8.0,net10.0", finding.Context!["allowedTargetFrameworks"]);
+        Assert.Equal("net10.0,net8.0", finding.Context!["allowedTargetFrameworks"]);
         Assert.Equal("net8.0,net9.0", finding.Context["targetFrameworks"]);
         Assert.Equal("net9.0", finding.Context["disallowedTargetFrameworks"]);
     }
