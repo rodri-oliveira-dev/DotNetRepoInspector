@@ -49,6 +49,9 @@ jobs:
       - name: Validate workflow syntax and expressions
         run: ./actionlint -shellcheck= -pyflakes= .github/workflows/*.yml
 
+      - name: Validate MCP Registry outage handling
+        run: python ./.github/scripts/test_mcp_publisher_validation.py
+
   dependency-review:
     name: Review dependency changes
     if: github.event_name == 'pull_request'

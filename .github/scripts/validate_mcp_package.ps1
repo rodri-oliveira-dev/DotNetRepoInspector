@@ -171,10 +171,7 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($McpPublisherPath)) {
         $publisherFullPath = (Resolve-Path -LiteralPath $McpPublisherPath).Path
         Write-Host "Validating MCP metadata with official mcp-publisher: $publisherFullPath"
-        & $publisherFullPath validate $manifestValidationPath
-        if ($LASTEXITCODE -ne 0) {
-            throw "Official mcp-publisher schema/semantic validation failed with exit code $LASTEXITCODE."
-        }
+        & (Join-Path $PSScriptRoot "invoke_mcp_publisher_validation.ps1") -PublisherPath $publisherFullPath -ManifestPath $manifestValidationPath
     }
 }
 finally {
@@ -228,7 +225,7 @@ $registryValidationSummary = if ([string]::IsNullOrWhiteSpace($McpPublisherPath)
     ""
 }
 else {
-    ", official registry validation"
+    ", official registry validation attempted"
 }
 
 Write-Host "MCP package metadata, BOM-free NuGet.org JSON compatibility$registryValidationSummary, contents, symbols, tool installation, dnx resolution, handshake, discovery, and inspect_repository smoke passed."

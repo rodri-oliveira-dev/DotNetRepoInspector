@@ -439,6 +439,28 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("UTF-8 without a BOM", validator, StringComparison.Ordinal);
         Assert.Contains("20000", validator, StringComparison.Ordinal);
         Assert.Contains("mcp-publisher", validator, StringComparison.Ordinal);
+        Assert.Contains("invoke_mcp_publisher_validation.ps1", validator, StringComparison.Ordinal);
+
+        string resilienceValidator = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "scripts",
+            "invoke_mcp_publisher_validation.ps1"));
+        Assert.Contains("AttemptTimeoutSeconds", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("error sending request", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("server returned status", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("connection refused", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("TimedOut", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("Transient MCP Registry failure detected", resilienceValidator, StringComparison.Ordinal);
+        Assert.Contains("schema/semantic rejections remain fatal", resilienceValidator, StringComparison.Ordinal);
+
+        string validationWorkflow = File.ReadAllText(Path.Combine(
+            RepositoryRoot,
+            ".github",
+            "workflows",
+            "validate.yml"));
+        Assert.Contains("Validate MCP Registry outage handling", validationWorkflow, StringComparison.Ordinal);
+        Assert.Contains("test_mcp_publisher_validation.py", validationWorkflow, StringComparison.Ordinal);
 
         string workflow = File.ReadAllText(Path.Combine(
             RepositoryRoot,
