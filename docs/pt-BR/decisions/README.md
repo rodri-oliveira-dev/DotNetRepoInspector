@@ -30,5 +30,6 @@ Um ADR deve registrar:
 - [ADR 0014: Manter os subtipos Blazor Web App e server-side sem suporte na ausência de evidência estrutural determinística](0014-blazor-server-subtype-detection.md) — Aceito.
 - [ADR 0015: Detectar Blazor WebAssembly pelo project SDK dedicado](0015-blazor-webassembly-subtype-detection.md) — Aceito.
 - [ADR 0016: Detectar Azure Functions por SDK oficial e sinais do modelo de runtime](0016-azure-functions-subtype-detection.md) — Aceito.
+- [ADR 0017: Definir a fronteira de extensibilidade da policy engine](0017-policy-engine-extensibility-boundary.md) — Aceito.
 
-Decisões futuras prováveis incluem fronteiras da avaliação de políticas e transporte MCP remoto caso ele se torne um cenário suportado.
+Uma provável próxima decisão é o transporte MCP remoto caso ele se torne um cenário suportado.
