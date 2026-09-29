@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` defines the stable inspection result independently of MSBuild internals, GitHub Actions, persistence, or any specific delivery mechanism.
 
-The current schema version is `1.4`.
+The current schema version is `1.5`.
 
 ## Top-level contract
 
@@ -15,6 +15,7 @@ Every payload contains these properties:
 - `dotNetSdk`: SDK configuration and the version resolved by the environment.
 - `projects`: normalized projects, always emitted as an array.
 - `diagnostics`: repository-level diagnostics, always emitted as an array.
+- `policyFindings`: policy evaluation results, always emitted as an array and structurally separate from inspection diagnostics.
 
 The machine-readable schema is [`inspection-v1.schema.json`](inspection-v1.schema.json). A canonical payload is available at [`examples/inspection-v1.example.json`](examples/inspection-v1.example.json).
 
@@ -66,6 +67,20 @@ Diagnostic scope is represented by location in the contract. Top-level `diagnost
 
 The stable diagnostic catalog and operational logging rules are documented in [`../diagnostics.md`](../diagnostics.md).
 
+## Policy findings
+
+Schema `1.5` adds top-level `policyFindings`. Policy findings represent governance decisions evaluated after normalized inspection facts have been collected; they are not inspection failures and are never inserted into repository or project `diagnostics`.
+
+Each finding contains:
+
+- `ruleCode`: stable `DRPxxxx` policy rule identifier;
+- `severity`: `warning` or `error`;
+- `message`: stable human-readable description;
+- `scope`: either `repository` or `project`; project scope also carries the normalized repository-relative `projectPath`;
+- optional `context`: structured string values describing the evaluated policy facts.
+
+The initial TargetFramework policy uses rule code `DRP0001`. An empty `policyFindings` array means either no enabled policy produced a finding or no policy was enabled; consumers that need to distinguish configuration intent should use the repository configuration as the source of truth.
+
 ## Paths
 
 Paths in the normalized contract use `/` separators and must not contain machine-specific absolute workspace paths.
@@ -85,6 +100,8 @@ The Git work-tree root discovered by the Git adapter is an internal operational 
 - classification signals are ordered ordinally;
 - diagnostics are ordered by severity, code, source, message, details, and canonical context;
 - diagnostic context keys are ordered ordinally;
+- policy findings are ordered by rule code, severity, scope, project path, message, and canonical context;
+- policy finding context keys are ordered ordinally;
 - path separators are normalized to `/`;
 - property names use `camelCase`;
 - optional `null` properties are omitted.
@@ -100,6 +117,7 @@ Schema versions follow a major/minor policy.
 - Schema `1.2` added the optional `repository.isDirty` boolean populated by Git metadata inspection.
 - Schema `1.3` added optional `classification.source` and `classification.automaticKind` fields so explicit classification overrides remain distinguishable from automatic classification.
 - Schema `1.4` adds optional `classification.subtype` as a refinement of the base classification kind without adding concrete subtype detection rules.
+- Schema `1.5` adds top-level `policyFindings` so policy violations remain structurally separate from inspection diagnostics.
 - Consumers of schema `1.x` should ignore unknown fields and preserve the documented semantics of existing fields.
 - Removing or renaming a field, changing its type, making an optional field required, or changing its meaning is a breaking change and requires a new major schema version such as `2.0`.
 - `InspectionSchema.IsCompatibleVersion` accepts versions with the current major version and rejects a different major version.
@@ -130,6 +148,7 @@ The stable contract intentionally does not expose infrastructure-specific result
 | Automatic classifier result | `projects[].classification.kind` when no override is active; otherwise `projects[].classification.automaticKind` |
 | Approved subtype evidence | optional `projects[].classification.subtype` when supported evidence exists |
 | Explicit classification override | effective `projects[].classification.kind` plus `projects[].classification.source` |
+| Policy rule evaluation | top-level `policyFindings[]`, separate from inspection diagnostics |
 
 The raw MSBuild `Properties` dictionary from the evaluation layer is intentionally excluded. It is an internal evidence source, not part of the stable public contract.
 

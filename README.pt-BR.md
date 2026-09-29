@@ -29,7 +29,7 @@ A superfície da v1 inclui:
 - metadados Git de repositório, commit, branch, remote e dirty state quando disponíveis;
 - classificação base determinística: Web, Worker, Console, Library, Test e Unknown;
 - campo opcional de contrato `classification.subtype` reservado para evidência explícita de subtipo;
-- JSON de inspeção versionado (`schemaVersion 1.4`);
+- JSON de inspeção versionado (`schemaVersion 1.5`);
 - configuração opcional do repositório para exclusões e overrides explícitos de classificação;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
@@ -53,7 +53,7 @@ O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload represen
 
 ```json
 {
-  "schemaVersion": "1.4",
+  "schemaVersion": "1.5",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -92,7 +92,8 @@ O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload represen
       "diagnostics": []
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "policyFindings": []
 }
 ```
 
