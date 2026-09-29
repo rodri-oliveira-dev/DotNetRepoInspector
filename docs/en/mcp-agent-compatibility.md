@@ -120,10 +120,10 @@ RC package evidence is recorded separately in [issue #137](https://github.com/ro
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | OpenAI Codex CLI | OpenAI | `codex-cli 0.154.0-alpha.6.2` | `2025-06-18` through `ModelContextProtocol` server | `codex mcp add dri -- <server> --root <root>` | explicit `--root` argument | validated by real client run | validated by `mcp_tool_call` to `list_projects` | validated: `list_projects` returned 6 projects | Passed historical local-binary Codex smoke; exact RC artifact not validated |
 | Claude Code | Anthropic | not observable in the #149 execution environment (2026-09-29) | not observed live; package uses stdio and deterministic harness records `2025-06-18` | `claude mcp add --transport stdio dotnet-repo-inspector -- dnx DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` | explicit `--root` argument | blocked by external client environment | blocked by external client environment | blocked before client launch | External impediment documented by #149; live smoke tracked in #177 |
-| Gemini CLI | Google | not installed in this environment | expected MCP stdio | `settings.json` `mcpServers.dotnetRepoInspector.command` + `args` | explicit `--root` argument | pending | pending | pending | Reproducible route documented; not validated |
+| Gemini CLI | Google | not observable in the #160 execution environment (2026-09-29) | not observed live; package uses stdio and deterministic harness records `2025-06-18` | `settings.json` with `command: dnx` and `DotNetRepoInspector.Mcp@1.5.2 --yes -- --root <root>` args | explicit `--root` argument | blocked by external client environment | blocked by external client environment | blocked before client launch | External impediment documented by #160; live smoke tracked in #178 |
 | MCP SDK deterministic harness | Protocol harness | `ModelContextProtocol` `2.2.0` | `2025-06-18` | `StdioClientTransport` | explicit `--root` argument per fixture | validated | validated | validated across all MVP fact categories | Passed deterministic protocol eval |
 
-Release note: OpenAI Codex CLI was validated against a local development executable, but its exact artifact/package version was not recorded. Do not treat that historical smoke as validation of `1.2.0-rc.1`. The exact `1.2.0-rc.1` package passed deterministic evals from a controlled local feed as recorded above; a Codex smoke against the **exact published RC package** remains pending until publication and must be recorded before GA promotion. Claude Code remains unvalidated because #149 recorded an external execution-environment impediment; its live smoke is tracked explicitly in #177. Gemini CLI remains pending for #160.
+Release note: OpenAI Codex CLI was validated against a local development executable, but its exact artifact/package version was not recorded. Do not treat that historical smoke as validation of `1.2.0-rc.1`. The exact `1.2.0-rc.1` package passed deterministic evals from a controlled local feed as recorded above; a Codex smoke against the **exact published RC package** remains pending until publication and must be recorded before GA promotion. Claude Code remains unvalidated because #149 recorded an external execution-environment impediment; its live smoke is tracked explicitly in #177. Gemini CLI likewise remains unvalidated because #160 recorded an external execution-environment impediment; its live smoke is tracked in #178.
 
 ## Claude Code validation attempt for #149 (2026-09-29)
 
@@ -180,6 +180,72 @@ Use dotnet-repo-inspector inspect_repository. Return the project count and the s
 ```
 
 Compare the structured facts with the ground truth above, record the negotiated MCP protocol and client/package versions, then remove the temporary MCP registration.
+
+## Gemini CLI validation attempt for #160 (2026-09-29)
+
+Issue #160 reuses the same deterministic ground truth established for Group 5:
+
+- controlled root: `tests/Fixtures/ProjectKinds`;
+- expected project inventory: exactly 6 projects: `Console/Console.csproj`, `Library/Library.csproj`, `MultiTargeting/MultiTargeting.csproj`, `Test/Test.csproj`, `Web/Web.csproj`, and `Worker/Worker.csproj`;
+- `list_projects` ground truth: Web=`web`, Worker=`worker`, Console=`console`, Library=`library`, Test=`test`; `Web/Web.csproj` targets `net10.0`; `MultiTargeting/MultiTargeting.csproj` targets `net8.0` and `net10.0`;
+- `inspect_repository` ground truth: the same six-project inventory and the same canonical per-project target-framework/classification facts projected by `InspectionReport`;
+- authoritative source: the versioned `mcp-evals-v1.json` dataset plus the `ProjectKinds` fixture projects themselves.
+
+### External impediment recorded by #160
+
+The stable package selected for the run is `DotNetRepoInspector.Mcp@1.5.2`, the current stable release at the time of the attempt. The intended server configuration uses `dnx` over stdio:
+
+```json
+{
+  "mcpServers": {
+    "dotnetRepoInspector": {
+      "command": "dnx",
+      "args": [
+        "DotNetRepoInspector.Mcp@1.5.2",
+        "--yes",
+        "--",
+        "--root",
+        "<absolute-path>/tests/Fixtures/ProjectKinds"
+      ],
+      "trust": false
+    }
+  }
+}
+```
+
+The execution environment available for #160 exposed GitHub repository operations but did not expose an executable host shell or an installed/authenticated Gemini CLI session. Consequently:
+
+- Gemini CLI version: **not observable in this execution environment**;
+- Gemini CLI authorization state: **not observable**;
+- MCP protocol negotiated with Gemini CLI: **not observed**;
+- handshake: **not executed**;
+- tool discovery: **not executed**;
+- `list_projects`: **not executed by Gemini CLI**;
+- `inspect_repository`: **not executed by Gemini CLI**.
+
+The deterministic harness protocol `2025-06-18` remains useful repository evidence, but it is deliberately **not** presented as a protocol version observed from Gemini CLI. No product or provider-specific code was changed to work around the environment.
+
+The required live validation is tracked explicitly in [#178](https://github.com/rodri-oliveira-dev/DotNetRepoInspector/issues/178). Only non-sensitive evidence should be recorded when that follow-up runs: client version, package version, negotiated protocol, tool discovery summary, structured fact summary, and pass/fail comparison. Credentials, tokens, and raw sensitive transcripts must not be committed.
+
+### Reproduction when Gemini CLI is available
+
+Record the client version:
+
+```bash
+gemini --version
+```
+
+Configure the MCP server with the exact stable package as shown above, then start Gemini CLI and execute both:
+
+```text
+Use the dotnetRepoInspector MCP server list_projects tool. Return the project paths, target frameworks, and classifications from the tool result.
+```
+
+```text
+Use the dotnetRepoInspector MCP server inspect_repository tool. Return the project count and the same per-project target framework and classification facts from the tool result.
+```
+
+Compare the structured facts with the ground truth above and record the negotiated MCP protocol and client/package versions.
 
 ## Reproducible Smoke Tests
 
@@ -281,5 +347,5 @@ Expected facts: six projects; `MultiTargeting/MultiTargeting.csproj` has `net8.0
 
 - The deterministic runner proves protocol compatibility and factual assertions, not real LLM behavior.
 - Codex CLI was the only external provider client installed and authorized in the validation environment.
-- Claude Code live validation is blocked by the external execution environment recorded in #149 and tracked in #177; Gemini CLI remains pending for #160.
+- Claude Code live validation is blocked by the external execution environment recorded in #149 and tracked in #177; Gemini CLI live validation is blocked by the external execution environment recorded in #160 and tracked in #178.
 - Live-client transcripts should be reduced to non-sensitive evidence such as client version, tool-call event, structured result summary, and pass/fail facts.
