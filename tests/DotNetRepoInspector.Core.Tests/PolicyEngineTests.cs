@@ -16,7 +16,7 @@ public sealed class PolicyEngineTests
             {
                 Assert.Single(context.Projects);
                 Assert.Equal("src/Sample/Sample.csproj", context.Projects[0].Path);
-                Assert.Equal(["net10.0"], context.Projects[0].TargetFrameworks);
+                Assert.Equal(new[] { "net10.0" }, context.Projects[0].TargetFrameworks);
 
                 return [];
             });
@@ -117,10 +117,10 @@ public sealed class PolicyEngineTests
         var result = engine.Evaluate(CreateReport());
 
         Assert.Equal(
-            ["DRP2001", "DRP2001", "DRP2002"],
+            new[] { "DRP2001", "DRP2001", "DRP2002" },
             result.Findings.Select(static finding => finding.RuleCode));
         Assert.Equal(
-            ["first", "second", "third"],
+            new[] { "first", "second", "third" },
             result.Findings.Select(static finding => finding.Message));
     }
 
@@ -133,7 +133,7 @@ public sealed class PolicyEngineTests
         var exception = Assert.Throws<ArgumentException>(
             () => new PolicyEngine([firstRule, secondRule]));
 
-        Assert.Contains("DRP3001", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("DRP3001", exception.Message);
     }
 
     [Fact]
