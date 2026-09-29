@@ -49,7 +49,7 @@ Regras concretas de detecção de subtipo e a camada opcional de políticas cont
 
 ## Contrato JSON
 
-O contrato v1 usa atualmente o schema de inspeção **1.4**. Um payload representativo é:
+O contrato v1 usa atualmente o schema de inspeção **1.5**. Um payload representativo é:
 
 ```json
 {
