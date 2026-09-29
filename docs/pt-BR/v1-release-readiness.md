@@ -22,7 +22,7 @@ As refs públicas da GitHub Action criadas a partir dessa linha de release estã
 | Alias minor da GitHub Action | `v1.0` |
 | Licença | MIT |
 
-A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. O campo `schemaVersion` preserva a baseline imutável da v1.0.0 (`1.3`), enquanto `currentSchemaVersion` acompanha o schema compatível atual da linha v1 (`1.4`). Testes do repositório validam os dois papéis junto de `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
+A contraparte legível por máquina desta tabela é `.github/release-readiness-v1.json`. O campo `schemaVersion` preserva a baseline imutável da v1.0.0 (`1.3`), enquanto `currentSchemaVersion` acompanha o schema compatível atual da linha v1 (`1.5`). Testes do repositório validam os dois papéis junto de `action.yml`, `InspectionSchema`, os metadados do pacote da CLI, o exemplo canônico do schema e os arquivos obrigatórios de governança/segurança.
 
 Para a linha v1 atual, o mesmo arquivo legível por máquina também registra o contrato oficial de distribuição por container: identidades publicadas no GHCR/Docker Hub, `linux/amd64` e `linux/arm64`, política de tags estáveis/prerelease, artifacts de evidência da release e controles obrigatórios de non-root/read-only/offline/digest/SBOM/provenance. Isso estende o release readiness sem reescrever o registro histórico da publicação v1.0.0.
 
@@ -35,7 +35,7 @@ A primeira release estável inclui estas superfícies suportadas:
 - descoberta de repositórios/projetos baseada em metadados .NET/MSBuild avaliados;
 - classificação base: Web, Worker, Console, Library, Test e Unknown;
 - referências normalizadas entre projetos e metadados Git do repositório;
-- JSON de inspeção versionado; a v1.0.0 foi publicada com `schemaVersion 1.3`, enquanto o contrato v1 compatível atual usa schema `1.4`;
+- JSON de inspeção versionado; a v1.0.0 foi publicada com `schemaVersion 1.3`, enquanto o contrato v1 compatível atual usa schema `1.5`;
 - `.dotnetrepoinspector.json` opcional, exclusões e overrides explícitos de classificação;
 - CLI/.NET Tool com separação determinística entre stdout/stderr e códigos de saída documentados;
 - Composite GitHub Action reutilizando a mesma .NET Tool;
@@ -87,7 +87,7 @@ Antes de iniciar a release oficial, confirme na `main`:
 - a validação do pacote instala o `DotNetRepoInspector.1.0.0.nupkg` exato global e localmente e verifica `--help`, `--version` e uma inspeção real;
 - a validação MCP inspeciona `.nupkg`/`.snupkg` exatos, instala a tool, resolve por `dnx` com fonte local e executa uma chamada stdio real de `inspect_repository`;
 - o release candidate contém `release-manifest.json` e `SHA256SUMS`;
-- o manifest aponta para o commit exato da release e informa schema `1.4`;
+- o manifest aponta para o commit exato da release e informa schema `1.5`;
 - smoke tests da GitHub Action e de compatibilidade estão verdes em Ubuntu, Windows e macOS.
 
 Um dry-run manual seguro pode ser iniciado em **Actions → Release → Run workflow**, versão `1.0.0`, `publish=false`. O job de publicação deve ser ignorado.

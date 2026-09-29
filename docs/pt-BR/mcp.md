@@ -162,7 +162,7 @@ Estrutura resumida da resposta (o report completo segue o [schema de inspeção]
   "ok": true,
   "data": {
     "report": {
-      "schemaVersion": "1.4",
+      "schemaVersion": "1.5",
       "repository": {},
       "dotNetSdk": {},
       "projects": [],
@@ -187,7 +187,7 @@ Dados da resposta:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.4",
+  "inspectionSchemaVersion": "1.5",
   "projects": [
     {
       "path": "src/App/App.csproj",
@@ -226,7 +226,7 @@ Dados resumidos da resposta (o `ProjectInspection` completo segue o [schema de i
 
 ```json
 {
-  "inspectionSchemaVersion": "1.4",
+  "inspectionSchemaVersion": "1.5",
   "project": {
     "path": "src/App/App.csproj",
     "name": "App",
@@ -251,7 +251,7 @@ Dados da resposta:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.4",
+  "inspectionSchemaVersion": "1.5",
   "projects": [
     {
       "path": "src/App/App.csproj",
@@ -278,7 +278,7 @@ Dados resumidos da resposta (os registros de diagnóstico também contêm os cam
 
 ```json
 {
-  "inspectionSchemaVersion": "1.4",
+  "inspectionSchemaVersion": "1.5",
   "diagnostics": [
     {
       "projectPath": "src/App/App.csproj",
@@ -306,7 +306,7 @@ Dados da resposta:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.4",
+  "inspectionSchemaVersion": "1.5",
   "dotNetSdk": {
     "globalJsonPath": "global.json",
     "configured": {
