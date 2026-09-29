@@ -443,8 +443,8 @@ jobs:
             throw "Expected Inspector version '$env:ACTION_TEST_TOOL_VERSION', actual '$env:INSPECTOR_VERSION'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.4") {
-            throw "Expected schema version 1.4, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected schema version 1.5, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -500,8 +500,8 @@ jobs:
             throw "Expected propagated CLI exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.4") {
-            throw "Expected schema version 1.4 from the partial report, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.5") {
+            throw "Expected schema version 1.5 from the partial report, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
