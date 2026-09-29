@@ -37,6 +37,20 @@
       ]
     },
     {
+      "id": "razor-pages-subtype-razor-generate-overlap",
+      "path": "RazorPagesSubtypeSignals/RazorGenerateOverlap",
+      "proves": [
+        "razor-pages-subtype-razor-generate-overlap"
+      ]
+    },
+    {
+      "id": "razor-pages-subtype-rcl-overlap",
+      "path": "RazorPagesSubtypeSignals/RazorClassLibraryOverlap",
+      "proves": [
+        "razor-pages-subtype-rcl-overlap"
+      ]
+    },
+    {
       "id": "project-worker",
       "path": "ProjectKinds/Worker",
       "proves": [

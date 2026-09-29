@@ -33,6 +33,8 @@ public sealed class FixtureMatrixTests
         "project-reference-fan-out",
         "project-reference-simple",
         "project-reference-unresolved",
+        "razor-pages-subtype-razor-generate-overlap",
+        "razor-pages-subtype-rcl-overlap",
         "sdk-resolution-missing",
         "test-false-negative-current",
         "test-project",

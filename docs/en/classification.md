@@ -42,6 +42,24 @@ The decision is documented in [ADR 0012](decisions/0012-mvc-subtype-detection.md
 
 Therefore a project with `kind = web` retains an absent `classification.subtype` even when Razor/MVC-oriented hints are present. A future MVC subtype requires an authoritative structured fact or an explicitly approved bounded semantic-analysis model.
 
+## Razor Pages subtype: intentionally unsupported
+
+Razor Pages is **not** currently emitted as a subtype. The current project/MSBuild model can identify Web and Razor build capabilities, but it cannot distinguish a Razor Page from an MVC Razor View without inspecting Razor source content.
+
+The decision is documented in [ADR 0013](decisions/0013-razor-pages-subtype-detection.md). The evaluated candidates are deliberately rejected as subtype rules:
+
+| Candidate evidence | Why it is insufficient |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.Web` | Proves only the base `web` workload and is shared by MVC, Razor Pages, APIs, Blazor, and mixed applications. |
+| effective `AddRazorSupportForMvc == true` | The Razor SDK uses it for applications containing MVC views **or Razor Pages**, and modern Web SDK projects set it implicitly. |
+| evaluated `RazorGenerate` items / `.cshtml` files | Both MVC Razor Views and Razor Pages are represented as Razor-generated `.cshtml` inputs; Razor Class Libraries can expose the same items. |
+| declared `Microsoft.NET.Sdk.Razor` | Proves Razor build capability, including Razor Class Libraries, not a Web Razor Pages application. |
+| a `Pages/**` path or `.cshtml.cs` companion file | File-system convention/path heuristic and explicitly outside the approved subtype boundary. |
+| `PageModel`, `AddRazorPages`, or `MapRazorPages` | Requires source or semantic inspection and can coexist with other ASP.NET Core application models. |
+| the Razor `@page` directive | This is the distinguishing Razor Pages marker, but detecting it requires reading Razor source content, which is outside the current inspection model. |
+
+Therefore a project with `kind = web` keeps `classification.subtype` absent even when Razor build items are present. A future Razor Pages subtype requires an approved content/semantic inspection boundary or a new authoritative structured signal.
+
 ## Inputs
 
 The classifier consumes normalized facts produced by the inspection pipeline:
