@@ -14,6 +14,8 @@ public sealed class FixtureMatrixTests
     [
         "blazor-interactive-server-source-only",
         "blazor-web-app-source-only",
+        "blazor-webassembly-razor-ambiguous",
+        "blazor-webassembly-sdk",
         "compatibility-net10",
         "compatibility-net8",
         "conditional-property",

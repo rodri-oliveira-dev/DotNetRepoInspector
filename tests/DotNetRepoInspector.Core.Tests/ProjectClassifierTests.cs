@@ -7,6 +7,8 @@ namespace DotNetRepoInspector.Core.Tests;
 public sealed class ProjectClassifierTests
 {
     private static readonly string[] WebSdk = [DeterministicProjectClassifier.WebSdk];
+    private static readonly string[] BlazorWebAssemblySdk =
+        [DeterministicProjectClassifier.BlazorWebAssemblySdk];
     private static readonly string[] WorkerSdk = [DeterministicProjectClassifier.WorkerSdk];
     private static readonly string[] WebAndWorkerSdks =
     [
@@ -171,6 +173,87 @@ public sealed class ProjectClassifierTests
         Assert.Equal(
             $"sdk:{DeterministicProjectClassifier.WebSdk}",
             Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_BlazorWebAssemblySdkIsHighConfidenceWebSubtype()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            BlazorWebAssemblySdk,
+            "Exe",
+            false));
+
+        Assert.Equal(ProjectClassificationKinds.Web, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Equal(ProjectClassificationSubtypes.BlazorWebAssembly, classification.Subtype);
+        Assert.Equal(
+            $"sdk:{DeterministicProjectClassifier.BlazorWebAssemblySdk}",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_BlazorWebAssemblyPackageHintDoesNotInferSubtype()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            WebSdk,
+            "Exe",
+            false)
+        {
+            PackageReferences = ["Microsoft.AspNetCore.Components.WebAssembly"]
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Web, classification.Kind);
+        Assert.Equal(ProjectClassificationConfidence.High, classification.Confidence);
+        Assert.Null(classification.Subtype);
+        Assert.Equal(
+            $"sdk:{DeterministicProjectClassifier.WebSdk}",
+            Assert.Single(classification.Signals));
+    }
+
+    [Fact]
+    public void Classify_BlazorWebAssemblySdkWithWorkerSdkReturnsUnknown()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            [
+                DeterministicProjectClassifier.BlazorWebAssemblySdk,
+                DeterministicProjectClassifier.WorkerSdk
+            ],
+            "Exe",
+            false));
+
+        Assert.Equal(ProjectClassificationKinds.Unknown, classification.Kind);
+        Assert.Null(classification.Confidence);
+        Assert.Null(classification.Subtype);
+        Assert.Contains(
+            $"sdk:{DeterministicProjectClassifier.BlazorWebAssemblySdk}",
+            classification.Signals);
+        Assert.Contains(
+            $"sdk:{DeterministicProjectClassifier.WorkerSdk}",
+            classification.Signals);
+        Assert.Contains("conflict:specialized-sdk", classification.Signals);
+    }
+
+    [Fact]
+    public void Classify_BlazorWebAssemblySdkWithWorkerOptInReturnsUnknown()
+    {
+        var classification = _classifier.Classify(new ProjectClassificationFacts(
+            BlazorWebAssemblySdk,
+            "Exe",
+            false)
+        {
+            UsingMicrosoftNETSdkWorker = true
+        });
+
+        Assert.Equal(ProjectClassificationKinds.Unknown, classification.Kind);
+        Assert.Null(classification.Confidence);
+        Assert.Null(classification.Subtype);
+        Assert.Contains(
+            $"sdk:{DeterministicProjectClassifier.BlazorWebAssemblySdk}",
+            classification.Signals);
+        Assert.Contains(
+            "property:UsingMicrosoftNETSdkWorker=true",
+            classification.Signals);
+        Assert.Contains("conflict:web-worker", classification.Signals);
     }
 
     [Fact]
@@ -386,7 +469,7 @@ public sealed class ProjectClassifierTests
     }
 
     [Fact]
-    public void Classify_DoesNotPopulateConcreteSubtypes()
+    public void Classify_OtherKindsDoNotPopulateConcreteSubtypes()
     {
         var classifications = new[]
         {

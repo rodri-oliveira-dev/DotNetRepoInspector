@@ -6,7 +6,7 @@ DotNetRepoInspector classifies projects from evaluated structural facts instead 
 
 The classifications are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
-`projects[].classification.subtype` is a separate optional refinement of the base classification kind. The current classifier does not populate concrete subtypes; the field stays absent unless a future approved rule provides explicit subtype evidence.
+`projects[].classification.subtype` is a separate optional refinement of the base classification kind. Concrete subtypes are emitted only from approved deterministic rules. The currently supported subtype is `blazor-webassembly`; otherwise the field stays absent.
 
 ## Web API subtype: intentionally unsupported
 
@@ -77,7 +77,22 @@ The decision is documented in [ADR 0014](decisions/0014-blazor-server-subtype-de
 | legacy `AddServerSideBlazor` / `MapBlazorHub` | Meaningful for classic Blazor Server hosting, but also source-level configuration. |
 | template paths/files such as `Components/**`, `App.razor`, `Routes.razor`, or `_Host.cshtml` | Convention heuristics, not authoritative application-model evidence. |
 
-Consequently, both a modern Blazor Web App and server-side/Interactive Server hosting remain `kind = web` with `classification.subtype` absent. Blazor WebAssembly is evaluated separately in #174 because it has a distinct SDK boundary.
+Consequently, both a modern Blazor Web App and server-side/Interactive Server hosting remain `kind = web` with `classification.subtype` absent.
+
+## Blazor WebAssembly subtype
+
+Standalone/client Blazor WebAssembly **is supported deterministically**. The explicit project SDK `Microsoft.NET.Sdk.BlazorWebAssembly` is a workload-specific structural signal that distinguishes browser-hosted WebAssembly projects from server-hosted ASP.NET Core projects.
+
+The decision is documented in [ADR 0015](decisions/0015-blazor-webassembly-subtype-detection.md).
+
+| Evidence | Decision |
+| --- | --- |
+| declared `Microsoft.NET.Sdk.BlazorWebAssembly` | Accepted: `kind = web`, `subtype = blazor-webassembly`, `confidence = high`. |
+| package `Microsoft.AspNetCore.Components.WebAssembly` without the SDK | Rejected as subtype evidence: package usage alone does not establish the project workload/hosting boundary. |
+| `.razor` files or Razor SDK | Rejected as subtype evidence: reusable component libraries and server-hosted applications can contain the same source shape. |
+| project/folder names such as `.Client` | Rejected naming heuristic. |
+
+Test-project signals retain higher precedence. A Blazor WebAssembly SDK combined with an independent Worker workload signal is treated as conflicting evidence and remains `unknown` rather than fabricating a subtype.
 
 ## Inputs
 
@@ -119,14 +134,15 @@ Rules are evaluated in this order:
 2. `IsTestProject == true` -> `test`.
 3. declared `MSTest.Sdk` -> `test`.
 4. when `IsTestProject` is missing, evaluated `Microsoft.NET.Test.Sdk` -> `test`.
-5. `Microsoft.NET.Sdk.Web` plus a strong Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker == true`) -> `unknown` because the workload signals conflict.
-6. `Microsoft.NET.Sdk.Web` -> `web`; service-lifetime package hints do not override Web.
-7. `Microsoft.NET.Sdk.Worker` -> `worker`.
-8. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
-9. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
-10. `OutputType == Exe` -> `console` when no more specific signal matched.
-11. `OutputType == Library` -> `library` when no more specific signal matched.
-12. otherwise -> `unknown`.
+5. Web-family SDK (`Microsoft.NET.Sdk.Web` or `Microsoft.NET.Sdk.BlazorWebAssembly`) plus a strong Worker signal (`Microsoft.NET.Sdk.Worker` or `UsingMicrosoftNETSdkWorker == true`) -> `unknown` because the workload signals conflict.
+6. `Microsoft.NET.Sdk.BlazorWebAssembly` -> `web` with `subtype = blazor-webassembly`.
+7. `Microsoft.NET.Sdk.Web` -> `web`; service-lifetime package hints do not override Web.
+8. `Microsoft.NET.Sdk.Worker` -> `worker`.
+9. `UsingMicrosoftNETSdkWorker == true` -> `worker`.
+10. `OutputType == Exe` plus `Microsoft.Extensions.Hosting.Systemd` or `Microsoft.Extensions.Hosting.WindowsServices` -> `worker`.
+11. `OutputType == Exe` -> `console` when no more specific signal matched.
+12. `OutputType == Library` -> `library` when no more specific signal matched.
+13. otherwise -> `unknown`.
 
 A strong test signal therefore remains `test` even when the project is executable or declares a specialized workload SDK. Conflicting Web/Worker SDK declarations produce `unknown` only when no approved test signal has already matched.
 
@@ -140,6 +156,7 @@ A strong test signal therefore remains `test` even when the project is executabl
 | `test` | `IsTestProject == true` | `property:IsTestProject=true` | `high` |
 | `test` | declared `MSTest.Sdk` | `sdk:MSTest.Sdk` | `high` |
 | `test` | fallback `Microsoft.NET.Test.Sdk` with missing `IsTestProject` | `package:Microsoft.NET.Test.Sdk` | `medium` |
+| `web` / `blazor-webassembly` | declared `Microsoft.NET.Sdk.BlazorWebAssembly` | `sdk:Microsoft.NET.Sdk.BlazorWebAssembly` | `high` |
 | `web` | declared `Microsoft.NET.Sdk.Web` | `sdk:Microsoft.NET.Sdk.Web` | `high` |
 | `worker` | declared `Microsoft.NET.Sdk.Worker` | `sdk:Microsoft.NET.Sdk.Worker` | `high` |
 | `worker` | explicit Worker opt-in property | `property:UsingMicrosoftNETSdkWorker=true` | `high` |

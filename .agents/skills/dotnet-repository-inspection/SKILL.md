@@ -45,7 +45,7 @@ Classification precedence must be explicit and covered by tests. A reasonable ba
 4. identify library output/default library semantics;
 5. return Unknown when evidence is insufficient or conflicting.
 
-Treat `Microsoft.NET.Sdk.Web` as Web by default. Do not claim Web API, Razor Pages, MVC, or Blazor solely from the Web SDK; those are subtypes requiring additional reliable signals.
+Treat `Microsoft.NET.Sdk.Web` as Web by default. Do not claim Web API, Razor Pages, MVC, or server-side Blazor solely from the Web SDK; those are subtypes requiring additional reliable signals. The explicitly declared `Microsoft.NET.Sdk.BlazorWebAssembly` SDK is an authoritative signal for the `blazor-webassembly` subtype.
 
 When adding Functions or other workloads, document the exact signals and add isolated fixtures before adding the classification.
 

@@ -25,6 +25,8 @@ There is intentionally **no** `global.json` at the fixture root. A `global.json`
 | `RazorPagesSubtypeSignals/RazorClassLibraryOverlap` | Razor Class Libraries can contain Razor Page source and MVC support without being Web Razor Pages applications |
 | `BlazorServerSubtypeSignals/WebAppStaticSsr` | Real Blazor Web App source configuration remains indistinguishable from base Web through current structured classification facts |
 | `BlazorServerSubtypeSignals/InteractiveServer` | Interactive Server hosting is established only by source-level render-mode configuration |
+| `BlazorWebAssemblySubtypeSignals/StandaloneSdk` | Explicit `Microsoft.NET.Sdk.BlazorWebAssembly` deterministically identifies standalone/client Blazor WebAssembly |
+| `BlazorWebAssemblySubtypeSignals/RazorLibraryAmbiguous` | Razor component source without the Blazor WebAssembly SDK remains a non-match |
 | `ProjectKinds/Worker` | `Microsoft.NET.Sdk.Worker` |
 | `ProjectKinds/Console` | executable `OutputType` |
 | `ProjectKinds/Library` | default SDK library semantics |

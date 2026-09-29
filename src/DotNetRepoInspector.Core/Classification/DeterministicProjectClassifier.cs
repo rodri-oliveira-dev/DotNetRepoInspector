@@ -5,6 +5,7 @@ namespace DotNetRepoInspector.Core.Classification;
 public sealed class DeterministicProjectClassifier : IProjectClassifier
 {
     public const string WebSdk = "Microsoft.NET.Sdk.Web";
+    public const string BlazorWebAssemblySdk = "Microsoft.NET.Sdk.BlazorWebAssembly";
     public const string WorkerSdk = "Microsoft.NET.Sdk.Worker";
     public const string MSTestSdk = "MSTest.Sdk";
     public const string MicrosoftNetTestSdkPackage = "Microsoft.NET.Test.Sdk";
@@ -26,6 +27,9 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
 
     private static readonly IReadOnlyList<string> WebSignals =
         Array.AsReadOnly(new[] { $"sdk:{WebSdk}" });
+
+    private static readonly IReadOnlyList<string> BlazorWebAssemblySignals =
+        Array.AsReadOnly(new[] { $"sdk:{BlazorWebAssemblySdk}" });
 
     private static readonly IReadOnlyList<string> WorkerSignals =
         Array.AsReadOnly(new[] { $"sdk:{WorkerSdk}" });
@@ -80,6 +84,7 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
         }
 
         var hasWebSdk = declaredSdks.Contains(WebSdk);
+        var hasBlazorWebAssemblySdk = declaredSdks.Contains(BlazorWebAssemblySdk);
         var hasWorkerSdk = declaredSdks.Contains(WorkerSdk);
         var hasMSTestSdk = declaredSdks.Contains(MSTestSdk);
         var hasMicrosoftNetTestSdkPackage =
@@ -129,12 +134,43 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
                 SpecializedSdkConflictSignals);
         }
 
+        if (hasBlazorWebAssemblySdk && hasWorkerSdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                CreateConflictSignals(
+                    $"sdk:{BlazorWebAssemblySdk}",
+                    $"sdk:{WorkerSdk}",
+                    "conflict:specialized-sdk"));
+        }
+
         if (hasWebSdk && facts.UsingMicrosoftNETSdkWorker is true)
         {
             return new ProjectClassification(
                 ProjectClassificationKinds.Unknown,
                 null,
                 WebAndWorkerPropertyConflictSignals);
+        }
+
+        if (hasBlazorWebAssemblySdk && facts.UsingMicrosoftNETSdkWorker is true)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Unknown,
+                null,
+                CreateConflictSignals(
+                    $"sdk:{BlazorWebAssemblySdk}",
+                    "property:UsingMicrosoftNETSdkWorker=true",
+                    "conflict:web-worker"));
+        }
+
+        if (hasBlazorWebAssemblySdk)
+        {
+            return new ProjectClassification(
+                ProjectClassificationKinds.Web,
+                ProjectClassificationConfidence.High,
+                BlazorWebAssemblySignals,
+                Subtype: ProjectClassificationSubtypes.BlazorWebAssembly);
         }
 
         if (hasWebSdk)
@@ -198,6 +234,12 @@ public sealed class DeterministicProjectClassifier : IProjectClassifier
             null,
             signals);
     }
+
+    private static IReadOnlyList<string> CreateConflictSignals(
+        string first,
+        string second,
+        string conflict) =>
+        Array.AsReadOnly(new[] { first, second, conflict });
 
     private static string? Normalize(string? value) =>
         string.IsNullOrWhiteSpace(value)
