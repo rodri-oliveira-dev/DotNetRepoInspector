@@ -86,7 +86,7 @@ Then point the existing `config` input to it:
 
 If `.dotnetrepoinspector.json` at the inspected repository root contains the policy, omit `config`; the default file is loaded automatically.
 
-No policy-specific output is required. The existing `report-path` points to schema `1.5` JSON containing top-level `policyFindings`, while `exit-code` is `1` when any policy finding has severity `error`. Policy warnings keep exit code `0` when inspection diagnostics are otherwise clean.
+No policy-specific output is required. The existing `report-path` points to schema `1.6` JSON containing top-level `policyFindings`, while `exit-code` is `1` when any policy finding has severity `error`. Policy warnings keep exit code `0` when inspection diagnostics are otherwise clean.
 
 ## Configure exclusions and overrides
 

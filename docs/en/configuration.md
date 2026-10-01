@@ -119,7 +119,7 @@ The rule evaluates only normalized `ProjectInspection.TargetFrameworks` facts:
 - a project with no known target framework produces no policy finding because the rule does not invent a violation from missing inspection facts;
 - projects are evaluated in repository-relative path order, so finding order is deterministic.
 
-Policy findings are distinct from inspection diagnostics. Enabled rules are evaluated after the normalized inspection report is built, and their results are emitted as top-level `policyFindings` in inspection schema `1.5`. The CLI and GitHub Action return exit code `1` when any policy finding has severity `error`; policy warnings do not fail an otherwise healthy inspection.
+Policy findings are distinct from inspection diagnostics. Enabled rules are evaluated after the normalized inspection report is built, and their results are emitted as top-level `policyFindings` in the current inspection schema `1.6` (the field was introduced in `1.5`). The CLI and GitHub Action return exit code `1` when any policy finding has severity `error`; policy warnings do not fail an otherwise healthy inspection.
 
 ## CLI configuration
 

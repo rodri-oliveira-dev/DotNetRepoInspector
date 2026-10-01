@@ -119,7 +119,7 @@ A rule avalia somente fatos normalizados de `ProjectInspection.TargetFrameworks`
 - um projeto sem target framework conhecido não gera finding de policy, pois a rule não inventa violação a partir de fatos ausentes da inspeção;
 - os projetos são avaliados em ordem de caminho relativo ao repositório, mantendo a ordem dos findings determinística.
 
-Findings de policy são distintos de diagnostics da inspeção. Rules habilitadas são avaliadas depois que o relatório normalizado de inspeção é construído, e seus resultados são emitidos em `policyFindings` no nível superior do schema de inspeção `1.5`. A CLI e a GitHub Action retornam exit code `1` quando qualquer finding de policy possui severidade `error`; warnings de policy não falham uma inspeção que esteja saudável.
+Findings de policy são distintos de diagnostics da inspeção. Rules habilitadas são avaliadas depois que o relatório normalizado de inspeção é construído, e seus resultados são emitidos em `policyFindings` no nível superior do schema de inspeção atual `1.6` (o campo foi introduzido na `1.5`). A CLI e a GitHub Action retornam exit code `1` quando qualquer finding de policy possui severidade `error`; warnings de policy não falham uma inspeção que esteja saudável.
 
 ## Configuração pela CLI
 
