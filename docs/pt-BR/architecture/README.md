@@ -1,5 +1,7 @@
 # Arquitetura
 
+O catálogo de detectores built-in reconhece HTTP de saída; RabbitMQ, MassTransit, Kafka, NServiceBus e abstrações customizadas de mensageria fortemente tipadas; AWS SQS, SNS, EventBridge e Kinesis; Azure Service Bus, Event Hubs e Event Grid; e Google Cloud Pub/Sub. O suporte de cloud é implementado por detectores independentes registrados no catálogo comum, portanto adicionar um provider não adiciona lógica específica na Engine. Identificadores de recursos cloud são reduzidos a nomes lógicos seguros ou chaves de configuração; credenciais, identificadores de conta/projeto, connection strings e payloads de mensagens não se tornam findings.
+
 **Idiomas:** [English](../../en/architecture/README.md) | Português (Brasil)
 
 Fronteiras atuais:
