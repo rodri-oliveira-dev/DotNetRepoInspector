@@ -32,7 +32,7 @@ public sealed class RepositoryInspector : IRepositoryInspector
             new MsBuildProjectFactsEvaluator(),
             new DotNetSdkInspector(),
             new GitRepositoryMetadataProvider(),
-            new IntegrationDiscoveryPipeline(Array.Empty<IIntegrationDetector>()))
+            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()))
     {
     }
 
@@ -46,7 +46,7 @@ public sealed class RepositoryInspector : IRepositoryInspector
             projectFactsEvaluator,
             sdkInspector,
             gitMetadataProvider,
-            new IntegrationDiscoveryPipeline(Array.Empty<IIntegrationDetector>()))
+            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()))
     {
     }
 
