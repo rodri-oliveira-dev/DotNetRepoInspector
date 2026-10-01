@@ -573,8 +573,8 @@ jobs:
             throw "Expected policy success exit code 0, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected policy success schema 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected policy success schema 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
@@ -609,8 +609,8 @@ jobs:
             throw "Expected policy violation exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected policy violation schema 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected policy violation schema 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not (Test-Path -LiteralPath $env:REPORT_PATH -PathType Leaf)) {
