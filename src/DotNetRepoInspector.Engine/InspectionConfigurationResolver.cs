@@ -13,6 +13,7 @@ internal sealed record EffectiveInspectionConfiguration(
     IReadOnlyList<string> ExcludedPaths,
     IReadOnlyDictionary<string, EffectiveClassificationOverride> ClassificationOverrides,
     IReadOnlyList<IPolicyRule> PolicyRules,
+    bool DiscoverIntegrations,
     InspectionDiagnostic? Error)
 {
     public bool Succeeded => Error is null;
@@ -20,14 +21,16 @@ internal sealed record EffectiveInspectionConfiguration(
     public static EffectiveInspectionConfiguration Success(
         IReadOnlyList<string> excludedPaths,
         IReadOnlyDictionary<string, EffectiveClassificationOverride> classificationOverrides,
-        IReadOnlyList<IPolicyRule> policyRules) =>
-        new(excludedPaths, classificationOverrides, policyRules, null);
+        IReadOnlyList<IPolicyRule> policyRules,
+        bool discoverIntegrations) =>
+        new(excludedPaths, classificationOverrides, policyRules, discoverIntegrations, null);
 
     public static EffectiveInspectionConfiguration Failure(InspectionDiagnostic error) =>
         new(
             Array.Empty<string>(),
             new Dictionary<string, EffectiveClassificationOverride>(StringComparer.Ordinal),
             Array.Empty<IPolicyRule>(),
+            false,
             error);
 }
 
@@ -68,6 +71,7 @@ internal static class InspectionConfigurationResolver
         var excludedPaths = new HashSet<string>(PathComparer);
         var classificationOverrides = new Dictionary<string, EffectiveClassificationOverride>(PathComparer);
         var policyRules = new List<IPolicyRule>();
+        bool? configuredIntegrationDiscovery = null;
 
         if (!request.DisableConfigurationFile)
         {
@@ -140,6 +144,23 @@ internal static class InspectionConfigurationResolver
                     return Failure(configurationSource, "policies-require-config-schema-2");
                 }
 
+                if (document.IntegrationDiscovery is not null &&
+                    !string.Equals(
+                        document.SchemaVersion,
+                        CurrentConfigurationSchemaVersion,
+                        StringComparison.Ordinal))
+                {
+                    return Failure(configurationSource, "integration-discovery-requires-config-schema-2");
+                }
+
+                if (document.IntegrationDiscovery is not null &&
+                    document.IntegrationDiscovery.Enabled is null)
+                {
+                    return Failure(configurationSource, "integration-discovery-enabled-required");
+                }
+
+                configuredIntegrationDiscovery = document.IntegrationDiscovery?.Enabled;
+
                 var exclusionError = AddExcludedPaths(
                     repositoryRoot,
                     document.Exclude,
@@ -208,7 +229,8 @@ internal static class InspectionConfigurationResolver
         return EffectiveInspectionConfiguration.Success(
             excludedPaths.OrderBy(static path => path, StringComparer.Ordinal).ToArray(),
             classificationOverrides,
-            policyRules.ToArray());
+            policyRules.ToArray(),
+            request.DiscoverIntegrations ?? configuredIntegrationDiscovery ?? false);
     }
 
     private static InspectionDiagnostic? AddExcludedPaths(
@@ -421,6 +443,21 @@ internal static class InspectionConfigurationResolver
         }
 
         public PoliciesDocument? Policies
+        {
+            get;
+            init;
+        }
+
+        public IntegrationDiscoveryDocument? IntegrationDiscovery
+        {
+            get;
+            init;
+        }
+    }
+
+    private sealed class IntegrationDiscoveryDocument
+    {
+        public bool? Enabled
         {
             get;
             init;

@@ -18,6 +18,26 @@ public sealed class CliOptionsParserTests
         Assert.False(result.Options.DisableConfigurationFile);
         Assert.Empty(result.Options.ExcludedPaths);
         Assert.Empty(result.Options.ClassificationOverrides);
+        Assert.Null(result.Options.DiscoverIntegrations);
+    }
+
+    [Fact]
+    public void Parse_EnablesIntegrationDiscoveryExplicitly()
+    {
+        CliParseResult result = CliOptionsParser.Parse(["--discover-integrations"]);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.Options?.DiscoverIntegrations);
+    }
+
+    [Fact]
+    public void Parse_RejectsDuplicateIntegrationDiscoveryOption()
+    {
+        CliParseResult result = CliOptionsParser.Parse(
+            ["--discover-integrations", "--discover-integrations"]);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("only be specified once", result.Error, StringComparison.Ordinal);
     }
 
     [Fact]

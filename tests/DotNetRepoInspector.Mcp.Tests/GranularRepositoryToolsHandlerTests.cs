@@ -93,9 +93,78 @@ public sealed class GranularRepositoryToolsHandlerTests
     }
 
     [Fact]
+    public async Task ListIntegrations_FiltersAndPaginatesBoundedResults()
+    {
+        IntegrationFinding http = IntegrationFinding.Create(
+            "src/App/App.csproj",
+            IntegrationKind.Http,
+            IntegrationDirection.Outbound,
+            "httpclient",
+            new IntegrationSourceLocation("src/App/Client.cs", 10),
+            IntegrationConfidence.High,
+            ["http:client"],
+            target: "orders");
+        IntegrationFinding messaging = IntegrationFinding.Create(
+            "src/Lib/Lib.csproj",
+            IntegrationKind.Messaging,
+            IntegrationDirection.Publish,
+            "kafka",
+            new IntegrationSourceLocation("src/Lib/Publisher.cs", 20),
+            IntegrationConfidence.High,
+            ["kafka:produce"],
+            target: "events",
+            resourceType: "topic");
+        InspectionReport report = CreateReport() with
+        {
+            Integrations = [http, messaging],
+            IntegrationDiscovery = IntegrationDiscoveryMetadata.Complete(truncated: false)
+        };
+        var handler = CreateHandler(report);
+
+        var filtered = await handler.ListIntegrationsAsync(
+            true, "src/Lib/Lib.csproj", IntegrationKind.Messaging,
+            IntegrationDirection.Publish, "kafka", 0, 1,
+            null, false, null, null, TestContext.Current.CancellationToken);
+        var data = Data(filtered);
+
+        Assert.Equal(1, data.GetProperty("total").GetInt32());
+        Assert.False(data.GetProperty("hasMore").GetBoolean());
+        Assert.Equal("kafka", data.GetProperty("integrations")[0].GetProperty("technology").GetString());
+
+        var firstPage = await handler.ListIntegrationsAsync(
+            true, null, null, null, null, 0, 1,
+            null, false, null, null, TestContext.Current.CancellationToken);
+        Assert.True(Data(firstPage).GetProperty("hasMore").GetBoolean());
+    }
+
+    [Fact]
+    public async Task ListIntegrations_ReportsDisabledDiscoveryAndRejectsInvalidInput()
+    {
+        var handler = CreateHandler(CreateReport());
+
+        var disabled = await handler.ListIntegrationsAsync(
+            null, null, null, null, null, 0, 100,
+            null, false, null, null, TestContext.Current.CancellationToken);
+        Assert.Equal("integration_discovery_not_enabled", ErrorCode(disabled));
+
+        var invalidFilter = await handler.ListIntegrationsAsync(
+            true, null, "not-a-kind", null, null, 0, 100,
+            null, false, null, null, TestContext.Current.CancellationToken);
+        Assert.Equal("invalid_tool_input", ErrorCode(invalidFilter));
+
+        var invalidPage = await handler.ListIntegrationsAsync(
+            true, null, null, null, null, 0, McpSecurityLimits.MaxIntegrationPageSize + 1,
+            null, false, null, null, TestContext.Current.CancellationToken);
+        Assert.Equal("invalid_tool_input", ErrorCode(invalidPage));
+    }
+
+    [Fact]
     public async Task RepositoryInspectionTools_DelegateEveryPublicTool()
     {
-        var report = CreateReport();
+        var report = CreateReport() with
+        {
+            IntegrationDiscovery = IntegrationDiscoveryMetadata.Complete(truncated: false)
+        };
         var granular = CreateHandler(report);
         var inspect = new InspectRepositoryHandler(new RepositoryInspectionExecutor(
             StubInspector.Returning(report),
@@ -120,6 +189,10 @@ public sealed class GranularRepositoryToolsHandlerTests
             cancellationToken: cancellationToken)).IsError);
         Assert.False((await RepositoryInspectionTools.GetSdkMetadataAsync(
             granular,
+            cancellationToken: cancellationToken)).IsError);
+        Assert.False((await RepositoryInspectionTools.ListIntegrationsAsync(
+            granular,
+            discoverIntegrations: true,
             cancellationToken: cancellationToken)).IsError);
     }
 

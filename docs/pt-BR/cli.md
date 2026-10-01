@@ -110,6 +110,7 @@ O primeiro argumento posicional é o caminho do repositório. Quando omitido, o 
     --no-config              Ignora o arquivo padrão .dotnetrepoinspector.json.
     --exclude <path>         Exclui um diretório ou projeto relativo ao repositório. Repetível.
     --classify <path>=<kind> Sobrescreve a classificação de um projeto. Repetível.
+    --discover-integrations  Analisa sintaxe de source para integrações externas (opt-in, limitada).
     --sink http              Persiste um snapshot pelo sink HTTP/webhook built-in.
     --sink-url <url>         Endpoint HTTP/HTTPS usado pelo sink selecionado.
     --sink-timeout-seconds   Timeout total da persistência em segundos. Padrão: 15.
@@ -133,11 +134,13 @@ Automações e consumidores de inventário de frota devem tratar a coleção `pr
 
 ## Configuração do repositório
 
-Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório, overrides explícitos de classificação e policies opt-in. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.
+Quando `.dotnetrepoinspector.json` existe na raiz do repositório inspecionado, ele é carregado automaticamente. O arquivo pode definir exclusões relativas ao repositório, overrides explícitos de classificação, Integration Discovery e policies opt-in. Ele é totalmente opcional; quando ausente, o comportamento zero-config existente é preservado.
 
 Use `--config` para selecionar outro arquivo relativo ao repositório, ou `--no-config` para ignorar o carregamento automático do arquivo padrão. `--config` e `--no-config` são mutuamente exclusivos.
 
 Valores diretos de `--exclude` são aditivos às exclusões do arquivo. Uma entrada direta de `--classify` tem precedência sobre o override do arquivo para o mesmo projeto. Consulte [`configuration.md`](configuration.md) para formato versionado, regras de caminho, proveniência dos overrides, diagnósticos e política completa de precedência.
+
+`--discover-integrations` habilita análise limitada da sintaxe de source. Permanece desabilitado por padrão, não executa código do repositório nem usa a rede e mantém JSON legível por máquina em stdout/arquivo enquanto logs operacionais ficam em stderr. A mesma capability pode ser habilitada por `integrationDiscovery.enabled`; a flag direta tem precedência.
 
 Exemplos:
 

@@ -111,7 +111,7 @@ Essa fronteira restringe caminhos fornecidos pelo cliente; ela não é um sandbo
 
 ## Contratos comuns de input e resposta
 
-Todas as seis tools são anunciadas como read-only, não destrutivas, idempotentes e closed-world. Propriedades de input desconhecidas são rejeitadas. Exceto pelo `projectPath` obrigatório de `get_project_details`, todo input é opcional:
+Todas as sete tools são anunciadas como read-only, não destrutivas, idempotentes e closed-world. Propriedades de input desconhecidas são rejeitadas. Exceto pelo `projectPath` obrigatório de `get_project_details`, todo input é opcional:
 
 | Propriedade | Tipo JSON | Significado |
 | --- | --- | --- |
@@ -119,6 +119,7 @@ Todas as seis tools são anunciadas como read-only, não destrutivas, idempotent
 | `disableConfigurationFile` | `boolean` | Desabilita tanto o arquivo de configuração padrão quanto um explícito. O padrão é `false`. |
 | `excludedPaths` | `string[]` | Caminhos de projetos relativos ao repositório a omitir. |
 | `classificationOverrides` | `object<string,string>` | Valores de classificação por caminho de projeto relativo ao repositório. |
+| `discoverIntegrations` | `boolean` | Disponível em `inspect_repository` e `list_integrations`; sobrescreve explicitamente a configuração do repositório. |
 
 `configurationPath` não pode ser combinado com `disableConfigurationFile: true`. Quando nenhum deles é fornecido, a Engine pode carregar `.dotnetrepoinspector.json` do root. A semântica de configuração está em [configuration.md](configuration.md).
 
@@ -139,9 +140,9 @@ Em uma falha esperada da tool, `ok` é `false`, `data` é `null`, o `isError` MC
 
 ### `inspect_repository`
 
-Objetivo: retornar o `InspectionReport` canônico completo, incluindo metadados do repositório/Git, dados do SDK configurado e resolvido, projetos, classificações, referências e diagnósticos.
+Objetivo: retornar o `InspectionReport` canônico completo, incluindo metadados do repositório/Git, dados do SDK configurado e resolvido, projetos, classificações, referências, diagnósticos e findings de integração opt-in.
 
-Schema de input: os quatro [inputs comuns](#contratos-comuns-de-input-e-resposta); nenhuma propriedade obrigatória e `additionalProperties: false`.
+Schema de input: os inputs comuns mais `discoverIntegrations`; nenhuma propriedade obrigatória e `additionalProperties: false`.
 
 Exemplo de request:
 
@@ -174,6 +175,14 @@ Estrutura resumida da resposta (o report completo segue o [schema de inspeção]
 ```
 
 Erros esperados: todos os erros comuns listados abaixo. Problemas recuperáveis de projeto, SDK, configuração e Git normalmente aparecem como diagnósticos do report, não como erros MCP da tool.
+
+### `list_integrations`
+
+Objetivo: executar o mesmo pipeline limitado de Integration Discovery usado pela Engine e retornar uma página filtrada determinística. A tool nunca recebe source code nem retorna snippets/config values.
+
+Os inputs incluem os inputs comuns de inspeção, `discoverIntegrations`, filtros exatos opcionais `projectPath`, `kind`, `direction` e `technology`, além de `offset` baseado em zero (`0..100000`) e `limit` (`1..200`, padrão `100`). Defina `discoverIntegrations: true` ou habilite `integrationDiscovery.enabled` na configuração. Se discovery não estiver habilitado, a tool retorna `integration_discovery_not_enabled` em vez de um resultado vazio ambíguo.
+
+Os dados da resposta incluem `inspectionSchemaVersion`, `offset`, `limit`, `total`, `hasMore`, `truncated` e `integrations`. Filtros fechados, paths ou paginação inválidos retornam `invalid_tool_input` ou o erro existente da fronteira de paths.
 
 ### `list_projects`
 

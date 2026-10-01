@@ -35,6 +35,10 @@ inputs:
     description: Newline-separated '<project-path>=<kind>' classification overrides.
     required: false
     default: ""
+  discover-integrations:
+    description: Set to true to enable bounded, syntax-only Integration Discovery. Defaults to false.
+    required: false
+    default: "false"
   sink-url:
     description: Optional HTTP/HTTPS endpoint that enables snapshot persistence through the built-in HTTP sink.
     required: false
@@ -94,6 +98,7 @@ runs:
         DRI_INPUT_EXCLUDE: "${{ inputs.exclude }}"
         DRI_INPUT_EXCLUDE_REPOSITORIES: "${{ inputs['exclude-repositories'] }}"
         DRI_INPUT_CLASSIFY: "${{ inputs.classify }}"
+        DRI_INPUT_DISCOVER_INTEGRATIONS: "${{ inputs['discover-integrations'] }}"
         DRI_INPUT_SINK_URL: "${{ inputs['sink-url'] }}"
         DRI_INPUT_SINK_TIMEOUT_SECONDS: "${{ inputs['sink-timeout-seconds'] }}"
         DRI_INPUT_SINK_FAILURE_MODE: "${{ inputs['sink-failure-mode'] }}"

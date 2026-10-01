@@ -18,6 +18,9 @@ When present at the inspected repository root, `.dotnetrepoinspector.json` is lo
   "classificationOverrides": {
     "src/App/App.csproj": "web"
   },
+  "integrationDiscovery": {
+    "enabled": false
+  },
   "policies": {
     "targetFramework": {
       "enabled": true,
@@ -28,7 +31,7 @@ When present at the inspected repository root, `.dotnetrepoinspector.json` is lo
 }
 ```
 
-`schemaVersion` is required. Configuration schema `1` remains supported for exclusions and classification overrides; schema `2` is the current version and adds the optional `policies` section. A `policies` section in schema `1` is rejected instead of being interpreted implicitly. Unknown properties are rejected so misspelled configuration does not silently change inspection behavior.
+`schemaVersion` is required. Configuration schema `1` remains supported for exclusions and classification overrides; schema `2` is the current version and adds the optional `policies` and `integrationDiscovery` sections. Either section in schema `1` is rejected instead of being interpreted implicitly. Unknown properties are rejected so misspelled configuration does not silently change inspection behavior.
 
 All configured paths are relative to the inspected repository root and must remain inside that root. Absolute paths and paths that escape through `..` are invalid. Paths use repository-relative semantics; `/` is recommended in versioned configuration.
 
@@ -73,6 +76,21 @@ The automatic signals remain present. `automaticKind` records the classifier's o
 
 If an override references a project that is not discovered, the inspection continues and emits `DRI1014` with severity `warning`. This makes stale configuration visible without turning it into an inspection failure.
 
+## Integration Discovery
+
+Integration Discovery is disabled by default. Schema `2` can enable the same bounded, syntax-only capability exposed by the CLI and Action:
+
+```json
+{
+  "schemaVersion": "2",
+  "integrationDiscovery": {
+    "enabled": true
+  }
+}
+```
+
+The scanner reads supported C# source files but does not execute repository code or use the network. Its normalized findings exclude source snippets, payloads, queries, connection strings, and credentials.
+
 ## Policies
 
 Policies are opt-in. With no configuration file, with no `policies` section, or with `targetFramework.enabled: false`, no policy rule is registered and inspection behavior is unchanged.
@@ -111,7 +129,8 @@ The CLI exposes the same concepts directly:
 dotnet repo-inspect . \
   --exclude generated \
   --exclude samples/Legacy.csproj \
-  --classify src/App/App.csproj=web
+  --classify src/App/App.csproj=web \
+  --discover-integrations
 ```
 
 Use a non-default configuration file with:
@@ -143,6 +162,7 @@ The reusable Action exposes the same concepts. `exclude` and `classify` accept n
       samples/Legacy.csproj
     classify: |
       src/App/App.csproj=web
+    discover-integrations: "true"
 ```
 
 A custom config file can be supplied through `config`; `no-config: "true"` disables automatic loading of the default file.
@@ -161,6 +181,8 @@ Exclusions are additive: direct `--exclude` / Action `exclude` values are combin
 
 For classification, a direct `--classify` / Action `classify` entry for the same project replaces the file's entry. In the resulting JSON its `classification.source` is `request`; a file-only override uses `configuration`.
 
+For Integration Discovery, direct CLI/MCP/Action opt-in takes precedence over the file. If no direct value exists, `integrationDiscovery.enabled` is used; if neither exists, the effective value is `false`.
+
 `--no-config` / Action `no-config` removes the file layer entirely. Direct exclusions and classification overrides still apply.
 
 ## Invalid configuration
@@ -175,6 +197,7 @@ Invalid repository configuration is represented in the normal inspection contrac
 - an unsupported classification kind;
 - conflicting `--config` and `--no-config` semantics at the Engine boundary;
 - a `policies` section under legacy schema `1`;
+- an `integrationDiscovery` section under legacy schema `1`, or one without `enabled`;
 - missing `targetFramework.enabled`, an enabled rule without an `allowed` list, blank allowed TFMs, or an unsupported policy severity.
 
 The Engine returns an `InspectionReport` containing the diagnostic instead of throwing away the machine-readable result. The CLI therefore exits with code `1` and the GitHub Action preserves the same exit code while exposing the report path when available.

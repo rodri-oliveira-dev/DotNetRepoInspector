@@ -446,8 +446,8 @@ jobs:
             throw "Expected Inspector version '$env:ACTION_TEST_TOOL_VERSION', actual '$env:INSPECTOR_VERSION'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected schema version 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected schema version 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -459,6 +459,10 @@ jobs:
           }
 
           $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if ($report.integrationDiscovery.enabled -ne $false -or
+              $report.integrationDiscovery.completed -ne $false) {
+            throw "Integration Discovery must remain disabled by default."
+          }
           if (@($report.projects).Count -ne 5) {
             throw "Expected five projects after exclusion, actual '$(@($report.projects).Count)'."
           }
@@ -476,6 +480,36 @@ jobs:
               $library.classification.source -ne "request" -or
               $library.classification.automaticKind -ne "library") {
             throw "Action classification override provenance was not preserved."
+          }
+
+      - name: Run Action with Integration Discovery
+        if: matrix.os == 'ubuntu-latest'
+        id: integrations
+        uses: ./
+        with:
+          path: ./tests/Fixtures/IntegrationDiscovery/Http
+          output: ./artifacts/action-smoke/integrations.json
+          discover-integrations: "true"
+
+      - name: Validate Action Integration Discovery opt-in
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        env:
+          EXIT_CODE: "${{ steps.integrations.outputs.exit-code }}"
+          REPORT_PATH: "${{ steps.integrations.outputs.report-path }}"
+        run: |
+          if ($env:EXIT_CODE -ne "0") {
+            throw "Expected Integration Discovery exit code 0, actual '$env:EXIT_CODE'."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if ($report.integrationDiscovery.enabled -ne $true -or
+              $report.integrationDiscovery.completed -ne $true) {
+            throw "Integration Discovery opt-in metadata was not preserved."
+          }
+
+          if (@($report.integrations).Count -eq 0) {
+            throw "Integration Discovery opt-in produced no findings."
           }
 
       - name: Verify non-zero CLI exit propagation and default report path
@@ -503,8 +537,8 @@ jobs:
             throw "Expected propagated CLI exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected schema version 1.5 from the partial report, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected schema version 1.6 from the partial report, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {

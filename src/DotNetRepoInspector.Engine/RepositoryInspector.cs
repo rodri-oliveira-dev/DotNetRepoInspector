@@ -158,7 +158,7 @@ public sealed class RepositoryInspector : IRepositoryInspector
             .ToArray();
 
         var integrationResult = IntegrationDiscoveryResult.Empty;
-        if (request.DiscoverIntegrations)
+        if (configuration.DiscoverIntegrations)
         {
             integrationResult = await _integrationDiscoveryPipeline.DiscoverAsync(
                 new IntegrationDiscoveryRequest(
@@ -178,7 +178,10 @@ public sealed class RepositoryInspector : IRepositoryInspector
             projects,
             OrderDiagnostics(diagnostics)) with
         {
-            Integrations = integrationResult.Findings
+            Integrations = integrationResult.Findings,
+            IntegrationDiscovery = configuration.DiscoverIntegrations
+                ? IntegrationDiscoveryMetadata.Complete(integrationResult.Truncated)
+                : IntegrationDiscoveryMetadata.NotExecuted
         };
 
         if (configuration.PolicyRules.Count == 0)

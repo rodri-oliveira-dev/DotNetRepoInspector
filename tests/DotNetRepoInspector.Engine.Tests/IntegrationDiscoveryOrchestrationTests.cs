@@ -27,6 +27,7 @@ public sealed class IntegrationDiscoveryOrchestrationTests
 
             Assert.Equal(0, discovery.CallCount);
             Assert.Empty(report.Integrations);
+            Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
         }
         finally
         {
@@ -77,6 +78,77 @@ public sealed class IntegrationDiscoveryOrchestrationTests
             Assert.Contains("Excluded", discovery.ObservedRequest?.ExcludedPaths ?? []);
             Assert.Equal(finding, Assert.Single(report.Integrations));
             Assert.Equal(diagnostic, Assert.Single(report.Diagnostics));
+            Assert.Equal(new IntegrationDiscoveryMetadata(true, true, false), report.IntegrationDiscovery);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InspectAsync_ConfigurationEnablesDiscoveryAndRequestCanDisableIt()
+    {
+        string repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Integrations-").FullName;
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(repositoryRoot, ".dotnetrepoinspector.json"),
+                """
+                {
+                  "schemaVersion": "2",
+                  "integrationDiscovery": { "enabled": true }
+                }
+                """,
+                TestContext.Current.CancellationToken);
+            var discovery = new RecordingIntegrationDiscoveryPipeline(
+                new IntegrationDiscoveryResult([], [], true));
+            RepositoryInspector inspector = CreateInspector(discovery);
+
+            InspectionReport enabled = await inspector.InspectAsync(
+                new RepositoryInspectionRequest(repositoryRoot),
+                TestContext.Current.CancellationToken);
+            InspectionReport disabled = await inspector.InspectAsync(
+                new RepositoryInspectionRequest(repositoryRoot, DiscoverIntegrations: false),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(new IntegrationDiscoveryMetadata(true, true, true), enabled.IntegrationDiscovery);
+            Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, disabled.IntegrationDiscovery);
+            Assert.Equal(1, discovery.CallCount);
+        }
+        finally
+        {
+            Directory.Delete(repositoryRoot, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task InspectAsync_RejectsIntegrationDiscoveryConfigurationWithoutEnabled()
+    {
+        string repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Integrations-").FullName;
+
+        try
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(repositoryRoot, ".dotnetrepoinspector.json"),
+                """
+                {
+                  "schemaVersion": "2",
+                  "integrationDiscovery": {}
+                }
+                """,
+                TestContext.Current.CancellationToken);
+            var discovery = new RecordingIntegrationDiscoveryPipeline();
+
+            InspectionReport report = await CreateInspector(discovery).InspectAsync(
+                new RepositoryInspectionRequest(repositoryRoot),
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(0, discovery.CallCount);
+            Assert.Equal(
+                "integration-discovery-enabled-required",
+                Assert.Single(report.Diagnostics).Context?["reason"]);
         }
         finally
         {

@@ -86,6 +86,8 @@ A policy inicial de TargetFramework usa o código `DRP0001`. Um array `policyFin
 
 O schema `1.6` adiciona a coleção opcional `integrations` no nível superior. Ela só é preenchida quando Integration Discovery é habilitado explicitamente; o fluxo de inspeção padrão não lê arquivos de código-fonte. Cada finding contém `id` determinístico, proveniência relativa ao projeto (`projectPath`, `source.path` e `source.line` baseada em um), `kind`, `direction`, `technology` reconhecida, `confidence` e `signals` determinísticos. Evidência lógica segura também pode incluir `target`, `resourceType`, `configurationKey` e `contract`.
 
+Todo report serializado novo também inclui `integrationDiscovery`: `enabled=false, completed=false` significa que a capability não foi executada; `enabled=true, completed=true` com `integrations` vazio significa que ela executou e não encontrou dependências. `truncated=true` registra que um budget de segurança foi atingido. Payloads v1 compatíveis mais antigos sem esse metadata são desserializados como não executados.
+
 O contrato nunca contém bodies de source, payloads, bodies de requests ou mensagens, queries, connection strings, credenciais, headers de autenticação, valores de configuração ou propriedades avaliadas arbitrárias. `configurationKey` identifica somente uma chave; nunca contém o valor correspondente. Detectores devem omitir evidência que não possa ser representada com segurança e usar confiança conservadora em vez de inventar endpoint remoto ou topologia runtime.
 
 ## Caminhos

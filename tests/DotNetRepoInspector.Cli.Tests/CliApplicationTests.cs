@@ -28,6 +28,55 @@ public sealed class CliApplicationTests
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "web");
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "worker");
         Assert.Empty(report.PolicyFindings);
+        Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
+    }
+
+    [Theory]
+    [InlineData("--discover-integrations")]
+    [InlineData("integration-enabled.json")]
+    public async Task RunAsync_IntegrationDiscoveryOptInProducesFindings(string optIn)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+        string fixture = FixturePath(Path.Combine("IntegrationDiscovery", "Http"));
+        string[] args = optIn.StartsWith("--", StringComparison.Ordinal)
+            ? [fixture, optIn]
+            : [fixture, "--config", optIn];
+
+        int exitCode = await application.RunAsync(
+            args,
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        InspectionReport report = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.True(report.IntegrationDiscovery.Enabled);
+        Assert.True(report.IntegrationDiscovery.Completed);
+        Assert.NotEmpty(report.Integrations);
+        Assert.DoesNotContain("PRIVATE", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_DisabledConfigurationDoesNotAnalyzeSource()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+        int exitCode = await application.RunAsync(
+            [FixturePath(Path.Combine("IntegrationDiscovery", "Http")), "--config", "integration-disabled.json"],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        InspectionReport report = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
+        Assert.Empty(report.Integrations);
+        Assert.Equal(string.Empty, error.ToString());
     }
 
     [Fact]

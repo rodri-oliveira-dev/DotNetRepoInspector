@@ -86,6 +86,8 @@ The initial TargetFramework policy uses rule code `DRP0001`. An empty `policyFin
 
 Schema `1.6` adds the optional top-level `integrations` collection. It is populated only when Integration Discovery is explicitly enabled; the default inspection path does not read source files. Each finding carries a deterministic `id`, project-relative provenance (`projectPath`, `source.path`, and one-based `source.line`), `kind`, `direction`, recognized `technology`, `confidence`, and deterministic `signals`. Safe logical evidence can additionally include `target`, `resourceType`, `configurationKey`, and `contract`.
 
+Every newly serialized report also includes `integrationDiscovery`: `enabled=false, completed=false` means the capability was not run; `enabled=true, completed=true` with an empty `integrations` array means it ran and found nothing. `truncated=true` records that a configured safety budget was reached. Older compatible v1 payloads without this additive metadata deserialize as not executed.
+
 The contract never contains source bodies, payloads, request or message bodies, queries, connection strings, credentials, authentication headers, configuration values, or arbitrary evaluated properties. `configurationKey` identifies a key only; it never contains the corresponding value. Detectors must omit evidence that cannot be represented safely and use conservative confidence rather than inventing a remote endpoint or runtime topology.
 
 ## Paths

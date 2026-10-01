@@ -111,7 +111,7 @@ This boundary constrains client-supplied paths; it is not an operating-system sa
 
 ## Common input and response contracts
 
-All six tools are advertised as read-only, non-destructive, idempotent, and closed-world. Unknown input properties are rejected. Except for the required `projectPath` on `get_project_details`, every input is optional:
+All seven tools are advertised as read-only, non-destructive, idempotent, and closed-world. Unknown input properties are rejected. Except for the required `projectPath` on `get_project_details`, every input is optional:
 
 | Property | JSON type | Meaning |
 | --- | --- | --- |
@@ -119,6 +119,7 @@ All six tools are advertised as read-only, non-destructive, idempotent, and clos
 | `disableConfigurationFile` | `boolean` | Disables both the default and an explicit configuration file. Defaults to `false`. |
 | `excludedPaths` | `string[]` | Repository-relative project paths to omit. |
 | `classificationOverrides` | `object<string,string>` | Classification values keyed by repository-relative project path. |
+| `discoverIntegrations` | `boolean` | Available on `inspect_repository` and `list_integrations`; explicitly overrides repository configuration. |
 
 `configurationPath` cannot be combined with `disableConfigurationFile: true`. When neither is supplied, the Engine may load `.dotnetrepoinspector.json` from the root. Configuration semantics are described in [configuration.md](configuration.md).
 
@@ -139,9 +140,9 @@ On an expected tool failure, `ok` is `false`, `data` is `null`, MCP `isError` is
 
 ### `inspect_repository`
 
-Purpose: return the complete canonical `InspectionReport`, including repository/Git metadata, configured and resolved SDK data, projects, classifications, references, and diagnostics.
+Purpose: return the complete canonical `InspectionReport`, including repository/Git metadata, configured and resolved SDK data, projects, classifications, references, diagnostics, and opt-in integration findings.
 
-Input schema: the four [common inputs](#common-input-and-response-contracts); no required properties and `additionalProperties: false`.
+Input schema: the common inputs plus `discoverIntegrations`; no required properties and `additionalProperties: false`.
 
 Example request:
 
@@ -174,6 +175,14 @@ Abridged response shape (the complete report follows the [inspection schema](sch
 ```
 
 Expected errors: all common tool errors listed below. Recoverable project, SDK, configuration, and Git problems are usually diagnostics in the report rather than MCP tool errors.
+
+### `list_integrations`
+
+Purpose: run the same bounded Integration Discovery pipeline used by the Engine and return a deterministic filtered page. It never accepts source code or returns source snippets/configuration values.
+
+Inputs include the common inspection inputs, `discoverIntegrations`, exact optional filters `projectPath`, `kind`, `direction`, and `technology`, plus zero-based `offset` (`0..100000`) and `limit` (`1..200`, default `100`). Set `discoverIntegrations: true` or enable `integrationDiscovery.enabled` in repository configuration. If discovery was not enabled, the tool returns `integration_discovery_not_enabled` instead of an ambiguous empty result.
+
+Response data includes `inspectionSchemaVersion`, `offset`, `limit`, `total`, `hasMore`, `truncated`, and `integrations`. Invalid closed-value filters, paths, or pagination return `invalid_tool_input` or the existing path-boundary error.
 
 ### `list_projects`
 

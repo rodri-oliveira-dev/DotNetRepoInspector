@@ -103,7 +103,8 @@ public sealed class CliApplication
                     ConfigurationPath: options.ConfigurationPath,
                     DisableConfigurationFile: options.DisableConfigurationFile,
                     ExcludedPaths: options.ExcludedPaths,
-                    ClassificationOverrides: options.ClassificationOverrides),
+                    ClassificationOverrides: options.ClassificationOverrides,
+                    DiscoverIntegrations: options.DiscoverIntegrations),
                 cancellationToken);
         }
         catch (OperationCanceledException)

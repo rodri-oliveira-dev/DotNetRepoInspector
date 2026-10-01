@@ -18,12 +18,20 @@ internal static class McpToolContractFilters
     private static readonly Dictionary<string, HashSet<string>> ToolArguments =
         new Dictionary<string, HashSet<string>>(StringComparer.Ordinal)
         {
-            ["inspect_repository"] = InspectionArguments(),
+            ["inspect_repository"] = InspectionArguments("discoverIntegrations"),
             ["list_projects"] = InspectionArguments(),
             ["get_project_details"] = InspectionArguments("projectPath"),
             ["get_project_reference_graph"] = InspectionArguments(),
             ["get_repository_diagnostics"] = InspectionArguments(),
-            ["get_sdk_metadata"] = InspectionArguments()
+            ["get_sdk_metadata"] = InspectionArguments(),
+            ["list_integrations"] = InspectionArguments(
+                "discoverIntegrations",
+                "projectPath",
+                "kind",
+                "direction",
+                "technology",
+                "offset",
+                "limit")
         };
 
     public static void Configure(IMcpRequestFilterBuilder filters)

@@ -42,6 +42,9 @@
       "items": {
         "$ref": "#/$defs/integrationFinding"
       }
+    },
+    "integrationDiscovery": {
+      "$ref": "#/$defs/integrationDiscovery"
     }
   },
   "$defs": {
@@ -324,6 +327,19 @@
             "type": "string"
           }
         }
+      }
+    },
+    "integrationDiscovery": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "completed",
+        "truncated"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "completed": { "type": "boolean" },
+        "truncated": { "type": "boolean" }
       }
     },
     "integrationSource": {

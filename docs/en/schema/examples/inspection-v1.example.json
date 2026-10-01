@@ -80,5 +80,10 @@
         "refit:contract"
       ]
     }
-  ]
+  ],
+  "integrationDiscovery": {
+    "enabled": true,
+    "completed": true,
+    "truncated": false
+  }
 }

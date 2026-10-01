@@ -156,10 +156,33 @@ public sealed class ReleaseReadinessTests
                 root.GetProperty("required")
                     .EnumerateArray()
                     .Select(static item => item.GetString()));
+            Assert.Equal(
+                "#/$defs/integrationDiscovery",
+                root.GetProperty("properties")
+                    .GetProperty("integrationDiscovery")
+                    .GetProperty("$ref")
+                    .GetString());
+            Assert.Equal(
+                ["enabled", "completed", "truncated"],
+                root.GetProperty("$defs")
+                    .GetProperty("integrationDiscovery")
+                    .GetProperty("required")
+                    .EnumerateArray()
+                    .Select(static item => item.GetString()));
 
             englishSchema ??= schemaJson;
             Assert.Equal(englishSchema, schemaJson);
         }
+    }
+
+    [Fact]
+    public void GitHubAction_DefinesIntegrationDiscoveryAsDisabledOptIn()
+    {
+        string actionMetadata = File.ReadAllText(Path.Combine(RepositoryRoot, "action.yml"));
+
+        Assert.Contains("discover-integrations:", actionMetadata, StringComparison.Ordinal);
+        Assert.Contains("DRI_INPUT_DISCOVER_INTEGRATIONS", actionMetadata, StringComparison.Ordinal);
+        Assert.Contains("default: \"false\"", actionMetadata, StringComparison.Ordinal);
     }
 
     [Fact]

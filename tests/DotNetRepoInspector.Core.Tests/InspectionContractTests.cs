@@ -21,7 +21,7 @@ public sealed class InspectionContractTests
 
         Assert.Equal(InspectionSchema.CurrentVersion, root.GetProperty("schemaVersion").GetString());
         Assert.Equal(
-            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings", "integrations" },
+            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings", "integrations", "integrationDiscovery" },
             root.EnumerateObject().Select(property => property.Name).ToArray());
 
         var repository = root.GetProperty("repository");
@@ -58,6 +58,10 @@ public sealed class InspectionContractTests
         Assert.False(projects[0].GetProperty("classification").TryGetProperty("subtype", out _));
         Assert.Empty(root.GetProperty("policyFindings").EnumerateArray());
         Assert.Empty(root.GetProperty("integrations").EnumerateArray());
+        JsonElement discovery = root.GetProperty("integrationDiscovery");
+        Assert.False(discovery.GetProperty("enabled").GetBoolean());
+        Assert.False(discovery.GetProperty("completed").GetBoolean());
+        Assert.False(discovery.GetProperty("truncated").GetBoolean());
     }
 
     [Fact]
@@ -204,6 +208,35 @@ public sealed class InspectionContractTests
 
         Assert.Equal("1.5", report.SchemaVersion);
         Assert.Empty(report.Integrations);
+    }
+
+    [Fact]
+    public void Deserialize_AcceptsOlderPayloadWithoutIntegrationDiscoveryMetadata()
+    {
+        var json = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false))
+            .Replace(
+                $"\"schemaVersion\": \"{InspectionSchema.CurrentVersion}\"",
+                "\"schemaVersion\": \"1.5\"",
+                StringComparison.Ordinal)
+            .Replace(
+                ",\n  \"integrationDiscovery\": {\n    \"enabled\": false,\n    \"completed\": false,\n    \"truncated\": false\n  }",
+                string.Empty,
+                StringComparison.Ordinal);
+
+        InspectionReport report = InspectionJsonSerializer.Deserialize(json);
+
+        Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
+    }
+
+    [Fact]
+    public void Serialize_RejectsInvalidIntegrationDiscoveryState()
+    {
+        var report = CreateReport(reverseCollections: false) with
+        {
+            IntegrationDiscovery = new IntegrationDiscoveryMetadata(false, true, false)
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
     }
 
     [Fact]

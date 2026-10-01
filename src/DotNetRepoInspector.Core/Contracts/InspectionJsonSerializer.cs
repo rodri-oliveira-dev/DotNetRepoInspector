@@ -73,8 +73,21 @@ public static class InspectionJsonSerializer
             Projects = normalizedProjects,
             Diagnostics = NormalizeDiagnostics(report.Diagnostics),
             PolicyFindings = NormalizePolicyFindings(report.PolicyFindings),
-            Integrations = NormalizeIntegrations(report.Integrations)
+            Integrations = NormalizeIntegrations(report.Integrations),
+            IntegrationDiscovery = NormalizeIntegrationDiscovery(report.IntegrationDiscovery)
         };
+    }
+
+    private static IntegrationDiscoveryMetadata NormalizeIntegrationDiscovery(
+        IntegrationDiscoveryMetadata metadata)
+    {
+        if ((!metadata.Enabled && (metadata.Completed || metadata.Truncated)) ||
+            (!metadata.Completed && metadata.Truncated))
+        {
+            throw new JsonException("Integration discovery metadata contains an invalid state.");
+        }
+
+        return metadata;
     }
 
     private static IntegrationFinding[] NormalizeIntegrations(
@@ -342,7 +355,8 @@ public static class InspectionJsonSerializer
             report.Projects is null ||
             report.Diagnostics is null ||
             report.PolicyFindings is null ||
-            report.Integrations is null)
+            report.Integrations is null ||
+            report.IntegrationDiscovery is null)
         {
             throw new JsonException(
                 "The inspection payload is missing one or more required top-level properties.");

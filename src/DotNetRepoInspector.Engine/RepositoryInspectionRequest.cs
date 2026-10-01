@@ -9,5 +9,5 @@ public sealed record RepositoryInspectionRequest(
     bool DisableConfigurationFile = false,
     IReadOnlyCollection<string>? ExcludedPaths = null,
     IReadOnlyDictionary<string, string>? ClassificationOverrides = null,
-    bool DiscoverIntegrations = false,
+    bool? DiscoverIntegrations = null,
     IntegrationDiscoveryOptions? IntegrationDiscoveryOptions = null);

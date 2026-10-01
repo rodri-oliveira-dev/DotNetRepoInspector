@@ -17,6 +17,7 @@ Options:
       --no-config              Ignore the default .dotnetrepoinspector.json file.
       --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
       --classify <path>=<kind> Override one project classification. Repeatable.
+      --discover-integrations  Analyze source syntax for external integrations (opt-in, bounded).
       --sink http              Persist a snapshot through the built-in HTTP/webhook sink.
       --sink-url <url>         HTTP/HTTPS endpoint used by the selected sink.
       --sink-timeout-seconds   Overall persistence timeout in seconds. Default: 15.
@@ -34,11 +35,16 @@ HTTP sink credentials:
   Set DOTNET_REPO_INSPECTOR_HTTP_TOKEN to send an Authorization: Bearer header.
   Never pass credentials in command-line arguments or embed them in --sink-url.
 
+Integration Discovery trust boundary:
+  Disabled by default. Reads source syntax within bounded limits but never executes repository code,
+  opens network connections, or emits source snippets, payloads, connection strings, or secrets.
+
 Examples:
   dotnet repo-inspect .
   dotnet repo-inspect ../repository --output inspection.json
   dotnet repo-inspect . --exclude generated --exclude samples/Legacy.csproj
   dotnet repo-inspect . --classify src/App/App.csproj=web
+  dotnet repo-inspect . --discover-integrations
   dotnet repo-inspect . --sink http --sink-url https://evidence.example/snapshots
   dotnet repo-inspect . --sink http --sink-url https://evidence.example/snapshots --sink-failure-mode fatal
   dotnet repo-inspect . --verbose > inspection.json
