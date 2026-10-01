@@ -142,6 +142,46 @@ public static class InspectionDiagnostics
             source,
             context);
 
+    public static InspectionDiagnostic IntegrationDiscoveryFileSkipped(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.IntegrationDiscoveryFileSkipped,
+            InspectionDiagnosticSeverity.Warning,
+            "A source file was skipped during integration discovery.",
+            source,
+            context);
+
+    public static InspectionDiagnostic IntegrationDiscoveryParseFailed(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.IntegrationDiscoveryParseFailed,
+            InspectionDiagnosticSeverity.Warning,
+            "A source file could not be parsed for integration discovery.",
+            source,
+            context);
+
+    public static InspectionDiagnostic IntegrationDiscoveryLimitReached(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.IntegrationDiscoveryLimitReached,
+            InspectionDiagnosticSeverity.Warning,
+            "Integration discovery reached a configured limit and returned partial results.",
+            source,
+            context);
+
+    public static InspectionDiagnostic IntegrationDetectorFailed(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.IntegrationDetectorFailed,
+            InspectionDiagnosticSeverity.Warning,
+            "An integration detector failed and the remaining discovery continued.",
+            source,
+            context);
+
     private static InspectionDiagnostic Create(
         string code,
         string severity,

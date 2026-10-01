@@ -3,6 +3,7 @@ using System.Globalization;
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Git;
+using DotNetRepoInspector.IntegrationDiscovery;
 using DotNetRepoInspector.MSBuild.Classification;
 using DotNetRepoInspector.MSBuild.Diagnostics;
 using DotNetRepoInspector.MSBuild.Discovery;
@@ -22,6 +23,7 @@ public sealed class RepositoryInspector : IRepositoryInspector
     private readonly IMsBuildProjectFactsEvaluator _projectFactsEvaluator;
     private readonly IDotNetSdkInspector _sdkInspector;
     private readonly IGitRepositoryMetadataProvider _gitMetadataProvider;
+    private readonly IIntegrationDiscoveryPipeline _integrationDiscoveryPipeline;
     private readonly MsBuildProjectClassificationAdapter _classificationAdapter;
 
     public RepositoryInspector()
@@ -29,7 +31,8 @@ public sealed class RepositoryInspector : IRepositoryInspector
             new FileSystemProjectDiscoverer(),
             new MsBuildProjectFactsEvaluator(),
             new DotNetSdkInspector(),
-            new GitRepositoryMetadataProvider())
+            new GitRepositoryMetadataProvider(),
+            new IntegrationDiscoveryPipeline(Array.Empty<IIntegrationDetector>()))
     {
     }
 
@@ -38,16 +41,33 @@ public sealed class RepositoryInspector : IRepositoryInspector
         IMsBuildProjectFactsEvaluator projectFactsEvaluator,
         IDotNetSdkInspector sdkInspector,
         IGitRepositoryMetadataProvider gitMetadataProvider)
+        : this(
+            projectDiscoverer,
+            projectFactsEvaluator,
+            sdkInspector,
+            gitMetadataProvider,
+            new IntegrationDiscoveryPipeline(Array.Empty<IIntegrationDetector>()))
+    {
+    }
+
+    public RepositoryInspector(
+        IProjectDiscoverer projectDiscoverer,
+        IMsBuildProjectFactsEvaluator projectFactsEvaluator,
+        IDotNetSdkInspector sdkInspector,
+        IGitRepositoryMetadataProvider gitMetadataProvider,
+        IIntegrationDiscoveryPipeline integrationDiscoveryPipeline)
     {
         ArgumentNullException.ThrowIfNull(projectDiscoverer);
         ArgumentNullException.ThrowIfNull(projectFactsEvaluator);
         ArgumentNullException.ThrowIfNull(sdkInspector);
         ArgumentNullException.ThrowIfNull(gitMetadataProvider);
+        ArgumentNullException.ThrowIfNull(integrationDiscoveryPipeline);
 
         _projectDiscoverer = projectDiscoverer;
         _projectFactsEvaluator = projectFactsEvaluator;
         _sdkInspector = sdkInspector;
         _gitMetadataProvider = gitMetadataProvider;
+        _integrationDiscoveryPipeline = integrationDiscoveryPipeline;
         _classificationAdapter = new MsBuildProjectClassificationAdapter();
     }
 
@@ -137,11 +157,29 @@ public sealed class RepositoryInspector : IRepositoryInspector
             .OrderBy(static project => project.Path, StringComparer.Ordinal)
             .ToArray();
 
+        var integrationResult = IntegrationDiscoveryResult.Empty;
+        if (request.DiscoverIntegrations)
+        {
+            integrationResult = await _integrationDiscoveryPipeline.DiscoverAsync(
+                new IntegrationDiscoveryRequest(
+                    repositoryRoot,
+                    projects
+                        .Select(static project => new IntegrationDiscoveryProject(project.Path))
+                        .ToArray(),
+                    configuration.ExcludedPaths,
+                    request.IntegrationDiscoveryOptions),
+                cancellationToken);
+            diagnostics.AddRange(integrationResult.Diagnostics);
+        }
+
         var report = InspectionReport.Create(
             gitResult.Metadata,
             ToSdkMetadata(repositoryRoot, sdkResult),
             projects,
-            OrderDiagnostics(diagnostics));
+            OrderDiagnostics(diagnostics)) with
+        {
+            Integrations = integrationResult.Findings
+        };
 
         if (configuration.PolicyRules.Count == 0)
         {

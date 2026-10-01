@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
   </ItemGroup>
 </Project>

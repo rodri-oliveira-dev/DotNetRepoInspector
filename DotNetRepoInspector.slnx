@@ -14,6 +14,7 @@
     <Project Path="tests/DotNetRepoInspector.Core.Tests/DotNetRepoInspector.Core.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj" />
+    <Project Path="tests/DotNetRepoInspector.IntegrationDiscovery.Tests/DotNetRepoInspector.IntegrationDiscovery.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj" />

@@ -16,4 +16,8 @@ public static class InspectionDiagnosticCodes
     public const string RepositoryMetadataUnavailable = "DRI1012";
     public const string InvalidConfiguration = "DRI1013";
     public const string ClassificationOverrideTargetNotFound = "DRI1014";
+    public const string IntegrationDiscoveryFileSkipped = "DRI1015";
+    public const string IntegrationDiscoveryParseFailed = "DRI1016";
+    public const string IntegrationDiscoveryLimitReached = "DRI1017";
+    public const string IntegrationDetectorFailed = "DRI1018";
 }

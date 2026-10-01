@@ -1,5 +1,3 @@
-using DotNetRepoInspector.Core.Contracts;
-
 namespace DotNetRepoInspector.IntegrationDiscovery;
 
 public interface IIntegrationDetector
@@ -9,7 +7,7 @@ public interface IIntegrationDetector
         get;
     }
 
-    ValueTask<IReadOnlyList<IntegrationFinding>> DetectAsync(
+    ValueTask DetectAsync(
         IntegrationDetectionContext context,
         CancellationToken cancellationToken);
 }

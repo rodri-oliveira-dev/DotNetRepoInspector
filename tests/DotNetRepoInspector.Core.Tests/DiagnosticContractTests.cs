@@ -19,6 +19,10 @@ public sealed class DiagnosticContractTests
         var propertyNotEvaluable = InspectionDiagnostics.PropertyNotEvaluable();
         var invalidConfiguration = InspectionDiagnostics.InvalidConfiguration();
         var unmatchedOverride = InspectionDiagnostics.ClassificationOverrideTargetNotFound();
+        var discoveryFileSkipped = InspectionDiagnostics.IntegrationDiscoveryFileSkipped();
+        var discoveryParseFailed = InspectionDiagnostics.IntegrationDiscoveryParseFailed();
+        var discoveryLimitReached = InspectionDiagnostics.IntegrationDiscoveryLimitReached();
+        var detectorFailed = InspectionDiagnostics.IntegrationDetectorFailed();
 
         Assert.Equal(InspectionDiagnosticCodes.InvalidProject, invalidProject.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Error, invalidProject.Severity);
@@ -34,6 +38,14 @@ public sealed class DiagnosticContractTests
             InspectionDiagnosticCodes.ClassificationOverrideTargetNotFound,
             unmatchedOverride.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Warning, unmatchedOverride.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.IntegrationDiscoveryFileSkipped, discoveryFileSkipped.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, discoveryFileSkipped.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.IntegrationDiscoveryParseFailed, discoveryParseFailed.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, discoveryParseFailed.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.IntegrationDiscoveryLimitReached, discoveryLimitReached.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, discoveryLimitReached.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.IntegrationDetectorFailed, detectorFailed.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, detectorFailed.Severity);
     }
 
     [Fact]
