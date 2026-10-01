@@ -21,7 +21,7 @@ public sealed class InspectionContractTests
 
         Assert.Equal(InspectionSchema.CurrentVersion, root.GetProperty("schemaVersion").GetString());
         Assert.Equal(
-            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings" },
+            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings", "integrations" },
             root.EnumerateObject().Select(property => property.Name).ToArray());
 
         var repository = root.GetProperty("repository");
@@ -57,6 +57,7 @@ public sealed class InspectionContractTests
                 .ToArray());
         Assert.False(projects[0].GetProperty("classification").TryGetProperty("subtype", out _));
         Assert.Empty(root.GetProperty("policyFindings").EnumerateArray());
+        Assert.Empty(root.GetProperty("integrations").EnumerateArray());
     }
 
     [Fact]
@@ -187,6 +188,72 @@ public sealed class InspectionContractTests
     }
 
     [Fact]
+    public void Deserialize_AcceptsOlderPayloadWithoutIntegrations()
+    {
+        var json = InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false))
+            .Replace(
+                $"\"schemaVersion\": \"{InspectionSchema.CurrentVersion}\"",
+                "\"schemaVersion\": \"1.5\"",
+                StringComparison.Ordinal)
+            .Replace(
+                ",\n  \"integrations\": []",
+                string.Empty,
+                StringComparison.Ordinal);
+
+        var report = InspectionJsonSerializer.Deserialize(json);
+
+        Assert.Equal("1.5", report.SchemaVersion);
+        Assert.Empty(report.Integrations);
+    }
+
+    [Fact]
+    public void Serialize_NormalizesAndOrdersIntegrationFindings()
+    {
+        IntegrationFinding first = CreateIntegrationFinding(
+            "src\\Zeta\\Zeta.csproj",
+            "src\\Zeta\\Client.cs",
+            20,
+            ["refit:contract", "http:client"]);
+        IntegrationFinding second = CreateIntegrationFinding(
+            "src/Alpha/Alpha.csproj",
+            "src/Alpha/Client.cs",
+            10,
+            ["http:client", "refit:contract"]);
+        var report = CreateReport(reverseCollections: false) with
+        {
+            Integrations = [first, second]
+        };
+
+        using JsonDocument document = JsonDocument.Parse(InspectionJsonSerializer.Serialize(report));
+        JsonElement.ArrayEnumerator integrations = document.RootElement
+            .GetProperty("integrations")
+            .EnumerateArray();
+        JsonElement[] items = integrations.ToArray();
+
+        Assert.Equal("src/Alpha/Alpha.csproj", items[0].GetProperty("projectPath").GetString());
+        Assert.Equal("src/Zeta/Client.cs", items[1].GetProperty("source").GetProperty("path").GetString());
+        Assert.Equal(
+            ["http:client", "refit:contract"],
+            items[1].GetProperty("signals").EnumerateArray().Select(static item => item.GetString()));
+    }
+
+    [Fact]
+    public void Serialize_RejectsIntegrationIdThatDoesNotMatchCanonicalEvidence()
+    {
+        IntegrationFinding finding = CreateIntegrationFinding(
+            "src/App/App.csproj",
+            "src/App/Client.cs",
+            7,
+            ["http:client"]);
+        var report = CreateReport(reverseCollections: false) with
+        {
+            Integrations = [finding with { Target = "changed-after-id-generation" }]
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
+    }
+
+    [Fact]
     public void Serialize_IsDeterministicAcrossCollectionOrder()
     {
         var firstReport = CreateReport(reverseCollections: true) with
@@ -273,6 +340,23 @@ public sealed class InspectionContractTests
             PolicySeverity.Warning,
             "Policy finding.",
             PolicyFindingScope.Project(projectPath));
+
+    private static IntegrationFinding CreateIntegrationFinding(
+        string projectPath,
+        string sourcePath,
+        int line,
+        IReadOnlyList<string> signals) =>
+        IntegrationFinding.Create(
+            projectPath,
+            IntegrationKind.Http,
+            IntegrationDirection.Outbound,
+            "refit",
+            new IntegrationSourceLocation(sourcePath, line),
+            IntegrationConfidence.High,
+            signals,
+            target: "Serasa",
+            configurationKey: "Serasa:BaseUrl",
+            contract: "ISerasaApi");
 
     private static InspectionReport CreateReport(bool reverseCollections)
     {

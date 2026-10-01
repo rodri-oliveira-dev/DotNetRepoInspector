@@ -31,5 +31,6 @@ An ADR should capture:
 - [ADR 0015: Detect Blazor WebAssembly from its dedicated project SDK](0015-blazor-webassembly-subtype-detection.md) — Accepted.
 - [ADR 0016: Detect Azure Functions from official SDK and runtime model signals](0016-azure-functions-subtype-detection.md) — Accepted.
 - [ADR 0017: Define the policy engine extensibility boundary](0017-policy-engine-extensibility-boundary.md) — Accepted.
+- [ADR 0018: Keep Integration Discovery opt-in and isolated](0018-integration-discovery-boundary.md) — Accepted.
 
 A likely next decision is remote MCP transport if it becomes a supported scenario.

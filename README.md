@@ -29,7 +29,7 @@ The v1 surface includes:
 - Git repository, commit, branch, remote, and dirty-state metadata when available;
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
 - optional `classification.subtype` contract field reserved for explicit subtype evidence;
-- versioned inspection JSON (`schemaVersion 1.5`);
+- versioned inspection JSON (`schemaVersion 1.6`);
 - optional repository configuration for exclusions, explicit classification overrides, and opt-in policies;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
@@ -49,11 +49,11 @@ Concrete subtype detection remains evidence-driven and conservative. The current
 
 ## JSON contract
 
-The v1 contract currently uses inspection schema **1.5**. A representative payload is:
+The v1 contract currently uses inspection schema **1.6**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.5",
+  "schemaVersion": "1.6",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",

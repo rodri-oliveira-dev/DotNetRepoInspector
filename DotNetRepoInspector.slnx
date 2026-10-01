@@ -3,6 +3,7 @@
     <Project Path="src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <Project Path="src/DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
     <Project Path="src/DotNetRepoInspector.Git/DotNetRepoInspector.Git.csproj" />
+    <Project Path="src/DotNetRepoInspector.IntegrationDiscovery/DotNetRepoInspector.IntegrationDiscovery.csproj" />
     <Project Path="src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
     <Project Path="src/DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
     <Project Path="src/DotNetRepoInspector.Persistence.Http/DotNetRepoInspector.Persistence.Http.csproj" />

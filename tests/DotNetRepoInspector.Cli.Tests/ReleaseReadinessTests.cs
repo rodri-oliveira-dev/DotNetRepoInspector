@@ -122,6 +122,47 @@ public sealed class ReleaseReadinessTests
     }
 
     [Fact]
+    public void InspectionSchema_DefinesOptionalIntegrationFindingsInBothLocales()
+    {
+        string? englishSchema = null;
+
+        foreach (string locale in new[] { "en", "pt-BR" })
+        {
+            string schemaPath = Path.Combine(
+                RepositoryRoot,
+                "docs",
+                locale,
+                "schema",
+                "inspection-v1.schema.json");
+            string schemaJson = File.ReadAllText(schemaPath);
+            using JsonDocument schema = JsonDocument.Parse(schemaJson);
+            JsonElement root = schema.RootElement;
+
+            Assert.Equal(
+                InspectionSchema.CurrentVersion,
+                root.GetProperty("properties")
+                    .GetProperty("schemaVersion")
+                    .GetProperty("const")
+                    .GetString());
+            Assert.Equal(
+                "#/$defs/integrationFinding",
+                root.GetProperty("properties")
+                    .GetProperty("integrations")
+                    .GetProperty("items")
+                    .GetProperty("$ref")
+                    .GetString());
+            Assert.DoesNotContain(
+                "integrations",
+                root.GetProperty("required")
+                    .EnumerateArray()
+                    .Select(static item => item.GetString()));
+
+            englishSchema ??= schemaJson;
+            Assert.Equal(englishSchema, schemaJson);
+        }
+    }
+
+    [Fact]
     public void NuGetPackageIcon_ExistsAndRespectsNuGetSizeLimit()
     {
         string iconPath = Path.Combine(RepositoryRoot, "resource", "nuget-icon.png");
@@ -369,7 +410,7 @@ public sealed class ReleaseReadinessTests
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "README.pt-BR.md"));
 
         Assert.Contains("stable v1 contract", english, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.5\"", english, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.6\"", english, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", english, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", english, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", english, StringComparison.Ordinal);
@@ -380,7 +421,7 @@ public sealed class ReleaseReadinessTests
         Assert.DoesNotContain("release candidate", english, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("contrato v1 estável", portuguese, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.5\"", portuguese, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.6\"", portuguese, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", portuguese, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", portuguese, StringComparison.Ordinal);

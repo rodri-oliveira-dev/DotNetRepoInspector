@@ -8,6 +8,34 @@ namespace DotNetRepoInspector.Core.Tests;
 
 public sealed class SecurityContractTests
 {
+    [Theory]
+    [InlineData("line one\nline two")]
+    [InlineData(" ")]
+    [InlineData("Server=db;Password=must-not-be-serialized")]
+    [InlineData("https://example.test/path?token=must-not-be-serialized")]
+    public void Serialize_RejectsUnsafeIntegrationEvidence(string target)
+    {
+        IntegrationFinding finding = IntegrationFinding.Create(
+            "src/App/App.csproj",
+            IntegrationKind.Http,
+            IntegrationDirection.Outbound,
+            "httpclient",
+            new IntegrationSourceLocation("src/App/Client.cs", 1),
+            IntegrationConfidence.Low,
+            ["http:client"],
+            target: target);
+        InspectionReport report = InspectionReport.Create(
+            new RepositoryMetadata("sample", null, null, null, null),
+            new DotNetSdkMetadata(null, null, null),
+            Array.Empty<ProjectInspection>(),
+            Array.Empty<InspectionDiagnostic>()) with
+        {
+            Integrations = [finding]
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
+    }
+
     [Fact]
     public void Serialize_RedactsSensitiveDiagnosticContextValues()
     {
