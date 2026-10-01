@@ -7,6 +7,7 @@ using System.Text.Json;
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Engine;
 using DotNetRepoInspector.Git;
+using DotNetRepoInspector.IntegrationDiscovery;
 using DotNetRepoInspector.MSBuild.Discovery;
 using DotNetRepoInspector.MSBuild.Evaluation;
 using DotNetRepoInspector.MSBuild.Sdk;
@@ -40,8 +41,23 @@ internal static class Program
         using var process = Process.GetCurrentProcess();
 
         var inspectionStopwatch = Stopwatch.StartNew();
-        var report = await inspector.InspectAsync(repository.RootPath, timeoutSource.Token);
+        var report = await inspector.InspectAsync(
+            new RepositoryInspectionRequest(
+                repository.RootPath,
+                DiscoverIntegrations: options.DiscoverIntegrations,
+                IntegrationDiscoveryOptions: options.DiscoverIntegrations
+                    ? new IntegrationDiscoveryOptions
+                    {
+                        MaxSourceFiles = options.ProjectCount,
+                        MaxTotalBytes = 4 * 1_048_576,
+                        MaxFindings = options.ProjectCount,
+                        MaxDuration = TimeSpan.FromSeconds(30)
+                    }
+                    : null),
+            timeoutSource.Token);
         inspectionStopwatch.Stop();
+
+        ValidateIntegrationDiscoveryGuardrail(report, options);
 
         var serializationStopwatch = Stopwatch.StartNew();
         var json = InspectionJsonSerializer.Serialize(report);
@@ -72,6 +88,9 @@ internal static class Program
             ManagedAllocatedBytes: Math.Max(0, allocatedAfter - allocatedBefore),
             PeakWorkingSetBytes: process.PeakWorkingSet64,
             JsonBytes: Encoding.UTF8.GetByteCount(json),
+            IntegrationDiscoveryEnabled: report.IntegrationDiscovery.Enabled,
+            IntegrationDiscoveryTruncated: report.IntegrationDiscovery.Truncated,
+            IntegrationFindingCount: report.Integrations.Count,
             OperatingSystem: RuntimeInformation.OSDescription,
             Framework: RuntimeInformation.FrameworkDescription);
 
@@ -172,6 +191,33 @@ internal static class Program
         Console.WriteLine($"Managed allocations: {FormatBytes(metrics.ManagedAllocatedBytes)}");
         Console.WriteLine($"Peak working set: {FormatBytes(metrics.PeakWorkingSetBytes)}");
         Console.WriteLine($"JSON size: {FormatBytes(metrics.JsonBytes)}");
+        Console.WriteLine(
+            $"Integration Discovery: enabled={metrics.IntegrationDiscoveryEnabled}, truncated={metrics.IntegrationDiscoveryTruncated}, findings={metrics.IntegrationFindingCount.ToString(CultureInfo.InvariantCulture)}");
+    }
+
+    private static void ValidateIntegrationDiscoveryGuardrail(
+        InspectionReport report,
+        BenchmarkOptions options)
+    {
+        if (!options.DiscoverIntegrations)
+        {
+            if (report.IntegrationDiscovery != IntegrationDiscoveryMetadata.NotExecuted ||
+                report.Integrations.Count != 0)
+            {
+                throw new InvalidOperationException(
+                    "The default performance scenario unexpectedly executed Integration Discovery.");
+            }
+
+            return;
+        }
+
+        if (!report.IntegrationDiscovery.Enabled ||
+            !report.IntegrationDiscovery.Completed ||
+            report.Integrations.Count > options.ProjectCount)
+        {
+            throw new InvalidOperationException(
+                "The opt-in performance scenario exceeded its Integration Discovery guardrails.");
+        }
     }
 
     private static PerformanceBaseline ReadBaseline(string path)
@@ -277,7 +323,8 @@ internal sealed record BenchmarkOptions(
     int TimeoutSeconds,
     string OutputPath,
     string? SummaryPath,
-    string? BaselinePath)
+    string? BaselinePath,
+    bool DiscoverIntegrations)
 {
     public static BenchmarkOptions Parse(IReadOnlyList<string> args)
     {
@@ -286,6 +333,7 @@ internal sealed record BenchmarkOptions(
         var outputPath = "artifacts/performance/metrics.json";
         string? summaryPath = null;
         string? baselinePath = null;
+        var discoverIntegrations = false;
 
         for (var index = 0; index < args.Count; index++)
         {
@@ -307,6 +355,9 @@ internal sealed record BenchmarkOptions(
                 case "--baseline":
                     baselinePath = ReadValue(args, ref index, argument);
                     break;
+                case "--discover-integrations":
+                    discoverIntegrations = true;
+                    break;
                 default:
                     throw new ArgumentException($"Unknown benchmark option '{argument}'.");
             }
@@ -317,7 +368,8 @@ internal sealed record BenchmarkOptions(
             timeoutSeconds,
             outputPath,
             summaryPath,
-            baselinePath);
+            baselinePath,
+            discoverIntegrations);
     }
 
     private static string ReadValue(IReadOnlyList<string> args, ref int index, string option)
@@ -352,6 +404,9 @@ internal sealed record PerformanceMetrics(
     long ManagedAllocatedBytes,
     long PeakWorkingSetBytes,
     int JsonBytes,
+    bool IntegrationDiscoveryEnabled,
+    bool IntegrationDiscoveryTruncated,
+    int IntegrationFindingCount,
     string OperatingSystem,
     string Framework);
 

@@ -35,6 +35,14 @@ O `global.json` é lido somente para obter os campos de configuração de SDK su
 
 O contexto de diagnósticos recebe sanitização de defesa em profundidade durante a serialização: valores cujas chaves indiquem credenciais, como `token`, `password`, `connectionString`, `secret` ou `apiKey`, são emitidos como `<redacted>`.
 
+## Integration Discovery opcional
+
+Integration Discovery fica desabilitado por padrão. Quando habilitado, analisa como sintaxe apenas uma allowlist limitada de arquivos C#; não compila, carrega nem executa código da aplicação inspecionada. O resultado normalizado contém identificadores de integração, tecnologia, direção, tipo de recurso, locais de evidência relativos ao projeto, confiança e diagnósticos controlados. Ele nunca contém texto de código-fonte, material de autorização, connection strings, queries, SQL, credenciais de cloud, valores de configuração, corpos de mensagens ou payloads de request/response.
+
+O recurso impõe limites independentes para caminhos, arquivos-fonte, total de bytes, findings, diagnósticos e tempo decorrido. Ele rejeita UTF-8 inválido, exclui outputs gerados/de build, rejeita links e caminhos que escapem do repositório, observa cancelamento, isola falhas de detectores e produz ordenação determinística. Os testes cobrem sintaxe muito grande e patológica, strings maliciosas com formato de segredo, traversal/links, budgets esgotados e redaction estável.
+
+Esses controles reduzem a superfície de ataque exposta ao parser; eles não são um sandbox de sistema operacional. A fronteira de confiança separada da avaliação MSBuild e as orientações abaixo para repositórios não confiáveis continuam aplicáveis.
+
 ## Sem upload automático
 
 A CLI e a .NET Tool gravam o JSON da inspeção em stdout ou no arquivo local solicitado. A GitHub Action grava o relatório em um arquivo local do runner e expõe o caminho como output da Action. O DotNetRepoInspector não envia o relatório para um serviço remoto por conta própria.

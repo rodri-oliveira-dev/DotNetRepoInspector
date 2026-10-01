@@ -35,6 +35,14 @@ The Inspector does **not** intentionally place the following data in the normali
 
 Diagnostic context is defense-in-depth sanitized at serialization time: values whose context keys look credential-bearing (for example `token`, `password`, `connectionString`, `secret`, or `apiKey`) are emitted as `<redacted>`.
 
+## Opt-in Integration Discovery
+
+Integration Discovery is disabled by default. When enabled, it parses a bounded allowlist of C# files as syntax only; it does not compile, load, or execute inspected application code. The normalized result contains integration identifiers, technology, direction, resource kind, project-relative evidence locations, confidence, and controlled diagnostics. It never contains source text, authorization material, connection strings, queries, SQL, cloud credentials, configuration values, message bodies, or request/response payloads.
+
+The feature enforces independent limits for paths, source files, total bytes, findings, diagnostics, and elapsed time. It rejects invalid UTF-8, excludes generated/build output, rejects links and paths that escape the repository, observes cancellation, isolates detector failures, and produces deterministic ordering. Tests cover oversized and pathological syntax, malicious secret-shaped strings, traversal/link handling, exhausted budgets, and stable redaction.
+
+These controls reduce the parser-facing attack surface; they are not an operating-system sandbox. The separate MSBuild evaluation trust boundary and the guidance for untrusted repositories below still apply.
+
 ## No automatic upload
 
 The CLI and .NET Tool write the inspection JSON to stdout or to the requested local file. The GitHub Action writes the report to a runner-local file and exposes its path as an Action output. DotNetRepoInspector does not upload the report to a remote service by itself.

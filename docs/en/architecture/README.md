@@ -35,7 +35,9 @@ The MCP server follows [ADR 0006](../decisions/0006-mcp-adapter-architecture.md)
 
 The end-to-end inspection behavior, including partial versus fatal inspection failure semantics, is documented in [`../inspection-engine.md`](../inspection-engine.md). Optional persistence is documented separately in [`../persistence.md`](../persistence.md) and [ADR 0003](../decisions/0003-persistence-sink-architecture.md).
 
-Integration Discovery follows [ADR 0018](../decisions/0018-integration-discovery-boundary.md): it is disabled by default, constrained by path/file/byte/finding/time budgets, and may emit only allow-listed evidence with relative source provenance.
+Integration Discovery follows [ADR 0018](../decisions/0018-integration-discovery-boundary.md): it is disabled by default, constrained by path/file/byte/finding/time budgets, and may emit only allow-listed evidence with relative source provenance. Its hostile-repository assumptions, controls, and residual risks are documented in the [`Integration Discovery threat model`](integration-discovery-threat-model.md).
+
+The complete recognized provider/pattern catalog and its limitations are documented in [`integration-discovery.md`](../integration-discovery.md).
 
 The built-in detector catalog recognizes outbound HTTP; provider-neutral RabbitMQ, MassTransit, Kafka, NServiceBus, and strongly typed custom messaging abstractions; AWS SQS, SNS, EventBridge, and Kinesis; Azure Service Bus, Event Hubs, and Event Grid; and Google Cloud Pub/Sub. Cloud support is implemented by independent detectors registered in the common catalog, so adding a provider does not add provider-specific logic to Engine. Cloud resource identifiers are reduced to safe logical names or configuration keys; credentials, account/project identifiers, connection strings, and message payloads are not findings.
 

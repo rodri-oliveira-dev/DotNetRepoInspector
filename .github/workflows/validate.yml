@@ -222,7 +222,7 @@ jobs:
           /k:"rodri-oliveira-dev_DotNetRepoInspector"
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
-          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Mcp.Tests/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.IntegrationDiscovery.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Mcp.Tests/coverage.opencover.xml"
           /d:sonar.coverage.exclusions=".github/**"
           /d:sonar.qualitygate.wait="${SONAR_QUALITY_GATE_WAIT}"
           /d:sonar.qualitygate.timeout=300
@@ -246,6 +246,7 @@ jobs:
             "tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj",
             "tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj",
             "tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj",
+            "tests/DotNetRepoInspector.IntegrationDiscovery.Tests/DotNetRepoInspector.IntegrationDiscovery.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj",
             "tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj",
@@ -303,9 +304,9 @@ jobs:
               -File
           )
 
-          if ($reports.Count -ne 8) {
+          if ($reports.Count -ne 9) {
             $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
-            throw "Expected eight normalized OpenCover reports, found $($reports.Count): $found"
+            throw "Expected nine normalized OpenCover reports, found $($reports.Count): $found"
           }
 
           Write-Host "Found $($reports.Count) normalized OpenCover reports."

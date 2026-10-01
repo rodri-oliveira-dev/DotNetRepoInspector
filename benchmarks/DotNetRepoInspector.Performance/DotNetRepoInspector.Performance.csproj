@@ -9,6 +9,7 @@
     <ProjectReference Include="../../src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <ProjectReference Include="../../src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
     <ProjectReference Include="../../src/DotNetRepoInspector.Git/DotNetRepoInspector.Git.csproj" />
+    <ProjectReference Include="../../src/DotNetRepoInspector.IntegrationDiscovery/DotNetRepoInspector.IntegrationDiscovery.csproj" />
     <ProjectReference Include="../../src/DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
   </ItemGroup>
 </Project>

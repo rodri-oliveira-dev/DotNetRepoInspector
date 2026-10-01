@@ -19,7 +19,7 @@
 
 ## O que a v1 faz
 
-O DotNetRepoInspector produz uma visão determinística e legível por máquina de um repositório .NET sem exigir análise de código-fonte ou banco de dados externo.
+O DotNetRepoInspector produz uma visão determinística e legível por máquina de um repositório .NET. O fluxo padrão permanece somente de metadata/MSBuild e não exige análise de source nem banco de dados externo; o Integration Discovery opcional adiciona análise sintática C# limitada.
 
 A superfície da v1 inclui:
 
@@ -31,6 +31,7 @@ A superfície da v1 inclui:
 - campo opcional de contrato `classification.subtype` reservado para evidência explícita de subtipo;
 - JSON de inspeção versionado (`schemaVersion 1.6`);
 - configuração opcional do repositório para exclusões, overrides explícitos de classificação e policies opt-in;
+- Integration Discovery opt-in para dependências normalizadas de HTTP, mensageria, database, cache e cloud storage;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
 - diagnósticos estruturados, cancelamento, compatibilidade cross-platform, hardening de segurança, guardrails de performance e validação contra repositórios públicos fixados.
@@ -42,10 +43,12 @@ A detecção concreta de subtypes permanece orientada por evidência e conservad
 - **MSBuild é a fonte da verdade.** Propriedades efetivamente avaliadas têm precedência sobre heurísticas baseadas no XML bruto do projeto.
 - **Zero configuração por padrão.** Uma inspeção útil exige apenas o caminho do repositório.
 - **Automação em primeiro lugar.** A saída é determinística, legível por máquina e adequada para CI/CD.
-- **Sem coleta de código-fonte.** O Inspector foca metadados de projeto e repositório.
+- **Sem coleta do corpo do source.** O fluxo padrão usa somente metadata/MSBuild. Integration Discovery opt-in faz parsing limitado de sintaxe C#, nunca executa código do repositório alvo e emite apenas evidência em allow-list—não corpos de source.
 - **Persistência é opcional.** A inspeção funciona sem banco, endpoint HTTP ou conta cloud.
 - **Agnóstico de provedor.** GitHub Actions é uma integração de delivery, não a arquitetura central.
 - **Contratos públicos versionados.** Regras de compatibilidade de produto, Action, CLI e JSON são documentadas e protegidas pelo release gate.
+
+Integration Discovery é desabilitado por padrão. Habilite com `--discover-integrations`, configuração do repositório, input da GitHub Action ou opt-in MCP. Ele não faz lookup por rede e nunca serializa snippets de source, queries, payloads, connection strings ou credenciais. Consulte o [catálogo v1.6 reconhecido e suas limitações](docs/pt-BR/integration-discovery.md).
 
 ## Contrato JSON
 
