@@ -2,6 +2,8 @@
 
 O catálogo de detectores built-in reconhece HTTP de saída; RabbitMQ, MassTransit, Kafka, NServiceBus e abstrações customizadas de mensageria fortemente tipadas; AWS SQS, SNS, EventBridge e Kinesis; Azure Service Bus, Event Hubs e Event Grid; e Google Cloud Pub/Sub. O suporte de cloud é implementado por detectores independentes registrados no catálogo comum, portanto adicionar um provider não adiciona lógica específica na Engine. Identificadores de recursos cloud são reduzidos a nomes lógicos seguros ou chaves de configuração; credenciais, identificadores de conta/projeto, connection strings e payloads de mensagens não se tornam findings.
 
+Os detectores de dependências de dados cobrem PostgreSQL, SQL Server, MySQL, Oracle, Redis, MongoDB, Azure Cosmos DB, DynamoDB, BigQuery, Amazon S3, Google Cloud Storage e Azure Blob Storage. Direções são emitidas apenas para operações explícitas; registros de uso geral usam `bidirectional` e APIs de query cujo efeito não pode ser determinado usam `unknown`. Somente nomes lógicos de banco/recurso e chaves de configuração são preservados—connection strings, SQL, credenciais, signed URLs e payloads de objetos/documentos são excluídos.
+
 **Idiomas:** [English](../../en/architecture/README.md) | Português (Brasil)
 
 Fronteiras atuais:

@@ -8,6 +8,9 @@ public static class IntegrationDetectorCatalog
             new MessagingIntegrationDetector(),
             new AwsMessagingIntegrationDetector(),
             new AzureMessagingIntegrationDetector(),
-            new GooglePubSubIntegrationDetector()
+            new GooglePubSubIntegrationDetector(),
+            new RelationalDatabaseIntegrationDetector(),
+            new CacheAndNoSqlIntegrationDetector(),
+            new CloudStorageIntegrationDetector()
         ];
 }
