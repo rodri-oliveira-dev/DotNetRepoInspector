@@ -61,7 +61,7 @@ if not path.is_file():
     raise SystemExit(f"inspection report was not created: {path}")
 with path.open(encoding="utf-8") as stream:
     report = json.load(stream)
-if report.get("schemaVersion") != "1.5":
+if report.get("schemaVersion") != "1.6":
     raise SystemExit(f"unexpected schemaVersion: {report.get('schemaVersion')!r}")
 resolved = (report.get("dotNetSdk") or {}).get("resolvedVersion")
 if not isinstance(resolved, str) or not resolved.startswith(f"{sdk_family}."):

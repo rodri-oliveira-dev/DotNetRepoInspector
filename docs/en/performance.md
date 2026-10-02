@@ -8,6 +8,8 @@ DotNetRepoInspector uses a reproducible synthetic repository to measure inspecti
 
 The performance harness lives in `benchmarks/DotNetRepoInspector.Performance` and creates the repository in a temporary directory before the timed region begins.
 
+The synthetic repository includes one C# integration pattern per project. The baseline invocation keeps Integration Discovery off and fails if any source finding is produced, so the existing end-to-end thresholds guard the default metadata/MSBuild-only path even when source is present. CI also runs the harness with `--discover-integrations`; that opt-in scenario uses explicit source-file, byte, finding, duration, and overall timeout bounds and records whether truncation occurred without changing the established default baseline.
+
 The versioned reference scenario is `synthetic-100-projects`:
 
 - 100 SDK-style projects under `src/`;

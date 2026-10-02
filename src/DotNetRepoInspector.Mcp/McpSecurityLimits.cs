@@ -8,4 +8,6 @@ internal static class McpSecurityLimits
     public const int MaxClassificationValueLength = 128;
     public const long MaxConfigurationFileBytes = 1_048_576;
     public const int MaxToolResultUtf8Bytes = 8 * 1_048_576;
+    public const int MaxIntegrationPageSize = 200;
+    public const int MaxIntegrationOffset = 100_000;
 }

@@ -36,6 +36,7 @@ The Action itself does not require a GitHub token or write permission to inspect
 | `exclude` | No | empty | Newline-separated repository-relative directory or exact project paths to exclude. |
 | `exclude-repositories` | No | empty | Newline-separated full `owner/repository` identifiers to skip before inspection in fleet inventory workflows. |
 | `classify` | No | empty | Newline-separated `<project-path>=<kind>` explicit classification overrides. |
+| `discover-integrations` | No | `false` | Set to `true` to enable bounded, syntax-only Integration Discovery. |
 | `sink-url` | No | empty | Absolute HTTP/HTTPS endpoint. A non-empty value enables the built-in HTTP snapshot sink. |
 | `sink-token` | No | empty | Optional Bearer token for the HTTP sink. Supply it from a GitHub Actions secret. |
 | `sink-timeout-seconds` | No | `15` | Overall persistence timeout when `sink-url` is configured. Supported range is `1..300`. |
@@ -45,6 +46,8 @@ The Action itself does not require a GitHub token or write permission to inspect
 Supported classification kinds are `web`, `worker`, `console`, `library`, `test`, and `unknown`.
 
 `exclude` values are additive to exclusions from the configuration file. A direct `classify` input wins over a file override for the same project. The Action passes these values to the same CLI/Engine configuration contract; it does not implement independent classification or policy logic. See [`configuration.md`](configuration.md).
+
+`discover-integrations: "true"` forwards the CLI opt-in. The default remains off; the Action requests no additional permission, token, or network access, and existing outputs such as `report-path` are unchanged.
 
 `exclude-repositories` is intentionally different from project-path `exclude`. It belongs to aggregated fleet inventory workflows that decide which repositories are part of the population before invoking inspection. Each value must be the complete GitHub repository identifier, such as `rodri-oliveira-dev/DotNetRepoInspector`; partial names, substrings, and path fragments are rejected. When the current `github.repository` matches, the Action exits successfully with `repository-excluded=true`, no report path, no schema version, and no Inspector invocation.
 
@@ -83,7 +86,7 @@ Then point the existing `config` input to it:
 
 If `.dotnetrepoinspector.json` at the inspected repository root contains the policy, omit `config`; the default file is loaded automatically.
 
-No policy-specific output is required. The existing `report-path` points to schema `1.5` JSON containing top-level `policyFindings`, while `exit-code` is `1` when any policy finding has severity `error`. Policy warnings keep exit code `0` when inspection diagnostics are otherwise clean.
+No policy-specific output is required. The existing `report-path` points to schema `1.6` JSON containing top-level `policyFindings`, while `exit-code` is `1` when any policy finding has severity `error`. Policy warnings keep exit code `0` when inspection diagnostics are otherwise clean.
 
 ## Configure exclusions and overrides
 

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.5",
+  "schemaVersion": "1.6",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -59,5 +59,31 @@
       }
     }
   ],
-  "policyFindings": []
+  "policyFindings": [],
+  "integrations": [
+    {
+      "id": "integration-6e7ab864fd3b45dc",
+      "projectPath": "src/App/App.csproj",
+      "kind": "http",
+      "direction": "outbound",
+      "technology": "refit",
+      "target": "Serasa",
+      "configurationKey": "Serasa:BaseUrl",
+      "contract": "ISerasaApi",
+      "source": {
+        "path": "src/App/SerasaClient.cs",
+        "line": 42
+      },
+      "confidence": "high",
+      "signals": [
+        "http:client",
+        "refit:contract"
+      ]
+    }
+  ],
+  "integrationDiscovery": {
+    "enabled": true,
+    "completed": true,
+    "truncated": false
+  }
 }

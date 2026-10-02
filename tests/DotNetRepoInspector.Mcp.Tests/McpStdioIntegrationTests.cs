@@ -34,6 +34,7 @@ public sealed class McpStdioIntegrationTests
                 "get_repository_diagnostics",
                 "get_sdk_metadata",
                 "inspect_repository",
+                "list_integrations",
                 "list_projects"
             ],
             tools.Select(static tool => tool.Name).Order(StringComparer.Ordinal));
@@ -47,6 +48,7 @@ public sealed class McpStdioIntegrationTests
         Assert.True(properties.TryGetProperty("disableConfigurationFile", out _));
         Assert.True(properties.TryGetProperty("excludedPaths", out _));
         Assert.True(properties.TryGetProperty("classificationOverrides", out _));
+        Assert.True(properties.TryGetProperty("discoverIntegrations", out _));
         Assert.False(inputSchema.GetProperty("additionalProperties").GetBoolean());
         Assert.NotNull(tool.ProtocolTool.OutputSchema);
 
@@ -74,6 +76,43 @@ public sealed class McpStdioIntegrationTests
         Assert.Contains(
             standardError,
             static line => line.Contains("started", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task ListIntegrations_RequiresOptInAndSupportsValidatedFilters()
+    {
+        await using var client = await CreateClientAsync(
+            FixturePath(Path.Combine("IntegrationDiscovery", "Http")),
+            new ConcurrentQueue<string>(),
+            TestContext.Current.CancellationToken);
+
+        var disabled = await CallAsync(client, "list_integrations");
+        AssertToolError(disabled, "integration_discovery_not_enabled");
+
+        var enabled = await client.CallToolAsync(
+            "list_integrations",
+            new Dictionary<string, object?>
+            {
+                ["discoverIntegrations"] = true,
+                ["kind"] = IntegrationKind.Http,
+                ["direction"] = IntegrationDirection.Outbound,
+                ["limit"] = 1
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+        var data = SuccessData(enabled);
+        Assert.Equal(1, data.GetProperty("limit").GetInt32());
+        Assert.True(data.GetProperty("total").GetInt32() > 0);
+        Assert.Equal(1, data.GetProperty("integrations").GetArrayLength());
+
+        var invalid = await client.CallToolAsync(
+            "list_integrations",
+            new Dictionary<string, object?>
+            {
+                ["discoverIntegrations"] = true,
+                ["kind"] = "invalid"
+            },
+            cancellationToken: TestContext.Current.CancellationToken);
+        AssertToolError(invalid, "invalid_tool_input");
     }
 
     [Fact]
@@ -281,6 +320,7 @@ public sealed class McpStdioIntegrationTests
     [InlineData("get_project_reference_graph")]
     [InlineData("get_repository_diagnostics")]
     [InlineData("get_sdk_metadata")]
+    [InlineData("list_integrations")]
     public async Task Tools_RejectUnknownInputProperties(string toolName)
     {
         await using var client = await CreateClientAsync(
@@ -418,7 +458,7 @@ public sealed class McpStdioIntegrationTests
                 new ConcurrentQueue<string>(),
                 TestContext.Current.CancellationToken);
 
-            Assert.Equal(6, (await client.ListToolsAsync(
+            Assert.Equal(7, (await client.ListToolsAsync(
                 cancellationToken: TestContext.Current.CancellationToken)).Count);
         }
         finally

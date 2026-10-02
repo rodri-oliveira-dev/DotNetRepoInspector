@@ -222,7 +222,7 @@ jobs:
           /k:"rodri-oliveira-dev_DotNetRepoInspector"
           /o:"rodri-oliveira-dev"
           /d:sonar.token="${SONAR_TOKEN}"
-          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Mcp.Tests/coverage.opencover.xml"
+          /d:sonar.cs.opencover.reportsPaths="artifacts/coverage/sonar/DotNetRepoInspector.Core.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.MSBuild.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Git.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Engine.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.IntegrationDiscovery.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Persistence.Http.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Cli.Tests/coverage.opencover.xml,artifacts/coverage/sonar/DotNetRepoInspector.Mcp.Tests/coverage.opencover.xml"
           /d:sonar.coverage.exclusions=".github/**"
           /d:sonar.qualitygate.wait="${SONAR_QUALITY_GATE_WAIT}"
           /d:sonar.qualitygate.timeout=300
@@ -246,6 +246,7 @@ jobs:
             "tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj",
             "tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj",
             "tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj",
+            "tests/DotNetRepoInspector.IntegrationDiscovery.Tests/DotNetRepoInspector.IntegrationDiscovery.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj",
             "tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj",
             "tests/DotNetRepoInspector.Cli.Tests/DotNetRepoInspector.Cli.Tests.csproj",
@@ -303,9 +304,9 @@ jobs:
               -File
           )
 
-          if ($reports.Count -ne 8) {
+          if ($reports.Count -ne 9) {
             $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
-            throw "Expected eight normalized OpenCover reports, found $($reports.Count): $found"
+            throw "Expected nine normalized OpenCover reports, found $($reports.Count): $found"
           }
 
           Write-Host "Found $($reports.Count) normalized OpenCover reports."
@@ -446,8 +447,8 @@ jobs:
             throw "Expected Inspector version '$env:ACTION_TEST_TOOL_VERSION', actual '$env:INSPECTOR_VERSION'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected schema version 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected schema version 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -459,6 +460,10 @@ jobs:
           }
 
           $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if ($report.integrationDiscovery.enabled -ne $false -or
+              $report.integrationDiscovery.completed -ne $false) {
+            throw "Integration Discovery must remain disabled by default."
+          }
           if (@($report.projects).Count -ne 5) {
             throw "Expected five projects after exclusion, actual '$(@($report.projects).Count)'."
           }
@@ -476,6 +481,36 @@ jobs:
               $library.classification.source -ne "request" -or
               $library.classification.automaticKind -ne "library") {
             throw "Action classification override provenance was not preserved."
+          }
+
+      - name: Run Action with Integration Discovery
+        if: matrix.os == 'ubuntu-latest'
+        id: integrations
+        uses: ./
+        with:
+          path: ./tests/Fixtures/IntegrationDiscovery/Http
+          output: ./artifacts/action-smoke/integrations.json
+          discover-integrations: "true"
+
+      - name: Validate Action Integration Discovery opt-in
+        if: matrix.os == 'ubuntu-latest'
+        shell: pwsh
+        env:
+          EXIT_CODE: "${{ steps.integrations.outputs.exit-code }}"
+          REPORT_PATH: "${{ steps.integrations.outputs.report-path }}"
+        run: |
+          if ($env:EXIT_CODE -ne "0") {
+            throw "Expected Integration Discovery exit code 0, actual '$env:EXIT_CODE'."
+          }
+
+          $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
+          if ($report.integrationDiscovery.enabled -ne $true -or
+              $report.integrationDiscovery.completed -ne $true) {
+            throw "Integration Discovery opt-in metadata was not preserved."
+          }
+
+          if (@($report.integrations).Count -eq 0) {
+            throw "Integration Discovery opt-in produced no findings."
           }
 
       - name: Verify non-zero CLI exit propagation and default report path
@@ -503,8 +538,8 @@ jobs:
             throw "Expected propagated CLI exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected schema version 1.5 from the partial report, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected schema version 1.6 from the partial report, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not [IO.Path]::IsPathFullyQualified($env:REPORT_PATH)) {
@@ -538,8 +573,8 @@ jobs:
             throw "Expected policy success exit code 0, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected policy success schema 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected policy success schema 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           $report = Get-Content -LiteralPath $env:REPORT_PATH -Raw | ConvertFrom-Json
@@ -574,8 +609,8 @@ jobs:
             throw "Expected policy violation exit code 1, actual '$env:EXIT_CODE'."
           }
 
-          if ($env:SCHEMA_VERSION -ne "1.5") {
-            throw "Expected policy violation schema 1.5, actual '$env:SCHEMA_VERSION'."
+          if ($env:SCHEMA_VERSION -ne "1.6") {
+            throw "Expected policy violation schema 1.6, actual '$env:SCHEMA_VERSION'."
           }
 
           if (-not (Test-Path -LiteralPath $env:REPORT_PATH -PathType Leaf)) {

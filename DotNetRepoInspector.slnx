@@ -3,6 +3,7 @@
     <Project Path="src/DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <Project Path="src/DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
     <Project Path="src/DotNetRepoInspector.Git/DotNetRepoInspector.Git.csproj" />
+    <Project Path="src/DotNetRepoInspector.IntegrationDiscovery/DotNetRepoInspector.IntegrationDiscovery.csproj" />
     <Project Path="src/DotNetRepoInspector.Engine/DotNetRepoInspector.Engine.csproj" />
     <Project Path="src/DotNetRepoInspector.Persistence/DotNetRepoInspector.Persistence.csproj" />
     <Project Path="src/DotNetRepoInspector.Persistence.Http/DotNetRepoInspector.Persistence.Http.csproj" />
@@ -13,6 +14,7 @@
     <Project Path="tests/DotNetRepoInspector.Core.Tests/DotNetRepoInspector.Core.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.MSBuild.Tests/DotNetRepoInspector.MSBuild.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Git.Tests/DotNetRepoInspector.Git.Tests.csproj" />
+    <Project Path="tests/DotNetRepoInspector.IntegrationDiscovery.Tests/DotNetRepoInspector.IntegrationDiscovery.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Engine.Tests/DotNetRepoInspector.Engine.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Persistence.Tests/DotNetRepoInspector.Persistence.Tests.csproj" />
     <Project Path="tests/DotNetRepoInspector.Persistence.Http.Tests/DotNetRepoInspector.Persistence.Http.Tests.csproj" />

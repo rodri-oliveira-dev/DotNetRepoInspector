@@ -32,6 +32,8 @@ public sealed class RepositoryInspectionTools
         [Description(
             "Optional project classification overrides keyed by repository-relative project path.")]
         Dictionary<string, string>? classificationOverrides = null,
+        [Description("Explicitly enables or disables bounded Integration Discovery; repository configuration is used when omitted.")]
+        bool? discoverIntegrations = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(handler);
@@ -41,6 +43,7 @@ public sealed class RepositoryInspectionTools
             disableConfigurationFile,
             excludedPaths,
             classificationOverrides,
+            discoverIntegrations,
             cancellationToken);
     }
 
@@ -200,6 +203,59 @@ public sealed class RepositoryInspectionTools
     {
         ArgumentNullException.ThrowIfNull(handler);
         return handler.GetSdkMetadataAsync(
+            configurationPath,
+            disableConfigurationFile,
+            excludedPaths,
+            classificationOverrides,
+            cancellationToken);
+    }
+
+    [McpServerTool(
+        Name = "list_integrations",
+        Title = "List discovered integrations",
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ListIntegrationsResponse),
+        ReadOnly = true,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false)]
+    [Description(
+        "Runs the shared bounded Integration Discovery pipeline and returns a filtered page of normalized findings.")]
+    public static Task<CallToolResult> ListIntegrationsAsync(
+        GranularRepositoryToolsHandler handler,
+        [Description("Explicitly enables or disables bounded Integration Discovery; repository configuration is used when omitted.")]
+        bool? discoverIntegrations = null,
+        [Description("Optional exact repository-relative project path filter.")]
+        string? projectPath = null,
+        [Description("Optional integration kind filter.")]
+        string? kind = null,
+        [Description("Optional integration direction filter.")]
+        string? direction = null,
+        [Description("Optional normalized technology filter.")]
+        string? technology = null,
+        [Description("Zero-based result offset. Maximum 100000.")]
+        int offset = 0,
+        [Description("Maximum findings returned. Range 1 to 200; default 100.")]
+        int limit = 100,
+        [Description("Optional repository-relative DotNetRepoInspector configuration path.")]
+        string? configurationPath = null,
+        [Description("Disables loading both the default and explicit configuration file.")]
+        bool disableConfigurationFile = false,
+        [Description("Optional repository-relative project paths to exclude.")]
+        string[]? excludedPaths = null,
+        [Description("Optional classification overrides keyed by repository-relative project path.")]
+        Dictionary<string, string>? classificationOverrides = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(handler);
+        return handler.ListIntegrationsAsync(
+            discoverIntegrations,
+            projectPath,
+            kind,
+            direction,
+            technology,
+            offset,
+            limit,
             configurationPath,
             disableConfigurationFile,
             excludedPaths,

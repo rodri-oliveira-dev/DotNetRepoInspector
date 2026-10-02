@@ -72,8 +72,93 @@ public static class InspectionJsonSerializer
             DotNetSdk = normalizedSdk,
             Projects = normalizedProjects,
             Diagnostics = NormalizeDiagnostics(report.Diagnostics),
-            PolicyFindings = NormalizePolicyFindings(report.PolicyFindings)
+            PolicyFindings = NormalizePolicyFindings(report.PolicyFindings),
+            Integrations = NormalizeIntegrations(report.Integrations),
+            IntegrationDiscovery = NormalizeIntegrationDiscovery(report.IntegrationDiscovery)
         };
+    }
+
+    private static IntegrationDiscoveryMetadata NormalizeIntegrationDiscovery(
+        IntegrationDiscoveryMetadata metadata)
+    {
+        if ((!metadata.Enabled && (metadata.Completed || metadata.Truncated)) ||
+            (!metadata.Completed && metadata.Truncated))
+        {
+            throw new JsonException("Integration discovery metadata contains an invalid state.");
+        }
+
+        return metadata;
+    }
+
+    private static IntegrationFinding[] NormalizeIntegrations(
+        IReadOnlyList<IntegrationFinding> findings) =>
+        findings
+            .Select(NormalizeIntegration)
+            .OrderBy(static finding => finding.ProjectPath, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Source.Path, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Source.Line)
+            .ThenBy(static finding => finding.Kind, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Direction, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Technology, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Target ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(static finding => finding.Id, StringComparer.Ordinal)
+            .ToArray();
+
+    private static IntegrationFinding NormalizeIntegration(IntegrationFinding finding)
+    {
+        if (finding is null ||
+            !IsDeterministicIntegrationId(finding.Id) ||
+            !IsSafeRelativePath(finding.ProjectPath) ||
+            !IntegrationKind.IsDefined(finding.Kind) ||
+            !IntegrationDirection.IsDefined(finding.Direction) ||
+            !IsSafeSlug(finding.Technology) ||
+            !IsSafeOptionalIdentifier(finding.Target) ||
+            !IsSafeOptionalSlug(finding.ResourceType) ||
+            !IsSafeOptionalConfigurationKey(finding.ConfigurationKey) ||
+            !IsSafeOptionalIdentifier(finding.Contract) ||
+            finding.Source is null ||
+            !IsSafeRelativePath(finding.Source.Path) ||
+            finding.Source.Line < 1 ||
+            !IntegrationConfidence.IsDefined(finding.Confidence) ||
+            finding.Signals is null ||
+            finding.Signals.Count == 0 ||
+            finding.Signals.Any(signal => !IsSafeSignal(signal)))
+        {
+            throw new JsonException("An integration finding contains invalid or unsafe evidence.");
+        }
+
+        var normalized = finding with
+        {
+            ProjectPath = NormalizePath(finding.ProjectPath),
+            Source = finding.Source with
+            {
+                Path = NormalizePath(finding.Source.Path)
+            },
+            Signals = finding.Signals
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(static signal => signal, StringComparer.Ordinal)
+                .ToArray()
+        };
+
+        string expectedId = IntegrationFinding.Create(
+            normalized.ProjectPath,
+            normalized.Kind,
+            normalized.Direction,
+            normalized.Technology,
+            normalized.Source,
+            normalized.Confidence,
+            normalized.Signals,
+            normalized.Target,
+            normalized.ResourceType,
+            normalized.ConfigurationKey,
+            normalized.Contract).Id;
+
+        if (!string.Equals(normalized.Id, expectedId, StringComparison.Ordinal))
+        {
+            throw new JsonException("An integration finding id does not match its canonical evidence.");
+        }
+
+        return normalized;
     }
 
     private static ProjectInspection NormalizeProject(ProjectInspection project)
@@ -269,12 +354,84 @@ public static class InspectionJsonSerializer
             report.DotNetSdk is null ||
             report.Projects is null ||
             report.Diagnostics is null ||
-            report.PolicyFindings is null)
+            report.PolicyFindings is null ||
+            report.Integrations is null ||
+            report.IntegrationDiscovery is null)
         {
             throw new JsonException(
                 "The inspection payload is missing one or more required top-level properties.");
         }
     }
+
+    private static bool IsDeterministicIntegrationId(string? id)
+    {
+        if (id is not { Length: 28 } ||
+            !id.StartsWith("integration-", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        for (var index = 12; index < id.Length; index++)
+        {
+            if (id[index] is not (>= '0' and <= '9') and not (>= 'a' and <= 'f'))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool IsSafeRelativePath(string? path) =>
+        !string.IsNullOrWhiteSpace(path) &&
+        !Path.IsPathRooted(path) &&
+        !path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+            .Any(segment => segment == "..") &&
+        IsSafeEvidence(path, 1024);
+
+    private static bool IsSafeOptionalIdentifier(string? value) =>
+        value is null ||
+        IsSafeRestrictedEvidence(
+            value,
+            static character =>
+                char.IsLetterOrDigit(character) ||
+                character is '.' or '_' or '-' or '/' or ':' or '+' or '<' or '>' or '[' or ']');
+
+    private static bool IsSafeOptionalSlug(string? value) =>
+        value is null || IsSafeSlug(value);
+
+    private static bool IsSafeSlug(string? value) =>
+        IsSafeRestrictedEvidence(
+            value,
+            static character =>
+                char.IsAsciiLetterOrDigit(character) || character is '.' or '_' or '-');
+
+    private static bool IsSafeSignal(string? value) =>
+        IsSafeRestrictedEvidence(
+            value,
+            static character =>
+                char.IsAsciiLetterOrDigit(character) || character is ':' or '.' or '_' or '-');
+
+    private static bool IsSafeOptionalConfigurationKey(string? value) =>
+        value is null ||
+        IsSafeRestrictedEvidence(
+            value,
+            static character =>
+                char.IsLetterOrDigit(character) || character is ':' or '.' or '_' or '-' or '[' or ']');
+
+    private static bool IsSafeRestrictedEvidence(
+        string? value,
+        Func<char, bool> isAllowedCharacter) =>
+        value is not null &&
+        IsSafeEvidence(value) &&
+        value.All(isAllowedCharacter);
+
+    private static bool IsSafeEvidence(string? value, int maximumLength = 256) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        value.Length <= maximumLength &&
+        !value.Contains('\r') &&
+        !value.Contains('\n') &&
+        !value.Contains('\0');
 
     private static void ValidateProjectShape(ProjectInspection project)
     {

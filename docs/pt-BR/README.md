@@ -9,6 +9,7 @@ Mantenha o [`README.md`](../../README.pt-BR.md) da raiz como ponto de entrada do
 - [`configuration.md`](configuration.md) — configuração opcional do repositório, exclusões, overrides de classificação e precedência.
 - [`diagnostics.md`](diagnostics.md) — catálogo estável de diagnósticos e regras de logging operacional.
 - [`security.md`](security.md) — limite de coleta de dados, modelo de confiança do MSBuild, tratamento de secrets, permissões da Action e credenciais de sinks.
+- [`integration-discovery.md`](integration-discovery.md) — catálogo reconhecido de integrações da v1.6, patterns, direções, evidências e limitações.
 - [`persistence.md`](persistence.md) — persistência opcional de snapshots, contrato de extensão de sinks, timeout, modo de falha e fronteira de retry.
 - [`snapshot-provenance.md`](snapshot-provenance.md) — identidade da evidência, proveniência UTC, digest do relatório e semântica de idempotência.
 - [`inspection-engine.md`](inspection-engine.md) — orquestração ponta a ponta da inspeção, semântica de falhas, determinismo e cancelamento.

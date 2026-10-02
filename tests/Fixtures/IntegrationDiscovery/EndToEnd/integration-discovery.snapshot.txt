@@ -1,0 +1,15 @@
+integration-1bdbbb2edc472751|EndToEnd/App/App.csproj|http|outbound|httpclient|billing||Billing:BaseUrl||EndToEnd/App/Integrations.cs:7|high|http:add-http-client,http:named-client,config:key,http:base-address
+integration-d9ae99b2be177459|EndToEnd/App/App.csproj|http|outbound|httpclient|TypedBilling|||TypedBillingClient|EndToEnd/App/Integrations.cs:10|high|http:add-http-client,http:typed-client,http:literal-host,http:base-address
+integration-572a93dd14094caa|EndToEnd/App/App.csproj|http|outbound|refit|Catalog||Catalog:BaseUrl|IExternalCatalogApi|EndToEnd/App/Integrations.cs:12|high|refit:add-refit-client,http:typed-client,config:key,http:base-address
+integration-216a5dea54e15e40|EndToEnd/App/App.csproj|database|bidirectional|postgresql|OrdersDb|database|ConnectionStrings:OrdersDb||EndToEnd/App/Integrations.cs:14|high|database:postgresql,database:registration
+integration-6fc3f629da354fab|EndToEnd/App/App.csproj|cache|bidirectional|redis|OrdersCache|cache|Redis:Connection||EndToEnd/App/Integrations.cs:15|high|cache:redis,redis:registration
+integration-d8e8f7017ebd09f1|EndToEnd/App/App.csproj|messaging|publish|aws-sqs|orders|queue|||EndToEnd/App/Integrations.cs:28|high|aws:sqs,sqs:send
+integration-764f7f3983d5be45|EndToEnd/App/App.csproj|messaging|publish|google-pubsub||topic|||EndToEnd/App/Integrations.cs:33|medium|google:pubsub,pubsub:publish
+integration-84d2ea9e52c0c24f|EndToEnd/App/App.csproj|storage|write|aws-s3|orders-documents|bucket|||EndToEnd/App/Integrations.cs:34|high|storage:aws-s3,s3:write
+integration-0f983756af27509e|EndToEnd/App/App.csproj|messaging|publish|unknown|custom-orders|||OrderCreated|EndToEnd/App/Integrations.cs:39|high|messaging:custom-abstraction,messaging:publish
+integration-bbd329aa270c15f2|EndToEnd/Worker/Worker.csproj|messaging|publish|rabbitmq|orders.exchange|exchange|||EndToEnd/Worker/Integrations.cs:12|high|messaging:rabbitmq,rabbitmq:basic-publish
+integration-341ad5d939b5ec71|EndToEnd/Worker/Worker.csproj|messaging|consume|rabbitmq|orders.queue|queue|||EndToEnd/Worker/Integrations.cs:13|high|messaging:rabbitmq,rabbitmq:basic-consume
+integration-bca50cb762064494|EndToEnd/Worker/Worker.csproj|messaging|publish|kafka||topic|Kafka:OrdersTopic|OrderCreated|EndToEnd/Worker/Integrations.cs:14|high|kafka:produce,messaging:kafka
+integration-7f96cb0fbe375a5e|EndToEnd/Worker/Worker.csproj|messaging|consume|kafka|orders.input|topic||OrderCreated|EndToEnd/Worker/Integrations.cs:15|high|kafka:subscribe,messaging:kafka
+integration-d8ab291c9a3f3f7d|EndToEnd/Worker/Worker.csproj|messaging|publish|azure-servicebus|orders-outbound|queue|||EndToEnd/Worker/Integrations.cs:18|high|azure:servicebus,servicebus:send
+integration-e57cbd703caf7dd4|EndToEnd/Worker/Worker.csproj|messaging|consume|azure-servicebus||queue|ServiceBus:InputQueue||EndToEnd/Worker/Integrations.cs:19|high|azure:servicebus,servicebus:create-processor

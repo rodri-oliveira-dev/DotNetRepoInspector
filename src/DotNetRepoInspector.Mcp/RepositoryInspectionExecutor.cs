@@ -54,11 +54,26 @@ public sealed class RepositoryInspectionExecutor
 
     public RepositoryRoot RepositoryRoot => _repositoryRoot;
 
+    public Task<RepositoryInspectionOutcome> ExecuteAsync(
+        string? configurationPath,
+        bool disableConfigurationFile,
+        IReadOnlyCollection<string>? excludedPaths,
+        IReadOnlyDictionary<string, string>? classificationOverrides,
+        CancellationToken cancellationToken) =>
+        ExecuteAsync(
+            configurationPath,
+            disableConfigurationFile,
+            excludedPaths,
+            classificationOverrides,
+            discoverIntegrations: null,
+            cancellationToken);
+
     public async Task<RepositoryInspectionOutcome> ExecuteAsync(
         string? configurationPath,
         bool disableConfigurationFile,
         IReadOnlyCollection<string>? excludedPaths,
         IReadOnlyDictionary<string, string>? classificationOverrides,
+        bool? discoverIntegrations,
         CancellationToken cancellationToken)
     {
         var validation = RepositoryPathBoundary.ValidateAndNormalize(
@@ -98,7 +113,8 @@ public sealed class RepositoryInspectionExecutor
                     ConfigurationPath: validation.ConfigurationPath,
                     DisableConfigurationFile: disableConfigurationFile,
                     ExcludedPaths: validation.ExcludedPaths,
-                    ClassificationOverrides: validation.ClassificationOverrides),
+                    ClassificationOverrides: validation.ClassificationOverrides,
+                    DiscoverIntegrations: discoverIntegrations),
                 linkedSource.Token);
 
             // Apply the canonical serializer's normalization and sensitive-context redaction

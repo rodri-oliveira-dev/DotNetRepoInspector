@@ -14,6 +14,7 @@ PRODUCT_ASSEMBLIES = (
     "DotNetRepoInspector.Core",
     "DotNetRepoInspector.Engine",
     "DotNetRepoInspector.Git",
+    "DotNetRepoInspector.IntegrationDiscovery",
     "DotNetRepoInspector.MSBuild",
     "DotNetRepoInspector.Mcp",
     "DotNetRepoInspector.Persistence",

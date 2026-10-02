@@ -15,6 +15,18 @@ public sealed record InspectionReport(
         init;
     } = Array.Empty<PolicyFinding>();
 
+    public IReadOnlyList<IntegrationFinding> Integrations
+    {
+        get;
+        init;
+    } = Array.Empty<IntegrationFinding>();
+
+    public IntegrationDiscoveryMetadata IntegrationDiscovery
+    {
+        get;
+        init;
+    } = IntegrationDiscoveryMetadata.NotExecuted;
+
     public static InspectionReport Create(
         RepositoryMetadata repository,
         DotNetSdkMetadata dotNetSdk,

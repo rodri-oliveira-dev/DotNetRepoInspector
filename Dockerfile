@@ -34,6 +34,16 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # composition while preserving Microsoft's supported container baseline.
 FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-noble@sha256:099f6f87ed745377dd27bd722f0d1a352bca71b4fddaabfd75e7c064bcaa82da AS final
 
+# The pinned Noble base currently predates the serviced OpenSSL build that fixes
+# CVE-2026-84782. Keep the immutable base digest and install the patched packages
+# explicitly until the next pinned runtime-deps servicing update.
+ARG OPENSSL_VERSION=3.0.13-0ubuntu3.16
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        libssl3t64="${OPENSSL_VERSION}" \
+        openssl="${OPENSSL_VERSION}" \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
 # Preserve the repository's supported SDK matrix inside one image. The .NET 10

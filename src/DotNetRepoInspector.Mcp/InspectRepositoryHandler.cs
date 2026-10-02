@@ -17,11 +17,26 @@ public sealed class InspectRepositoryHandler
         _executor = executor;
     }
 
+    public Task<CallToolResult> ExecuteAsync(
+        string? configurationPath,
+        bool disableConfigurationFile,
+        IReadOnlyCollection<string>? excludedPaths,
+        IReadOnlyDictionary<string, string>? classificationOverrides,
+        CancellationToken cancellationToken) =>
+        ExecuteAsync(
+            configurationPath,
+            disableConfigurationFile,
+            excludedPaths,
+            classificationOverrides,
+            discoverIntegrations: null,
+            cancellationToken);
+
     public async Task<CallToolResult> ExecuteAsync(
         string? configurationPath,
         bool disableConfigurationFile,
         IReadOnlyCollection<string>? excludedPaths,
         IReadOnlyDictionary<string, string>? classificationOverrides,
+        bool? discoverIntegrations,
         CancellationToken cancellationToken)
     {
         var outcome = await _executor.ExecuteAsync(
@@ -29,6 +44,7 @@ public sealed class InspectRepositoryHandler
             disableConfigurationFile,
             excludedPaths,
             classificationOverrides,
+            discoverIntegrations,
             cancellationToken);
         if (!outcome.Succeeded)
         {

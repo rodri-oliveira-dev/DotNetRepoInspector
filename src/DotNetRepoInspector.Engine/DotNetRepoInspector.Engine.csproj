@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="../DotNetRepoInspector.Core/DotNetRepoInspector.Core.csproj" />
     <ProjectReference Include="../DotNetRepoInspector.Git/DotNetRepoInspector.Git.csproj" />
+    <ProjectReference Include="../DotNetRepoInspector.IntegrationDiscovery/DotNetRepoInspector.IntegrationDiscovery.csproj" />
     <ProjectReference Include="../DotNetRepoInspector.MSBuild/DotNetRepoInspector.MSBuild.csproj" />
   </ItemGroup>
 </Project>

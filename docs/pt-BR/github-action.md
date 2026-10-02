@@ -36,6 +36,7 @@ A própria Action não precisa de token do GitHub nem de permissão de escrita p
 | `exclude` | Não | vazio | Diretórios ou caminhos exatos de projeto, relativos ao repositório e separados por linhas, a serem excluídos. |
 | `exclude-repositories` | Não | vazio | Identificadores completos `owner/repository`, separados por linhas, a serem pulados antes da inspeção em workflows de inventário de frota. |
 | `classify` | Não | vazio | Overrides explícitos `<project-path>=<kind>` separados por linhas. |
+| `discover-integrations` | Não | `false` | Defina `true` para habilitar Integration Discovery limitado e somente sintático. |
 | `sink-url` | Não | vazio | Endpoint HTTP/HTTPS absoluto. Um valor não vazio habilita o sink HTTP de snapshots built-in. |
 | `sink-token` | Não | vazio | Bearer token opcional para o sink HTTP. Forneça-o por um secret do GitHub Actions. |
 | `sink-timeout-seconds` | Não | `15` | Timeout total da persistência quando `sink-url` está configurado. Faixa suportada: `1..300`. |
@@ -45,6 +46,8 @@ A própria Action não precisa de token do GitHub nem de permissão de escrita p
 Os tipos de classificação suportados são `web`, `worker`, `console`, `library`, `test` e `unknown`.
 
 Valores de `exclude` são aditivos às exclusões do arquivo. Uma entrada direta de `classify` vence o override do arquivo para o mesmo projeto. A Action encaminha esses valores para o mesmo contrato de configuração da CLI/Engine; ela não implementa lógica independente de classificação ou policy. Consulte [`configuration.md`](configuration.md).
+
+`discover-integrations: "true"` encaminha o opt-in da CLI. O padrão continua desabilitado; a Action não solicita permissão, token ou acesso de rede adicional, e outputs existentes como `report-path` permanecem inalterados.
 
 `exclude-repositories` é intencionalmente diferente de `exclude` por caminho de projeto. Ele pertence a workflows de inventário agregado de frota que decidem quais repositórios fazem parte da população antes de invocar a inspeção. Cada valor deve ser o identificador completo do repositório no GitHub, como `rodri-oliveira-dev/DotNetRepoInspector`; nomes parciais, substrings e fragmentos de caminho são rejeitados. Quando o `github.repository` atual corresponde, a Action termina com sucesso usando `repository-excluded=true`, sem caminho de relatório, sem versão de schema e sem invocar o Inspector.
 
@@ -83,7 +86,7 @@ Depois aponte o input `config` já existente para ele:
 
 Se `.dotnetrepoinspector.json` na raiz do repositório inspecionado já contiver a policy, omita `config`; o arquivo padrão será carregado automaticamente.
 
-Nenhum output específico de policy é necessário. O `report-path` existente aponta para o JSON do schema `1.5` que contém `policyFindings` no nível superior, enquanto `exit-code` é `1` quando qualquer finding de policy possui severidade `error`. Warnings de policy mantêm exit code `0` quando os diagnostics de inspeção estão limpos.
+Nenhum output específico de policy é necessário. O `report-path` existente aponta para o JSON do schema `1.6` que contém `policyFindings` no nível superior, enquanto `exit-code` é `1` quando qualquer finding de policy possui severidade `error`. Warnings de policy mantêm exit code `0` quando os diagnostics de inspeção estão limpos.
 
 ## Configurar exclusões e overrides
 

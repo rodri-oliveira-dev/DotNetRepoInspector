@@ -69,3 +69,18 @@ public sealed record GetSdkMetadataResponse(
 public sealed record GetSdkMetadataData(
     string InspectionSchemaVersion,
     DotNetSdkMetadata DotNetSdk);
+
+public sealed record ListIntegrationsResponse(
+    string McpSchemaVersion,
+    bool Ok,
+    ListIntegrationsData? Data,
+    McpToolError? Error);
+
+public sealed record ListIntegrationsData(
+    string InspectionSchemaVersion,
+    int Offset,
+    int Limit,
+    int Total,
+    bool HasMore,
+    bool Truncated,
+    IReadOnlyList<IntegrationFinding> Integrations);

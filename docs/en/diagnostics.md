@@ -24,12 +24,18 @@ Inspection diagnostics are part of the normalized result and are intended for bo
 | `DRI1012` | `warning` | Repository metadata could not be fully collected. |
 | `DRI1013` | `error` | The inspection configuration is invalid, unsupported, unreadable, or violates path/classification rules. |
 | `DRI1014` | `warning` | A configured classification override did not match a discovered project. |
+| `DRI1015` | `warning` | A source file was skipped during integration discovery. |
+| `DRI1016` | `warning` | A source file could not be parsed for integration discovery. |
+| `DRI1017` | `warning` | Integration discovery reached a configured limit and returned partial results. |
+| `DRI1018` | `warning` | An integration detector failed and the remaining discovery continued. |
 
 Codes are stable identifiers. Existing codes must not be repurposed for a different meaning. Automation should use `code` and `severity`, not message text.
 
 For `DRI1013`, `context.reason` provides a stable non-sensitive reason such as `invalid-json`, `unsupported-config-schema`, `config-file-not-found`, `invalid-excluded-path`, or `invalid-classification-kind`. Policy configuration adds stable reasons such as `policies-require-config-schema-2`, `target-framework-policy-enabled-required`, `target-framework-policy-allowed-required`, `invalid-target-framework-policy-allowed`, and `invalid-target-framework-policy-severity`. Configuration details that could contain arbitrary repository content are not copied into diagnostics.
 
 For `DRI1014`, `source` identifies the configured repository-relative project path and `context.overrideSource` identifies whether the stale override came from `configuration` or the direct `request` layer.
+
+For `DRI1015` through `DRI1018`, `source` is limited to a repository-relative path. `context.reason`, `context.component`, and optional `context.detector` contain stable identifiers only. Parser diagnostics, exception messages, source snippets, and configuration values are never copied into these diagnostics.
 
 ## Diagnostic fields
 

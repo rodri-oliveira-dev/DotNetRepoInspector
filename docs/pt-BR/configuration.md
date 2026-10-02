@@ -18,6 +18,9 @@ Quando presente na raiz do repositório inspecionado, `.dotnetrepoinspector.json
   "classificationOverrides": {
     "src/App/App.csproj": "web"
   },
+  "integrationDiscovery": {
+    "enabled": false
+  },
   "policies": {
     "targetFramework": {
       "enabled": true,
@@ -28,7 +31,7 @@ Quando presente na raiz do repositório inspecionado, `.dotnetrepoinspector.json
 }
 ```
 
-`schemaVersion` é obrigatório. O schema de configuração `1` continua suportado para exclusões e overrides de classificação; o schema `2` é a versão atual e adiciona a seção opcional `policies`. Uma seção `policies` no schema `1` é rejeitada em vez de ser interpretada implicitamente. Propriedades desconhecidas são rejeitadas para que erros de digitação não alterem silenciosamente o comportamento da inspeção.
+`schemaVersion` é obrigatório. O schema de configuração `1` continua suportado para exclusões e overrides de classificação; o schema `2` é a versão atual e adiciona as seções opcionais `policies` e `integrationDiscovery`. Qualquer uma dessas seções no schema `1` é rejeitada em vez de ser interpretada implicitamente. Propriedades desconhecidas são rejeitadas para que erros de digitação não alterem silenciosamente o comportamento da inspeção.
 
 Todos os caminhos configurados são relativos à raiz do repositório inspecionado e devem permanecer dentro dela. Caminhos absolutos e caminhos que escapem por `..` são inválidos. Os caminhos seguem semântica relativa ao repositório; `/` é recomendado em configuração versionada.
 
@@ -73,6 +76,21 @@ Os sinais automáticos continuam presentes. `automaticKind` registra o resultado
 
 Se um override apontar para um projeto que não foi descoberto, a inspeção continua e emite `DRI1014` com severidade `warning`. Isso torna configuração obsoleta visível sem transformá-la em falha de inspeção.
 
+## Integration Discovery
+
+Integration Discovery é desabilitado por padrão. O schema `2` pode habilitar a mesma capability limitada e somente sintática exposta pela CLI e pela Action:
+
+```json
+{
+  "schemaVersion": "2",
+  "integrationDiscovery": {
+    "enabled": true
+  }
+}
+```
+
+O scanner lê arquivos C# suportados, mas não executa código do repositório nem usa a rede. Seus findings normalizados excluem snippets de source, payloads, queries, connection strings e credenciais.
+
 ## Policies
 
 Policies são opt-in. Sem arquivo de configuração, sem a seção `policies` ou com `targetFramework.enabled: false`, nenhuma rule é registrada e o comportamento da inspeção permanece inalterado.
@@ -101,7 +119,7 @@ A rule avalia somente fatos normalizados de `ProjectInspection.TargetFrameworks`
 - um projeto sem target framework conhecido não gera finding de policy, pois a rule não inventa violação a partir de fatos ausentes da inspeção;
 - os projetos são avaliados em ordem de caminho relativo ao repositório, mantendo a ordem dos findings determinística.
 
-Findings de policy são distintos de diagnostics da inspeção. Rules habilitadas são avaliadas depois que o relatório normalizado de inspeção é construído, e seus resultados são emitidos em `policyFindings` no nível superior do schema de inspeção `1.5`. A CLI e a GitHub Action retornam exit code `1` quando qualquer finding de policy possui severidade `error`; warnings de policy não falham uma inspeção que esteja saudável.
+Findings de policy são distintos de diagnostics da inspeção. Rules habilitadas são avaliadas depois que o relatório normalizado de inspeção é construído, e seus resultados são emitidos em `policyFindings` no nível superior do schema de inspeção atual `1.6` (o campo foi introduzido na `1.5`). A CLI e a GitHub Action retornam exit code `1` quando qualquer finding de policy possui severidade `error`; warnings de policy não falham uma inspeção que esteja saudável.
 
 ## Configuração pela CLI
 
@@ -111,7 +129,8 @@ A CLI expõe os mesmos conceitos diretamente:
 dotnet repo-inspect . \
   --exclude generated \
   --exclude samples/Legacy.csproj \
-  --classify src/App/App.csproj=web
+  --classify src/App/App.csproj=web \
+  --discover-integrations
 ```
 
 Use um arquivo diferente do padrão com:
@@ -143,6 +162,7 @@ A Action reutilizável expõe os mesmos conceitos. `exclude` e `classify` recebe
       samples/Legacy.csproj
     classify: |
       src/App/App.csproj=web
+    discover-integrations: "true"
 ```
 
 Um arquivo de configuração customizado pode ser informado em `config`; `no-config: "true"` desabilita o carregamento automático do arquivo padrão.
@@ -161,6 +181,8 @@ Exclusões são aditivas: valores de `--exclude` / input `exclude` da Action sã
 
 Na classificação, uma entrada direta de `--classify` / Action `classify` para o mesmo projeto substitui a entrada do arquivo. No JSON resultante, `classification.source` será `request`; um override apenas do arquivo usa `configuration`.
 
+Para Integration Discovery, o opt-in direto pela CLI/MCP/Action tem precedência sobre o arquivo. Sem valor direto, `integrationDiscovery.enabled` é usado; se nenhum deles existir, o valor efetivo é `false`.
+
 `--no-config` / Action `no-config` remove completamente a camada do arquivo. Exclusões e overrides diretos continuam sendo aplicados.
 
 ## Configuração inválida
@@ -175,6 +197,7 @@ Configuração inválida do repositório é representada no contrato normal da i
 - tipo de classificação não suportado;
 - semântica conflitante de `--config` e `--no-config` na fronteira da Engine;
 - seção `policies` usando o schema legado `1`;
+- seção `integrationDiscovery` usando o schema legado `1` ou sem `enabled`;
 - ausência de `targetFramework.enabled`, rule habilitada sem lista `allowed`, TFMs permitidos em branco ou severidade de policy não suportada.
 
 A Engine retorna um `InspectionReport` contendo o diagnóstico em vez de descartar o resultado legível por máquina. A CLI, portanto, termina com código `1`, e a GitHub Action preserva o mesmo código enquanto expõe o caminho do relatório quando disponível.

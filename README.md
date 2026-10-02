@@ -19,7 +19,7 @@
 
 ## What v1 does
 
-DotNetRepoInspector produces one deterministic, machine-readable view of a .NET repository without requiring source-code analysis or an external database.
+DotNetRepoInspector produces one deterministic, machine-readable view of a .NET repository. The default path remains metadata/MSBuild-only and requires neither source analysis nor an external database; optional Integration Discovery adds bounded C# syntax analysis.
 
 The v1 surface includes:
 
@@ -29,8 +29,9 @@ The v1 surface includes:
 - Git repository, commit, branch, remote, and dirty-state metadata when available;
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
 - optional `classification.subtype` contract field reserved for explicit subtype evidence;
-- versioned inspection JSON (`schemaVersion 1.5`);
+- versioned inspection JSON (`schemaVersion 1.6`);
 - optional repository configuration for exclusions, explicit classification overrides, and opt-in policies;
+- opt-in Integration Discovery for normalized HTTP, messaging, database, cache, and cloud-storage dependencies;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
@@ -42,18 +43,20 @@ Concrete subtype detection remains evidence-driven and conservative. The current
 - **MSBuild is the source of truth.** Effective evaluated properties take precedence over raw project XML heuristics.
 - **Zero configuration by default.** A useful inspection requires only a repository path.
 - **Automation first.** Output is deterministic, machine-readable, and suitable for CI/CD.
-- **No source-code collection.** The Inspector focuses on project/repository metadata.
+- **No source-body collection.** The default flow is metadata/MSBuild-only. Opt-in Integration Discovery parses bounded C# syntax, never executes target-repository code, and emits only allow-listed evidence—not source bodies.
 - **Persistence is optional.** Inspection works without a database, HTTP endpoint, or cloud account.
 - **Provider agnostic.** GitHub Actions is a delivery integration, not the core architecture.
 - **Versioned public contracts.** Product, Action, CLI, and JSON compatibility rules are documented and release-gated.
 
+Integration Discovery is disabled by default. Enable it with `--discover-integrations`, repository configuration, the GitHub Action input, or the MCP opt-in. It performs no network lookup and never serializes source snippets, queries, payloads, connection strings, or credentials. See the [recognized v1.6 catalog and limitations](docs/en/integration-discovery.md).
+
 ## JSON contract
 
-The v1 contract currently uses inspection schema **1.5**. A representative payload is:
+The v1 contract currently uses inspection schema **1.6**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.5",
+  "schemaVersion": "1.6",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",

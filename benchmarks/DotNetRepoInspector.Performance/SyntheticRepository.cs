@@ -81,6 +81,19 @@ internal sealed class SyntheticRepository : IDisposable
                 Path.Combine(projectDirectory, $"{projectName}.csproj"),
                 projectContent,
                 new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+
+            File.WriteAllText(
+                Path.Combine(projectDirectory, "IntegrationClient.cs"),
+                $$"""
+                namespace Synthetic.{{projectName}};
+
+                internal sealed class IntegrationClient(IHttpClientFactory factory)
+                {
+                    public Task<HttpResponseMessage> SendAsync(CancellationToken cancellationToken) =>
+                        factory.CreateClient("synthetic-{{indexText}}").GetAsync("health", cancellationToken);
+                }
+                """,
+                new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         }
 
         return new SyntheticRepository(rootPath);

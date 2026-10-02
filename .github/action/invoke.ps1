@@ -251,6 +251,17 @@ $noConfig = switch ($noConfigInput.Trim().ToLowerInvariant()) {
     default { throw "Unsupported no-config value. Expected true or false." }
 }
 
+$discoverIntegrationsInput = $env:DRI_INPUT_DISCOVER_INTEGRATIONS
+if ([string]::IsNullOrWhiteSpace($discoverIntegrationsInput)) {
+    $discoverIntegrationsInput = "false"
+}
+
+$discoverIntegrations = switch ($discoverIntegrationsInput.Trim().ToLowerInvariant()) {
+    "false" { $false }
+    "true" { $true }
+    default { throw "Unsupported discover-integrations value. Expected true or false." }
+}
+
 $repositoryInput = if ([string]::IsNullOrWhiteSpace($env:DRI_INPUT_PATH)) { "." } else { $env:DRI_INPUT_PATH }
 $repositoryPath = Resolve-WorkspacePath -Path $repositoryInput -MustExist
 
@@ -355,6 +366,10 @@ foreach ($excludedPath in @(Get-InputLines -Value $env:DRI_INPUT_EXCLUDE)) {
 
 foreach ($classificationOverride in @(Get-InputLines -Value $env:DRI_INPUT_CLASSIFY)) {
     $arguments += @("--classify", $classificationOverride)
+}
+
+if ($discoverIntegrations) {
+    $arguments += "--discover-integrations"
 }
 
 $sinkUrl = $env:DRI_INPUT_SINK_URL
