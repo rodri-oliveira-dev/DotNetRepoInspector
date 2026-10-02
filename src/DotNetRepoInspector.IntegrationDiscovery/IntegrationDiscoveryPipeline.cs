@@ -277,6 +277,10 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
         CancellationToken cancellationToken)
     {
         HashSet<string> exclusions = CreateExclusionSet(repositoryRoot, excludedPaths);
+        HashSet<string> excludedProjectDirectories = exclusions
+            .Where(IsProjectFile)
+            .Select(static path => Path.GetDirectoryName(path)!)
+            .ToHashSet(PathComparer);
         ProjectRoot[] projectRoots = projects
             .OrderBy(static project => project.ProjectPath, StringComparer.Ordinal)
             .Select(project => TryCreateProjectRoot(repositoryRoot, project.ProjectPath))
@@ -288,7 +292,6 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
             .Select(static project => project.DirectoryPath)
             .ToHashSet(PathComparer);
         var sources = new Dictionary<string, SourceCandidate>(PathComparer);
-        var visitedDirectories = new HashSet<string>(PathComparer);
         var visitedPaths = 0;
 
         foreach (ProjectRoot project in projectRoots)
@@ -302,7 +305,15 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
             }
 
             var pendingDirectories = new Stack<string>();
+            var visitedDirectories = new HashSet<string>(PathComparer);
             pendingDirectories.Push(project.DirectoryPath);
+
+            if (++visitedPaths > options.MaxVisitedPaths)
+            {
+                state.Truncated = true;
+                diagnostics.Add(LimitDiagnostic(project.ProjectPath, "visited-paths"));
+                return OrderSources(sources);
+            }
 
             while (pendingDirectories.Count > 0)
             {
@@ -313,19 +324,27 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
                     continue;
                 }
 
-                if (++visitedPaths > options.MaxVisitedPaths)
-                {
-                    state.Truncated = true;
-                    diagnostics.Add(LimitDiagnostic(ToRelativePath(repositoryRoot, directory), "visited-paths"));
-                    return OrderSources(sources);
-                }
-
-                string[] files;
-                string[] directories;
                 try
                 {
-                    files = Directory.GetFiles(directory, "*.cs", EnumerationOptions);
-                    directories = Directory.GetDirectories(directory, "*", EnumerationOptions);
+                    foreach (string file in Directory.EnumerateFiles(directory, "*.cs", EnumerationOptions))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (++visitedPaths > options.MaxVisitedPaths)
+                        {
+                            state.Truncated = true;
+                            diagnostics.Add(LimitDiagnostic(ToRelativePath(repositoryRoot, file), "visited-paths"));
+                            return OrderSources(sources);
+                        }
+
+                        if (IsExcluded(file, exclusions) || IsGeneratedFileName(file))
+                        {
+                            continue;
+                        }
+
+                        string sourcePath = ToRelativePath(repositoryRoot, file);
+                        var candidate = new SourceCandidate(project.ProjectPath, sourcePath, file);
+                        sources[$"{project.ProjectPath}\0{file}"] = candidate;
+                    }
                 }
                 catch (Exception exception) when (IsFileAccessException(exception))
                 {
@@ -335,28 +354,28 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
                     continue;
                 }
 
-                foreach (string file in files.OrderBy(static path => path, StringComparer.Ordinal))
+                var directories = new List<string>();
+                try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (++visitedPaths > options.MaxVisitedPaths)
+                    foreach (string child in Directory.EnumerateDirectories(directory, "*", EnumerationOptions))
                     {
-                        state.Truncated = true;
-                        diagnostics.Add(LimitDiagnostic(ToRelativePath(repositoryRoot, file), "visited-paths"));
-                        return OrderSources(sources);
-                    }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        if (++visitedPaths > options.MaxVisitedPaths)
+                        {
+                            state.Truncated = true;
+                            diagnostics.Add(LimitDiagnostic(ToRelativePath(repositoryRoot, child), "visited-paths"));
+                            return OrderSources(sources);
+                        }
 
-                    if (IsExcluded(file, exclusions) || IsGeneratedFileName(file))
-                    {
-                        continue;
+                        directories.Add(child);
                     }
-
-                    string sourcePath = ToRelativePath(repositoryRoot, file);
-                    var candidate = new SourceCandidate(project.ProjectPath, sourcePath, file);
-                    if (!sources.TryGetValue(file, out var existing) ||
-                        string.CompareOrdinal(candidate.ProjectPath, existing.ProjectPath) < 0)
-                    {
-                        sources[file] = candidate;
-                    }
+                }
+                catch (Exception exception) when (IsFileAccessException(exception))
+                {
+                    diagnostics.Add(FileSkippedDiagnostic(
+                        ToRelativePath(repositoryRoot, directory),
+                        "directory-unavailable"));
+                    continue;
                 }
 
                 foreach (string child in directories.OrderByDescending(
@@ -365,6 +384,8 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
                 {
                     if (IsExcluded(child, exclusions) ||
                         ExcludedDirectoryNames.Contains(Path.GetFileName(child)) ||
+                        excludedProjectDirectories.Contains(child) &&
+                        !PathComparer.Equals(child, project.DirectoryPath) ||
                         allProjectDirectories.Contains(child) && !PathComparer.Equals(child, project.DirectoryPath))
                     {
                         continue;
@@ -456,6 +477,14 @@ public sealed class IntegrationDiscoveryPipeline : IIntegrationDiscoveryPipeline
                fileName.EndsWith(".g.i.cs", StringComparison.OrdinalIgnoreCase) ||
                fileName.EndsWith(".generated.cs", StringComparison.OrdinalIgnoreCase) ||
                fileName.EndsWith(".designer.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsProjectFile(string path)
+    {
+        string extension = Path.GetExtension(path);
+        return extension.Equals(".csproj", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".fsproj", StringComparison.OrdinalIgnoreCase) ||
+               extension.Equals(".vbproj", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsSafeDetectorId(string? id) =>

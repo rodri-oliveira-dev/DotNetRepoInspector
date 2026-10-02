@@ -11,7 +11,7 @@ public sealed class CacheAndNoSqlIntegrationDetector : IIntegrationDetector
     public ValueTask DetectAsync(IntegrationDetectionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Dictionary<string, string> types = CloudMessagingSyntax.FindVariableTypes(context.Root);
+        VariableTypeMap types = CloudMessagingSyntax.FindVariableTypes(context.Root);
         var resources = new Dictionary<string, ResourceEvidence>(StringComparer.Ordinal);
         MapConstructedClients(context, types, resources);
 
@@ -84,7 +84,7 @@ public sealed class CacheAndNoSqlIntegrationDetector : IIntegrationDetector
         string method,
         string? type,
         ResourceEvidence mapped,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources)
     {
         if (type is "MongoClient" or "IMongoClient" && method == "GetDatabase")
@@ -126,7 +126,7 @@ public sealed class CacheAndNoSqlIntegrationDetector : IIntegrationDetector
         string method,
         string? type,
         ResourceEvidence mapped,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources)
     {
         if (type == "CosmosClient" && method == "GetDatabase")
@@ -187,12 +187,12 @@ public sealed class CacheAndNoSqlIntegrationDetector : IIntegrationDetector
 
     private static void MapConstructedClients(
         IntegrationDetectionContext context,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources)
     {
         foreach (VariableDeclaratorSyntax variable in context.Root.DescendantNodes().OfType<VariableDeclaratorSyntax>())
         {
-            if (!types.TryGetValue(variable.Identifier.ValueText, out string? type))
+            if (!types.TryGetType(variable, out string? type))
                 continue;
             if (type == "ConnectionMultiplexer")
             {

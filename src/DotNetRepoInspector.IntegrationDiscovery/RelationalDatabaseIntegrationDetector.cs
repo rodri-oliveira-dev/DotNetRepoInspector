@@ -37,7 +37,7 @@ public sealed class RelationalDatabaseIntegrationDetector : IIntegrationDetector
     public ValueTask DetectAsync(IntegrationDetectionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Dictionary<string, string> types = CloudMessagingSyntax.FindVariableTypes(context.Root);
+        VariableTypeMap types = CloudMessagingSyntax.FindVariableTypes(context.Root);
 
         foreach (ObjectCreationExpressionSyntax creation in context.Root.DescendantNodes()
                      .OfType<ObjectCreationExpressionSyntax>().OrderBy(static node => node.SpanStart))

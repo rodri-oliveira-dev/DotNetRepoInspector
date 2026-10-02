@@ -28,7 +28,7 @@ public sealed class AwsMessagingIntegrationDetector : IIntegrationDetector
     public ValueTask DetectAsync(IntegrationDetectionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Dictionary<string, string> types = CloudMessagingSyntax.FindVariableTypes(context.Root);
+        VariableTypeMap types = CloudMessagingSyntax.FindVariableTypes(context.Root);
         foreach (InvocationExpressionSyntax invocation in context.Root.DescendantNodes()
                      .OfType<InvocationExpressionSyntax>().OrderBy(static node => node.SpanStart))
         {

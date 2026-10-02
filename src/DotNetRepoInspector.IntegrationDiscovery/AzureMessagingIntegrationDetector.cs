@@ -11,7 +11,7 @@ public sealed class AzureMessagingIntegrationDetector : IIntegrationDetector
     public ValueTask DetectAsync(IntegrationDetectionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Dictionary<string, string> types = CloudMessagingSyntax.FindVariableTypes(context.Root);
+        VariableTypeMap types = CloudMessagingSyntax.FindVariableTypes(context.Root);
         var resources = new Dictionary<string, ResourceEvidence>(StringComparer.Ordinal);
         MapConstructedClients(context, types, resources);
 
@@ -68,12 +68,12 @@ public sealed class AzureMessagingIntegrationDetector : IIntegrationDetector
 
     private static void MapConstructedClients(
         IntegrationDetectionContext context,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources)
     {
         foreach (VariableDeclaratorSyntax variable in context.Root.DescendantNodes().OfType<VariableDeclaratorSyntax>())
         {
-            if (!types.TryGetValue(variable.Identifier.ValueText, out string? type))
+            if (!types.TryGetType(variable, out string? type))
                 continue;
             (string[] names, int position)? rule = type switch
             {
@@ -92,14 +92,14 @@ public sealed class AzureMessagingIntegrationDetector : IIntegrationDetector
 
     private static void MapInvocationResult(
         InvocationExpressionSyntax invocation,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources,
         string type,
         ResourceEvidence resource)
     {
         if (invocation.Parent is not EqualsValueClauseSyntax { Parent: VariableDeclaratorSyntax variable })
             return;
-        types[variable.Identifier.ValueText] = type;
+        types.Add(variable, type);
         resources[variable.Identifier.ValueText] = resource;
     }
 }

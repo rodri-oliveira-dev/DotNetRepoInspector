@@ -66,7 +66,7 @@ internal static class DataIntegrationSyntax
 
     public static void MapInvocationResult(
         InvocationExpressionSyntax invocation,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources,
         string type,
         ResourceEvidence resource)
@@ -77,7 +77,7 @@ internal static class DataIntegrationSyntax
             return;
         }
 
-        types[variable.Identifier.ValueText] = type;
+        types.Add(variable, type);
         resources[variable.Identifier.ValueText] = resource;
     }
 

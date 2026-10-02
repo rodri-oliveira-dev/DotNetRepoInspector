@@ -171,6 +171,42 @@ public sealed class IntegrationDiscoveryPipelineTests
     }
 
     [Fact]
+    public async Task DiscoverAsync_TreatsAnExcludedNestedProjectAsADirectoryBoundary()
+    {
+        var pipeline = new IntegrationDiscoveryPipeline(
+            [new ConfigurationKeyDetector("configuration", [])]);
+
+        IntegrationDiscoveryResult result = await pipeline.DiscoverAsync(
+            RequestWithExclusions(
+                ["NestedProjects/Parent/Child/Child.csproj"],
+                "NestedProjects/Parent/Parent.csproj"),
+            TestContext.Current.CancellationToken);
+
+        IntegrationFinding finding = Assert.Single(result.Findings);
+        Assert.Equal("NestedProjects/Parent/Parent.csproj", finding.ProjectPath);
+        Assert.Equal("Messaging:Parent", finding.ConfigurationKey);
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_PreservesFindingsForColocatedProjects()
+    {
+        var pipeline = new IntegrationDiscoveryPipeline(
+            [new ConfigurationKeyDetector("configuration", [])]);
+
+        IntegrationDiscoveryResult result = await pipeline.DiscoverAsync(
+            Request(
+                "ColocatedProjects/Alpha.csproj",
+                "ColocatedProjects/Beta.csproj"),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            ["ColocatedProjects/Alpha.csproj", "ColocatedProjects/Beta.csproj"],
+            result.Findings.Select(static finding => finding.ProjectPath));
+        Assert.All(result.Findings, static finding =>
+            Assert.Equal("Messaging:Shared", finding.ConfigurationKey));
+    }
+
+    [Fact]
     public async Task DiscoverAsync_RejectsUnsafeLiteralEvidence()
     {
         var pipeline = new IntegrationDiscoveryPipeline(

@@ -11,7 +11,7 @@ public sealed class GooglePubSubIntegrationDetector : IIntegrationDetector
     public ValueTask DetectAsync(IntegrationDetectionContext context, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
-        Dictionary<string, string> types = CloudMessagingSyntax.FindVariableTypes(context.Root);
+        VariableTypeMap types = CloudMessagingSyntax.FindVariableTypes(context.Root);
         var resources = new Dictionary<string, ResourceEvidence>(StringComparer.Ordinal);
         MapCreatedClients(context, types, resources);
 
@@ -42,7 +42,7 @@ public sealed class GooglePubSubIntegrationDetector : IIntegrationDetector
 
     private static void MapCreatedClients(
         IntegrationDetectionContext context,
-        Dictionary<string, string> types,
+        VariableTypeMap types,
         Dictionary<string, ResourceEvidence> resources)
     {
         foreach (VariableDeclaratorSyntax variable in context.Root.DescendantNodes().OfType<VariableDeclaratorSyntax>())
@@ -54,7 +54,7 @@ public sealed class GooglePubSubIntegrationDetector : IIntegrationDetector
             if (creation is null || !CloudMessagingSyntax.TryGetInvocation(creation, out _, out ExpressionSyntax? factory))
                 continue;
             string type = ((IdentifierNameSyntax)factory!).Identifier.ValueText;
-            types[variable.Identifier.ValueText] = type;
+            types.Add(variable, type);
             ExpressionSyntax? resource = CloudMessagingSyntax.Argument(creation, type == "PublisherClient" ? ["topicName"] : ["subscriptionName"], 0);
             resources[variable.Identifier.ValueText] = CloudMessagingSyntax.Evidence(context, resource,
                 type == "PublisherClient" ? ["TopicName", "topicName"] : ["SubscriptionName", "subscriptionName"]);

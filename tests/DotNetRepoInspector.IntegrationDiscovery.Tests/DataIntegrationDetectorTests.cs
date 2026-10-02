@@ -48,6 +48,16 @@ public sealed class DataIntegrationDetectorTests
     }
 
     [Fact]
+    public async Task ResolvesReceiverTypesWithinTheirLexicalScopes()
+    {
+        IntegrationDiscoveryResult result = await DiscoverAsync(new CloudStorageIntegrationDetector());
+
+        Assert.Contains(result.Findings, finding =>
+            finding.Technology == "aws-s3" && finding.Target == "scoped-real");
+        Assert.DoesNotContain(result.Findings, finding => finding.Target == "scoped-lookalike");
+    }
+
+    [Fact]
     public async Task IsDeterministicIgnoresLookalikesAndDoesNotSerializeSensitiveValues()
     {
         IIntegrationDetector[] detectors =

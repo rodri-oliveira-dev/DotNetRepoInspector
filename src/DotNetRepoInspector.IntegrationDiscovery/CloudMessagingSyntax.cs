@@ -5,9 +5,9 @@ namespace DotNetRepoInspector.IntegrationDiscovery;
 
 internal static class CloudMessagingSyntax
 {
-    public static Dictionary<string, string> FindVariableTypes(CompilationUnitSyntax root)
+    public static VariableTypeMap FindVariableTypes(CompilationUnitSyntax root)
     {
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        var result = new VariableTypeMap();
         foreach (VariableDeclarationSyntax declaration in root.DescendantNodes().OfType<VariableDeclarationSyntax>())
         {
             string declaredType = SimpleName(declaration.Type);
@@ -18,7 +18,7 @@ internal static class CloudMessagingSyntax
                     : declaredType;
                 if (!string.IsNullOrEmpty(type))
                 {
-                    result[variable.Identifier.ValueText] = type;
+                    result.Add(variable, type);
                 }
             }
         }
@@ -27,7 +27,7 @@ internal static class CloudMessagingSyntax
         {
             if (parameter.Type is not null)
             {
-                result[parameter.Identifier.ValueText] = SimpleName(parameter.Type);
+                result.Add(parameter, SimpleName(parameter.Type));
             }
         }
 
@@ -36,18 +36,14 @@ internal static class CloudMessagingSyntax
 
     public static string? ReceiverType(
         ExpressionSyntax? receiver,
-        IReadOnlyDictionary<string, string> variableTypes)
+        VariableTypeMap variableTypes)
     {
-        string? name = receiver switch
+        if (receiver is ObjectCreationExpressionSyntax creation)
         {
-            IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
-            MemberAccessExpressionSyntax member => member.Name.Identifier.ValueText,
-            ObjectCreationExpressionSyntax creation => SimpleName(creation.Type),
-            _ => null
-        };
-        return name is not null && variableTypes.TryGetValue(name, out string? type)
-            ? type
-            : receiver is ObjectCreationExpressionSyntax ? name : null;
+            return SimpleName(creation.Type);
+        }
+
+        return receiver is null ? null : variableTypes.Resolve(receiver);
     }
 
     public static bool TryGetInvocation(
@@ -270,6 +266,89 @@ internal static class CloudMessagingSyntax
         CastExpressionSyntax cast => Unwrap(cast.Expression),
         _ => expression
     };
+}
+
+internal sealed class VariableTypeMap
+{
+    private readonly List<VariableTypeBinding> _bindings = [];
+
+    public void Add(VariableDeclaratorSyntax variable, string type)
+    {
+        SyntaxNode? scope = variable.Parent?.Parent is FieldDeclarationSyntax or EventFieldDeclarationSyntax
+            ? variable.Ancestors().OfType<BaseTypeDeclarationSyntax>().FirstOrDefault()
+            : variable.Ancestors().FirstOrDefault(static node => node is
+                BlockSyntax or
+                SwitchSectionSyntax or
+                ForStatementSyntax or
+                UsingStatementSyntax or
+                FixedStatementSyntax) ??
+            variable.Ancestors().OfType<CompilationUnitSyntax>().FirstOrDefault();
+        Add(variable, variable.Identifier.ValueText, type, scope, scope is not BaseTypeDeclarationSyntax);
+    }
+
+    public void Add(ParameterSyntax parameter, string type)
+    {
+        SyntaxNode? scope = parameter.Ancestors().FirstOrDefault(static node => node is
+            AnonymousFunctionExpressionSyntax or
+            LocalFunctionStatementSyntax or
+            BaseMethodDeclarationSyntax or
+            BasePropertyDeclarationSyntax or
+            BaseTypeDeclarationSyntax);
+        Add(parameter, parameter.Identifier.ValueText, type, scope, requiresPriorDeclaration: false);
+    }
+
+    public bool TryGetType(VariableDeclaratorSyntax variable, out string? type)
+    {
+        type = _bindings.LastOrDefault(binding => ReferenceEquals(binding.Declaration, variable))?.Type;
+        return type is not null;
+    }
+
+    public string? Resolve(ExpressionSyntax receiver)
+    {
+        string? name = receiver switch
+        {
+            IdentifierNameSyntax identifier => identifier.Identifier.ValueText,
+            MemberAccessExpressionSyntax member => member.Name.Identifier.ValueText,
+            _ => null
+        };
+        if (name is null)
+        {
+            return null;
+        }
+
+        return _bindings
+            .Where(binding =>
+                binding.Name == name &&
+                binding.Scope.FullSpan.Contains(receiver.Span) &&
+                (!binding.RequiresPriorDeclaration || binding.Declaration.SpanStart < receiver.SpanStart))
+            .OrderBy(static binding => binding.Scope.FullSpan.Length)
+            .ThenByDescending(static binding => binding.Declaration.SpanStart)
+            .Select(static binding => binding.Type)
+            .FirstOrDefault();
+    }
+
+    private void Add(
+        SyntaxNode declaration,
+        string name,
+        string type,
+        SyntaxNode? scope,
+        bool requiresPriorDeclaration)
+    {
+        if (scope is null)
+        {
+            return;
+        }
+
+        _bindings.RemoveAll(binding => ReferenceEquals(binding.Declaration, declaration));
+        _bindings.Add(new VariableTypeBinding(declaration, name, type, scope, requiresPriorDeclaration));
+    }
+
+    private sealed record VariableTypeBinding(
+        SyntaxNode Declaration,
+        string Name,
+        string Type,
+        SyntaxNode Scope,
+        bool RequiresPriorDeclaration);
 }
 
 internal sealed record ResourceEvidence(string? Target, string? ConfigurationKey)
