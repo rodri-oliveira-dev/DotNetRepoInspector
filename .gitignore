@@ -46,6 +46,7 @@ project.fragment.lock.json
 *.binlog
 [Bb]uild[Ll]og.*
 
+
 # Local environment and secrets
 .env
 .env.*
