@@ -23,7 +23,7 @@ env:
 jobs:
   workflow-lint:
     name: Validate GitHub Actions workflows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
@@ -55,7 +55,7 @@ jobs:
   dependency-review:
     name: Review dependency changes
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
 
     steps:
@@ -71,7 +71,7 @@ jobs:
 
   build-test-quality:
     name: Build, test and quality
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
@@ -173,7 +173,7 @@ jobs:
 
   sonar:
     name: SonarQube Cloud
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     needs: build-test-quality
     if: >-
@@ -328,7 +328,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-24.04
           - windows-latest
           - macos-latest
 
@@ -381,7 +381,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-24.04
           - windows-latest
           - macos-latest
     env:
@@ -484,7 +484,7 @@ jobs:
           }
 
       - name: Run Action with Integration Discovery
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         id: integrations
         uses: ./
         with:
@@ -493,7 +493,7 @@ jobs:
           discover-integrations: "true"
 
       - name: Validate Action Integration Discovery opt-in
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         shell: pwsh
         env:
           EXIT_CODE: "${{ steps.integrations.outputs.exit-code }}"
@@ -514,7 +514,7 @@ jobs:
           }
 
       - name: Verify non-zero CLI exit propagation and default report path
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         id: expected-failure
         continue-on-error: true
         uses: ./
@@ -522,7 +522,7 @@ jobs:
           path: ./tests/Fixtures/Compatibility/MissingSdk
 
       - name: Validate failure propagation
-        if: matrix.os == 'ubuntu-latest' && always()
+        if: matrix.os == 'ubuntu-24.04' && always()
         shell: pwsh
         env:
           STEP_OUTCOME: "${{ steps.expected-failure.outcome }}"
@@ -553,7 +553,7 @@ jobs:
           }
 
       - name: Run Action with compliant TargetFramework policy
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         id: policy-ok
         uses: ./
         with:
@@ -562,7 +562,7 @@ jobs:
           output: ./artifacts/action-smoke/policy-ok.json
 
       - name: Validate compliant policy result
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         shell: pwsh
         env:
           EXIT_CODE: "${{ steps.policy-ok.outputs.exit-code }}"
@@ -583,7 +583,7 @@ jobs:
           }
 
       - name: Run Action with TargetFramework policy violation
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         id: policy-violation
         continue-on-error: true
         uses: ./
@@ -593,7 +593,7 @@ jobs:
           output: ./artifacts/action-smoke/policy-violation.json
 
       - name: Validate policy violation propagation
-        if: matrix.os == 'ubuntu-latest' && always()
+        if: matrix.os == 'ubuntu-24.04' && always()
         shell: pwsh
         env:
           STEP_OUTCOME: "${{ steps.policy-violation.outcome }}"
@@ -648,7 +648,7 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-24.04
           - windows-latest
           - macos-latest
 
