@@ -44,7 +44,7 @@ concurrency:
 jobs:
   dockerfile-lint:
     name: Hadolint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     steps:
@@ -61,7 +61,7 @@ jobs:
 
   image-validation:
     name: Image (${{ matrix.platform }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     strategy:
       fail-fast: false
