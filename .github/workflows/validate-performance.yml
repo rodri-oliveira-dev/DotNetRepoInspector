@@ -32,7 +32,7 @@ env:
 jobs:
   synthetic-large-repository:
     name: Synthetic repository (100 projects)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_OS || 'ubuntu-26.04' }}
     timeout-minutes: 10
 
     steps:
@@ -101,7 +101,7 @@ jobs:
 
   mcp-protocol:
     name: MCP protocol and adapter
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_OS || 'ubuntu-26.04' }}
     timeout-minutes: 15
 
     steps:

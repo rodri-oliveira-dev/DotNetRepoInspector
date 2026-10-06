@@ -24,7 +24,7 @@ env:
 jobs:
   real-repositories:
     name: Validate pinned real repositories
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.RUNNER_OS || 'ubuntu-26.04' }}
     timeout-minutes: 25
 
     steps:
