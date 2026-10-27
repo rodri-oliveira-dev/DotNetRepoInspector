@@ -188,6 +188,12 @@ internal static partial class DockerfileParser
             return;
         }
 
+        if (IsSensitiveArgumentName(name))
+        {
+            arguments[name] = ArgumentValue.Unknown;
+            return;
+        }
+
         if (equalsIndex < 0)
         {
             arguments[name] = ArgumentValue.Unknown;
@@ -200,6 +206,15 @@ internal static partial class DockerfileParser
             ? new ArgumentValue(true, substitution.Value)
             : ArgumentValue.Unknown;
     }
+
+    private static bool IsSensitiveArgumentName(string name) =>
+        name.Contains("TOKEN", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("SECRET", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("PASSWORD", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("CREDENTIAL", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("PRIVATE_KEY", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("API_KEY", StringComparison.OrdinalIgnoreCase) ||
+        name.Contains("ACCESS_KEY", StringComparison.OrdinalIgnoreCase);
 
     private static FromParseResult ParseFrom(
         string value,
@@ -447,7 +462,8 @@ internal static partial class DockerfileParser
             repository = name;
         }
 
-        return repository.Length > 0;
+        return registry is not { Length: > 256 } &&
+               repository.Length is > 0 and <= MaximumReferenceLength;
     }
 
     private static bool TryGetDotNetFamily(string repository, out string? family)
@@ -469,7 +485,7 @@ internal static partial class DockerfileParser
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*", RegexOptions.CultureInvariant)]
     private static partial Regex ArgumentAtStartRegex();
 
-    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9_.-]*$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9_.-]{0,255}$", RegexOptions.CultureInvariant)]
     private static partial Regex StageNameRegex();
 
     [GeneratedRegex("\\s+", RegexOptions.CultureInvariant)]

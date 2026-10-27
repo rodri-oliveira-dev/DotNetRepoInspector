@@ -18,6 +18,7 @@ Options:
       --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
       --classify <path>=<kind> Override one project classification. Repeatable.
       --discover-integrations  Analyze source syntax for external integrations (opt-in, bounded).
+      --discover-containers    Analyze Dockerfiles for container image evidence (opt-in, bounded).
       --sink http              Persist a snapshot through the built-in HTTP/webhook sink.
       --sink-url <url>         HTTP/HTTPS endpoint used by the selected sink.
       --sink-timeout-seconds   Overall persistence timeout in seconds. Default: 15.
@@ -39,12 +40,17 @@ Integration Discovery trust boundary:
   Disabled by default. Reads source syntax within bounded limits but never executes repository code,
   opens network connections, or emits source snippets, payloads, connection strings, or secrets.
 
+Container Discovery trust boundary:
+  Disabled by default. Reads bounded Dockerfile syntax but never runs Docker, builds images,
+  expands environment variables, queries registries, or executes repository scripts.
+
 Examples:
   dotnet repo-inspect .
   dotnet repo-inspect ../repository --output inspection.json
   dotnet repo-inspect . --exclude generated --exclude samples/Legacy.csproj
   dotnet repo-inspect . --classify src/App/App.csproj=web
   dotnet repo-inspect . --discover-integrations
+  dotnet repo-inspect . --discover-containers
   dotnet repo-inspect . --sink http --sink-url https://evidence.example/snapshots
   dotnet repo-inspect . --sink http --sink-url https://evidence.example/snapshots --sink-failure-mode fatal
   dotnet repo-inspect . --verbose > inspection.json

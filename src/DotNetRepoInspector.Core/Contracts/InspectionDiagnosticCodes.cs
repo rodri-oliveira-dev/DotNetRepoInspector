@@ -20,4 +20,7 @@ public static class InspectionDiagnosticCodes
     public const string IntegrationDiscoveryParseFailed = "DRI1016";
     public const string IntegrationDiscoveryLimitReached = "DRI1017";
     public const string IntegrationDetectorFailed = "DRI1018";
+    public const string ContainerDiscoveryFileSkipped = "DRI1019";
+    public const string ContainerDiscoveryParseFailed = "DRI1020";
+    public const string ContainerDiscoveryLimitReached = "DRI1021";
 }

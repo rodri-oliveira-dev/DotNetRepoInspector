@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` define o resultado estável da inspeção de forma independente dos detalhes internos do MSBuild, GitHub Actions, persistência ou qualquer mecanismo específico de delivery.
 
-A versão atual do schema é `1.6`.
+A versão atual do schema é `1.7`.
 
 ## Contrato de nível superior
 
@@ -16,7 +16,9 @@ Todo payload contém estas propriedades:
 - `projects`: projetos normalizados, sempre emitidos como array.
 - `diagnostics`: diagnósticos no nível do repositório, sempre emitidos como array.
 - `policyFindings`: resultados opcionais da avaliação de policies, estruturalmente separados dos diagnósticos da inspeção. O serializer canônico sempre o emite como array; payloads compatíveis `1.x` mais antigos podem omiti-lo.
-- `integrations`: findings de integração normalizados e opcionais. O serializer canônico `1.6` sempre o emite como array; payloads compatíveis `1.x` mais antigos podem omiti-lo.
+- `integrations`: findings de integração normalizados e opcionais. O serializer canônico sempre o emite como array; payloads compatíveis `1.x` mais antigos podem omiti-lo.
+- `containerImages`: evidência normalizada de instruções `FROM` em Dockerfiles. O serializer canônico `1.7` sempre o emite como array.
+- `containerDiscovery`: estado de execução da descoberta limitada de Dockerfiles.
 
 O schema legível por máquina está em [`inspection-v1.schema.json`](inspection-v1.schema.json). Um payload canônico está disponível em [`examples/inspection-v1.example.json`](examples/inspection-v1.example.json).
 
@@ -58,6 +60,10 @@ O contrato distingue deliberadamente ausência de um valor explícito:
 
 Essa distinção é especialmente importante para fatos MSBuild como `isTestProject` e `isPackable`, para `repository.isDirty`, para `classification.subtype` quando não existe evidência de subtipo, e para os campos de proveniência da classificação, que só existem quando um override está ativo.
 
+## Metadados de publicação
+
+O schema `1.7` adiciona `projects[].publication`, preenchido a partir do estado avaliado pelo MSBuild. Ele contém `selfContained`, `publishSelfContained`, `publishAot`, `publishTrimmed` e `runtimeFrameworkVersion`. Cada propriedade possui um `state` explícito: `evaluated`, `unspecified`, `unknown` ou `context-dependent`. `value` só está presente para `evaluated`, mantendo `false` explícito distinto de uma configuração ausente ou não resolvida. Esses fatos não afirmam como uma aplicação foi realmente implantada.
+
 ## Diagnósticos
 
 Diagnósticos são fatos estáveis da inspeção, e não linhas de log operacional. Um diagnóstico contém um código estável `DRIxxxx`, uma das severidades `info`, `warning` ou `error`, uma mensagem estável legível por pessoas e os campos opcionais `source`, `details` e `context`.
@@ -90,6 +96,12 @@ Todo report serializado novo também inclui `integrationDiscovery`: `enabled=fal
 
 O contrato nunca contém bodies de source, payloads, bodies de requests ou mensagens, queries, connection strings, credenciais, headers de autenticação, valores de configuração ou propriedades avaliadas arbitrárias. `configurationKey` identifica somente uma chave; nunca contém o valor correspondente. Detectores devem omitir evidência que não possa ser representada com segurança e usar confiança conservadora em vez de inventar endpoint remoto ou topologia runtime.
 
+## Evidência de imagens de container
+
+O schema `1.7` adiciona `containerImages` e `containerDiscovery` no nível superior. A descoberta é opt-in; o fluxo padrão de inspeção não lê Dockerfiles. Cada imagem registra `source.path` relativo ao repositório, `source.line` baseada em um, `referenceKind`, `resolutionStatus`, o `stageAlias` atual e, quando resolvidos, `imageReference`, `registry`, `repository`, `tag` ou `digest` SHA-256. `referenceKind` diferencia imagens externas, estágios anteriores e `scratch`.
+
+Os valores oficiais de `dotNetFamily` (`sdk`, `aspnet`, `runtime` e `runtime-deps`) só são emitidos para repositories exatos sob `mcr.microsoft.com/dotnet/...`. Caminhos semelhantes em outros registries não são tratados como oficiais. Variáveis e expressões não suportadas produzem `resolutionStatus=unresolved`, sem suposições nem expansão de valores do ambiente. `containerDiscovery.truncated=true` significa que um budget de arquivo, caminho, bytes, duração, profundidade, diagnósticos ou resultados produziu saída parcial.
+
 ## Caminhos
 
 Caminhos no contrato normalizado usam `/` como separador e não devem conter caminhos absolutos do workspace específicos da máquina.
@@ -113,6 +125,7 @@ A raiz da work tree descoberta pelo adapter Git é um valor operacional interno 
 - chaves de contexto dos findings de policy são ordenadas ordinalmente;
 - findings de integração são ordenados por caminho do projeto, caminho e linha de source, kind, direction, technology, target e id;
 - signals de integração são deduplicados e ordenados ordinalmente;
+- imagens de container são ordenadas por caminho e linha de source, referência de imagem e alias do estágio;
 - separadores de caminho são normalizados para `/`;
 - nomes de propriedades usam `camelCase`;
 - propriedades opcionais com valor `null` são omitidas.
@@ -130,6 +143,7 @@ As versões do schema seguem uma política major/minor.
 - O schema `1.4` adiciona `classification.subtype` opcional como refinamento do tipo base de classificação sem adicionar regras concretas de detecção de subtipo.
 - O schema `1.5` adiciona `policyFindings` no nível superior para que violações de policy permaneçam estruturalmente separadas dos diagnósticos da inspeção.
 - O schema `1.6` adiciona `integrations` opcional no nível superior para evidência de integração derivada de source e habilitada por opt-in.
+- O schema `1.7` adiciona metadados avaliados de publicação por projeto, além de `containerImages` opt-in e o estado de execução `containerDiscovery`.
 - Consumidores do schema `1.x` devem ignorar campos desconhecidos e preservar a semântica documentada dos campos existentes.
 - Remover ou renomear um campo, alterar seu tipo, tornar obrigatório um campo opcional ou alterar seu significado é uma breaking change e exige uma nova versão major do schema, como `2.0`.
 - `InspectionSchema.IsCompatibleVersion` aceita versões com a major atual e rejeita uma major diferente.
@@ -157,11 +171,13 @@ O contrato estável intencionalmente não expõe tipos de resultado específicos
 | Projeto `IsTestProject` | `projects[].isTestProject` |
 | Projeto `IsPackable` | `projects[].isPackable` |
 | Projeto `RuntimeIdentifiers` | `projects[].runtimeIdentifiers` |
+| Propriedades avaliadas de publish | `projects[].publication` com estado explícito do valor |
 | Resultado do classificador automático | `projects[].classification.kind` sem override; caso contrário `projects[].classification.automaticKind` |
 | Evidência aprovada de subtipo | `projects[].classification.subtype` opcional quando houver evidência suportada |
 | Override explícito de classificação | `projects[].classification.kind` efetivo mais `projects[].classification.source` |
 | Avaliação de policy | `policyFindings[]` no nível superior, separado dos diagnósticos da inspeção |
 | Análise de source opt-in | `integrations[]` no nível superior, contendo somente evidência limitada e normalizada |
+| Análise opt-in de Dockerfiles | `containerImages[]` no nível superior e estado `containerDiscovery` |
 
 O dicionário bruto `Properties` do MSBuild vindo da camada de avaliação é intencionalmente excluído. Ele é uma fonte interna de evidência, não parte do contrato público estável.
 

@@ -13,6 +13,7 @@ public static class CliOptionsParser
     private const string ExcludeOption = "--exclude";
     private const string ClassifyOption = "--classify";
     private const string DiscoverIntegrationsOption = "--discover-integrations";
+    private const string DiscoverContainersOption = "--discover-containers";
     private const string SinkOption = "--sink";
     private const string SinkUrlOption = "--sink-url";
     private const string SinkTimeoutOption = "--sink-timeout-seconds";
@@ -38,6 +39,7 @@ public static class CliOptionsParser
         var showHelp = false;
         var showVersion = false;
         bool? discoverIntegrations = null;
+        bool? discoverContainers = null;
         var sinkUrlSpecified = false;
         var sinkTimeoutSpecified = false;
         var sinkFailureModeSpecified = false;
@@ -85,6 +87,17 @@ public static class CliOptionsParser
                 }
 
                 discoverIntegrations = true;
+                continue;
+            }
+
+            if (string.Equals(argument, DiscoverContainersOption, StringComparison.Ordinal))
+            {
+                if (discoverContainers is not null)
+                {
+                    return CliParseResult.Failure("The --discover-containers option can only be specified once.");
+                }
+
+                discoverContainers = true;
                 continue;
             }
 
@@ -407,6 +420,7 @@ public static class CliOptionsParser
             excludedPaths.ToArray(),
             classificationOverrides,
             discoverIntegrations,
+            discoverContainers,
             persistenceOptions,
             showHelp,
             showVersion));

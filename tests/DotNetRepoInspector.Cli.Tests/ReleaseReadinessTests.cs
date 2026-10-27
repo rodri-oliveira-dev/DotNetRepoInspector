@@ -183,6 +183,50 @@ public sealed class ReleaseReadinessTests
         Assert.Contains("discover-integrations:", actionMetadata, StringComparison.Ordinal);
         Assert.Contains("DRI_INPUT_DISCOVER_INTEGRATIONS", actionMetadata, StringComparison.Ordinal);
         Assert.Contains("default: \"false\"", actionMetadata, StringComparison.Ordinal);
+        Assert.DoesNotContain("discover-containers:", actionMetadata, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InspectionSchema_DefinesPublicationAndContainerEvidenceInBothLocales()
+    {
+        foreach (string locale in new[] { "en", "pt-BR" })
+        {
+            string schemaPath = Path.Combine(
+                RepositoryRoot,
+                "docs",
+                locale,
+                "schema",
+                "inspection-v1.schema.json");
+            using JsonDocument schema = JsonDocument.Parse(File.ReadAllText(schemaPath));
+            JsonElement root = schema.RootElement;
+            JsonElement definitions = root.GetProperty("$defs");
+
+            Assert.Equal(
+                "#/$defs/projectPublication",
+                definitions.GetProperty("project")
+                    .GetProperty("properties")
+                    .GetProperty("publication")
+                    .GetProperty("$ref")
+                    .GetString());
+            Assert.Equal(
+                "#/$defs/containerImage",
+                root.GetProperty("properties")
+                    .GetProperty("containerImages")
+                    .GetProperty("items")
+                    .GetProperty("$ref")
+                    .GetString());
+            Assert.Equal(
+                ["enabled", "completed", "truncated"],
+                definitions.GetProperty("containerDiscovery")
+                    .GetProperty("required")
+                    .EnumerateArray()
+                    .Select(static item => item.GetString()));
+            Assert.DoesNotContain(
+                "containerImages",
+                root.GetProperty("required")
+                    .EnumerateArray()
+                    .Select(static item => item.GetString()));
+        }
     }
 
     [Fact]
@@ -433,7 +477,7 @@ public sealed class ReleaseReadinessTests
         string portuguese = File.ReadAllText(Path.Combine(RepositoryRoot, "README.pt-BR.md"));
 
         Assert.Contains("stable v1 contract", english, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.6\"", english, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.7\"", english, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", english, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", english, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", english, StringComparison.Ordinal);
@@ -444,7 +488,7 @@ public sealed class ReleaseReadinessTests
         Assert.DoesNotContain("release candidate", english, StringComparison.OrdinalIgnoreCase);
 
         Assert.Contains("contrato v1 estável", portuguese, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": \"1.6\"", portuguese, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": \"1.7\"", portuguese, StringComparison.Ordinal);
         Assert.Contains("dotnet tool install --global DotNetRepoInspector", portuguese, StringComparison.Ordinal);
         Assert.DoesNotContain("dotnet tool install --global DotNetRepoInspector --version", portuguese, StringComparison.Ordinal);
         Assert.Contains("dnx DotNetRepoInspector.Mcp --yes", portuguese, StringComparison.Ordinal);

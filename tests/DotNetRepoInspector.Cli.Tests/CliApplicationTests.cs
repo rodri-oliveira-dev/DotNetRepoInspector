@@ -29,6 +29,8 @@ public sealed class CliApplicationTests
         Assert.Contains(report.Projects, static project => project.Classification?.Kind == "worker");
         Assert.Empty(report.PolicyFindings);
         Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
+        Assert.Equal(ContainerDiscoveryMetadata.NotExecuted, report.ContainerDiscovery);
+        Assert.Empty(report.ContainerImages);
     }
 
     [Theory]
@@ -77,6 +79,60 @@ public sealed class CliApplicationTests
         Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
         Assert.Empty(report.Integrations);
         Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Theory]
+    [InlineData("--discover-containers")]
+    [InlineData("container-enabled.json")]
+    public async Task RunAsync_ContainerDiscoveryOptInProducesStructuredEvidence(string optIn)
+    {
+        ArgumentNullException.ThrowIfNull(optIn);
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+        string fixture = FixturePath("ContainerDiscovery");
+        string[] args = optIn.StartsWith("--", StringComparison.Ordinal)
+            ? [fixture, optIn]
+            : [fixture, "--config", optIn];
+
+        int exitCode = await application.RunAsync(
+            args,
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        InspectionReport report = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Equal(ContainerDiscoveryMetadata.Complete(false), report.ContainerDiscovery);
+        Assert.NotEmpty(report.ContainerImages);
+        Assert.Contains(
+            report.ContainerImages,
+            static image =>
+                image.DotNetFamily == ContainerDotNetImageFamily.Sdk &&
+                image.IsOfficialDotNetImage);
+        Assert.Contains(
+            report.ContainerImages,
+            static image => image.ResolutionStatus == ContainerImageResolutionStatus.Unresolved);
+        Assert.DoesNotContain("fixture-secret", output.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RunAsync_DisabledContainerConfigurationDoesNotReadDockerfiles()
+    {
+        using var output = new StringWriter();
+        using var error = new StringWriter();
+        var application = new CliApplication(new RepositoryInspector(), "1.0.0-test");
+
+        int exitCode = await application.RunAsync(
+            [FixturePath("ContainerDiscovery"), "--config", "container-disabled.json"],
+            output,
+            error,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(CliExitCodes.Success, exitCode);
+        InspectionReport report = InspectionJsonSerializer.Deserialize(output.ToString());
+        Assert.Equal(ContainerDiscoveryMetadata.NotExecuted, report.ContainerDiscovery);
+        Assert.Empty(report.ContainerImages);
     }
 
     [Fact]

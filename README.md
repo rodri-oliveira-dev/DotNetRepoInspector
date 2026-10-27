@@ -24,14 +24,15 @@ DotNetRepoInspector produces one deterministic, machine-readable view of a .NET 
 The v1 surface includes:
 
 - discovery of SDK-style .NET projects;
-- evaluated MSBuild facts such as SDKs, target frameworks, output type, test metadata, packability, runtime identifiers, and `ProjectReference` edges;
+- evaluated MSBuild facts such as SDKs, target frameworks, output type, test metadata, packability, runtime identifiers, publication settings, and `ProjectReference` edges;
 - `global.json` and resolved SDK metadata;
 - Git repository, commit, branch, remote, and dirty-state metadata when available;
 - deterministic base classification: Web, Worker, Console, Library, Test, and Unknown;
 - optional `classification.subtype` contract field reserved for explicit subtype evidence;
-- versioned inspection JSON (`schemaVersion 1.6`);
+- versioned inspection JSON (`schemaVersion 1.7`);
 - optional repository configuration for exclusions, explicit classification overrides, and opt-in policies;
 - opt-in Integration Discovery for normalized HTTP, messaging, database, cache, and cloud-storage dependencies;
+- opt-in bounded Container Discovery for Dockerfile image and stage evidence;
 - CLI/.NET Tool and reusable Composite GitHub Action;
 - optional HTTP/webhook snapshot persistence with provenance and idempotency;
 - structured diagnostics, cancellation, cross-platform compatibility checks, security hardening, performance guardrails, and validation against pinned public repositories.
@@ -50,13 +51,15 @@ Concrete subtype detection remains evidence-driven and conservative. The current
 
 Integration Discovery is disabled by default. Enable it with `--discover-integrations`, repository configuration, the GitHub Action input, or the MCP opt-in. It performs no network lookup and never serializes source snippets, queries, payloads, connection strings, or credentials. See the [recognized v1.6 catalog and limitations](docs/en/integration-discovery.md).
 
+Container Discovery is also disabled by default. Enable it with `--discover-containers` or repository configuration. It reads bounded Dockerfile syntax without invoking Docker, running repository scripts, expanding environment variables, or querying registries.
+
 ## JSON contract
 
-The v1 contract currently uses inspection schema **1.6**. A representative payload is:
+The v1 contract currently uses inspection schema **1.7**. A representative payload is:
 
 ```json
 {
-  "schemaVersion": "1.6",
+  "schemaVersion": "1.7",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -92,11 +95,30 @@ The v1 contract currently uses inspection schema **1.6**. A representative paylo
         "signals": ["sdk:Microsoft.NET.Sdk.Web"]
       },
       "references": [],
-      "diagnostics": []
+      "diagnostics": [],
+      "publication": {
+        "selfContained": { "state": "evaluated", "value": false },
+        "publishSelfContained": { "state": "unspecified" },
+        "publishAot": { "state": "unspecified" },
+        "publishTrimmed": { "state": "unspecified" },
+        "runtimeFrameworkVersion": { "state": "unspecified" }
+      }
     }
   ],
   "diagnostics": [],
-  "policyFindings": []
+  "policyFindings": [],
+  "integrations": [],
+  "integrationDiscovery": {
+    "enabled": false,
+    "completed": false,
+    "truncated": false
+  },
+  "containerImages": [],
+  "containerDiscovery": {
+    "enabled": false,
+    "completed": false,
+    "truncated": false
+  }
 }
 ```
 

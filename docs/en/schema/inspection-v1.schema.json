@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "DotNetRepoInspector inspection schema 1.6",
+  "title": "DotNetRepoInspector inspection schema 1.7",
   "type": "object",
   "required": [
     "schemaVersion",
@@ -11,7 +11,7 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": "1.6"
+      "const": "1.7"
     },
     "repository": {
       "$ref": "#/$defs/repository"
@@ -45,6 +45,15 @@
     },
     "integrationDiscovery": {
       "$ref": "#/$defs/integrationDiscovery"
+    },
+    "containerImages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/containerImage"
+      }
+    },
+    "containerDiscovery": {
+      "$ref": "#/$defs/containerDiscovery"
     }
   },
   "$defs": {
@@ -252,7 +261,66 @@
           "items": {
             "$ref": "#/$defs/diagnostic"
           }
+        },
+        "publication": {
+          "$ref": "#/$defs/projectPublication"
         }
+      }
+    },
+    "publicationBoolean": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "enum": ["evaluated", "unspecified", "unknown", "context-dependent"]
+        },
+        "value": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "evaluated" } } },
+          "then": { "required": ["value"] },
+          "else": { "not": { "required": ["value"] } }
+        }
+      ]
+    },
+    "publicationString": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "enum": ["evaluated", "unspecified", "unknown", "context-dependent"]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "\\S"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "state": { "const": "evaluated" } } },
+          "then": { "required": ["value"] },
+          "else": { "not": { "required": ["value"] } }
+        }
+      ]
+    },
+    "projectPublication": {
+      "type": "object",
+      "required": [
+        "selfContained",
+        "publishSelfContained",
+        "publishAot",
+        "publishTrimmed",
+        "runtimeFrameworkVersion"
+      ],
+      "properties": {
+        "selfContained": { "$ref": "#/$defs/publicationBoolean" },
+        "publishSelfContained": { "$ref": "#/$defs/publicationBoolean" },
+        "publishAot": { "$ref": "#/$defs/publicationBoolean" },
+        "publishTrimmed": { "$ref": "#/$defs/publicationBoolean" },
+        "runtimeFrameworkVersion": { "$ref": "#/$defs/publicationString" }
       }
     },
     "policyScope": {
@@ -420,6 +488,45 @@
             "pattern": "\\S"
           }
         }
+      }
+    },
+    "containerDiscovery": {
+      "type": "object",
+      "required": ["enabled", "completed", "truncated"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "completed": { "type": "boolean" },
+        "truncated": { "type": "boolean" }
+      }
+    },
+    "containerSource": {
+      "type": "object",
+      "required": ["path", "line"],
+      "properties": {
+        "path": { "type": "string", "pattern": "\\S" },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "containerImage": {
+      "type": "object",
+      "required": [
+        "referenceKind",
+        "resolutionStatus",
+        "isOfficialDotNetImage",
+        "source"
+      ],
+      "properties": {
+        "imageReference": { "type": "string", "pattern": "\\S" },
+        "registry": { "type": "string", "pattern": "\\S" },
+        "repository": { "type": "string", "pattern": "\\S" },
+        "tag": { "type": "string", "pattern": "\\S" },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+        "stageAlias": { "type": "string", "pattern": "\\S" },
+        "referenceKind": { "enum": ["external", "stage", "scratch"] },
+        "resolutionStatus": { "enum": ["resolved", "unresolved"] },
+        "dotNetFamily": { "enum": ["sdk", "aspnet", "runtime", "runtime-deps"] },
+        "isOfficialDotNetImage": { "type": "boolean" },
+        "source": { "$ref": "#/$defs/containerSource" }
       }
     }
   }

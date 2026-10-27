@@ -71,4 +71,33 @@ public sealed class SecurityContractTests
         Assert.Equal("<redacted>", context.GetProperty("connection_string").GetString());
         Assert.Equal("src/App/App.csproj", context.GetProperty("project").GetString());
     }
+
+    [Fact]
+    public void Serialize_RejectsUnsafeContainerEvidence()
+    {
+        InspectionReport report = InspectionReport.Create(
+            new RepositoryMetadata("sample", null, null, null, null),
+            new DotNetSdkMetadata(null, null, null),
+            Array.Empty<ProjectInspection>(),
+            Array.Empty<InspectionDiagnostic>()) with
+        {
+            ContainerImages =
+            [
+                new ContainerImageEvidence(
+                    "registry.example/image:tag\nsecret",
+                    "registry.example",
+                    "image",
+                    "tag",
+                    null,
+                    null,
+                    ContainerImageReferenceKind.External,
+                    ContainerImageResolutionStatus.Resolved,
+                    null,
+                    false,
+                    new ContainerSourceLocation("Dockerfile", 1))
+            ]
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
+    }
 }

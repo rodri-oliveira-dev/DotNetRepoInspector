@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Core.Policies;
@@ -21,7 +22,19 @@ public sealed class InspectionContractTests
 
         Assert.Equal(InspectionSchema.CurrentVersion, root.GetProperty("schemaVersion").GetString());
         Assert.Equal(
-            new[] { "schemaVersion", "repository", "dotNetSdk", "projects", "diagnostics", "policyFindings", "integrations", "integrationDiscovery" },
+            new[]
+            {
+                "schemaVersion",
+                "repository",
+                "dotNetSdk",
+                "projects",
+                "diagnostics",
+                "policyFindings",
+                "integrations",
+                "integrationDiscovery",
+                "containerImages",
+                "containerDiscovery"
+            },
             root.EnumerateObject().Select(property => property.Name).ToArray());
 
         var repository = root.GetProperty("repository");
@@ -56,12 +69,26 @@ public sealed class InspectionContractTests
                 .Select(element => element.GetString())
                 .ToArray());
         Assert.False(projects[0].GetProperty("classification").TryGetProperty("subtype", out _));
+        JsonElement publication = projects[0].GetProperty("publication");
+        Assert.Equal(
+            PublicationPropertyValueState.Evaluated,
+            publication.GetProperty("selfContained").GetProperty("state").GetString());
+        Assert.False(publication.GetProperty("selfContained").GetProperty("value").GetBoolean());
+        Assert.Equal(
+            PublicationPropertyValueState.ContextDependent,
+            publication.GetProperty("publishAot").GetProperty("state").GetString());
+        Assert.False(publication.GetProperty("publishAot").TryGetProperty("value", out _));
         Assert.Empty(root.GetProperty("policyFindings").EnumerateArray());
         Assert.Empty(root.GetProperty("integrations").EnumerateArray());
         JsonElement discovery = root.GetProperty("integrationDiscovery");
         Assert.False(discovery.GetProperty("enabled").GetBoolean());
         Assert.False(discovery.GetProperty("completed").GetBoolean());
         Assert.False(discovery.GetProperty("truncated").GetBoolean());
+        Assert.Empty(root.GetProperty("containerImages").EnumerateArray());
+        JsonElement containerDiscovery = root.GetProperty("containerDiscovery");
+        Assert.False(containerDiscovery.GetProperty("enabled").GetBoolean());
+        Assert.False(containerDiscovery.GetProperty("completed").GetBoolean());
+        Assert.False(containerDiscovery.GetProperty("truncated").GetBoolean());
     }
 
     [Fact]
@@ -226,6 +253,106 @@ public sealed class InspectionContractTests
         InspectionReport report = InspectionJsonSerializer.Deserialize(json);
 
         Assert.Equal(IntegrationDiscoveryMetadata.NotExecuted, report.IntegrationDiscovery);
+    }
+
+    [Fact]
+    public void Deserialize_AcceptsSchema16PayloadWithoutDeploymentEvidence()
+    {
+        JsonObject payload = JsonNode.Parse(
+            InspectionJsonSerializer.Serialize(CreateReport(reverseCollections: false)))!.AsObject();
+        payload["schemaVersion"] = "1.6";
+        payload.Remove("containerImages");
+        payload.Remove("containerDiscovery");
+        foreach (JsonNode? project in payload["projects"]!.AsArray())
+        {
+            project!.AsObject().Remove("publication");
+        }
+
+        InspectionReport report = InspectionJsonSerializer.Deserialize(payload.ToJsonString());
+
+        Assert.Equal("1.6", report.SchemaVersion);
+        Assert.All(
+            report.Projects,
+            static project => Assert.Equal(ProjectPublicationMetadata.Unspecified, project.Publication));
+        Assert.Empty(report.ContainerImages);
+        Assert.Equal(ContainerDiscoveryMetadata.NotExecuted, report.ContainerDiscovery);
+    }
+
+    [Fact]
+    public void Serialize_NormalizesAndOrdersContainerImages()
+    {
+        var first = new ContainerImageEvidence(
+            "ubuntu:latest",
+            null,
+            "ubuntu",
+            "latest",
+            null,
+            null,
+            ContainerImageReferenceKind.External,
+            ContainerImageResolutionStatus.Resolved,
+            null,
+            false,
+            new ContainerSourceLocation("deploy\\Dockerfile", 7));
+        var second = new ContainerImageEvidence(
+            "mcr.microsoft.com/dotnet/sdk:10.0",
+            "mcr.microsoft.com",
+            "dotnet/sdk",
+            "10.0",
+            null,
+            "build",
+            ContainerImageReferenceKind.External,
+            ContainerImageResolutionStatus.Resolved,
+            ContainerDotNetImageFamily.Sdk,
+            true,
+            new ContainerSourceLocation("Dockerfile", 1));
+        InspectionReport report = CreateReport(reverseCollections: false) with
+        {
+            ContainerImages = [first, second],
+            ContainerDiscovery = ContainerDiscoveryMetadata.Complete(truncated: false)
+        };
+
+        string json = InspectionJsonSerializer.Serialize(report);
+        InspectionReport deserialized = InspectionJsonSerializer.Deserialize(json);
+
+        Assert.Equal("Dockerfile", deserialized.ContainerImages[0].Source.Path);
+        Assert.Equal("deploy/Dockerfile", deserialized.ContainerImages[1].Source.Path);
+        Assert.Equal(ContainerDiscoveryMetadata.Complete(false), deserialized.ContainerDiscovery);
+    }
+
+    [Fact]
+    public void Serialize_RejectsInvalidContainerDiscoveryState()
+    {
+        InspectionReport report = CreateReport(reverseCollections: false) with
+        {
+            ContainerDiscovery = new ContainerDiscoveryMetadata(false, true, false)
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
+    }
+
+    [Fact]
+    public void Serialize_RejectsContainerEvidenceWhenDiscoveryWasNotExecuted()
+    {
+        InspectionReport report = CreateReport(reverseCollections: false) with
+        {
+            ContainerImages =
+            [
+                new ContainerImageEvidence(
+                    "ubuntu:latest",
+                    null,
+                    "ubuntu",
+                    "latest",
+                    null,
+                    null,
+                    ContainerImageReferenceKind.External,
+                    ContainerImageResolutionStatus.Resolved,
+                    null,
+                    false,
+                    new ContainerSourceLocation("Dockerfile", 1))
+            ]
+        };
+
+        Assert.Throws<JsonException>(() => InspectionJsonSerializer.Serialize(report));
     }
 
     [Fact]
@@ -434,7 +561,15 @@ public sealed class InspectionContractTests
                     new ProjectReferenceMetadata("src\\Core\\Core.csproj"),
                     new ProjectReferenceMetadata("src\\Shared\\Shared.csproj")
                 },
-            Array.Empty<InspectionDiagnostic>());
+            Array.Empty<InspectionDiagnostic>())
+        {
+            Publication = new ProjectPublicationMetadata(
+                new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, false),
+                new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, true),
+                new PublicationBooleanPropertyValue(PublicationPropertyValueState.ContextDependent, null),
+                PublicationBooleanPropertyValue.Unspecified,
+                new PublicationStringPropertyValue(PublicationPropertyValueState.Evaluated, "10.0.1"))
+        };
 
         var library = new ProjectInspection(
             "src/Library/Library.csproj",

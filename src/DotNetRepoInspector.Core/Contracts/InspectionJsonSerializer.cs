@@ -66,6 +66,16 @@ public static class InspectionJsonSerializer
         {
             GlobalJsonPath = NormalizeOptionalPath(report.DotNetSdk.GlobalJsonPath)
         };
+        ContainerImageEvidence[] normalizedContainerImages =
+            NormalizeContainerImages(report.ContainerImages);
+        ContainerDiscoveryMetadata normalizedContainerDiscovery =
+            NormalizeContainerDiscovery(report.ContainerDiscovery);
+        if (normalizedContainerImages.Length > 0 &&
+            (!normalizedContainerDiscovery.Enabled || !normalizedContainerDiscovery.Completed))
+        {
+            throw new JsonException(
+                "Container image evidence requires completed container discovery metadata.");
+        }
 
         return report with
         {
@@ -74,8 +84,114 @@ public static class InspectionJsonSerializer
             Diagnostics = NormalizeDiagnostics(report.Diagnostics),
             PolicyFindings = NormalizePolicyFindings(report.PolicyFindings),
             Integrations = NormalizeIntegrations(report.Integrations),
-            IntegrationDiscovery = NormalizeIntegrationDiscovery(report.IntegrationDiscovery)
+            IntegrationDiscovery = NormalizeIntegrationDiscovery(report.IntegrationDiscovery),
+            ContainerImages = normalizedContainerImages,
+            ContainerDiscovery = normalizedContainerDiscovery
         };
+    }
+
+    private static ContainerDiscoveryMetadata NormalizeContainerDiscovery(
+        ContainerDiscoveryMetadata metadata)
+    {
+        if ((!metadata.Enabled && (metadata.Completed || metadata.Truncated)) ||
+            (!metadata.Completed && metadata.Truncated))
+        {
+            throw new JsonException("Container discovery metadata contains an invalid state.");
+        }
+
+        return metadata;
+    }
+
+    private static ContainerImageEvidence[] NormalizeContainerImages(
+        IReadOnlyList<ContainerImageEvidence> images) =>
+        images
+            .Select(NormalizeContainerImage)
+            .OrderBy(static image => image.Source.Path, StringComparer.Ordinal)
+            .ThenBy(static image => image.Source.Line)
+            .ThenBy(static image => image.ImageReference ?? string.Empty, StringComparer.Ordinal)
+            .ThenBy(static image => image.StageAlias ?? string.Empty, StringComparer.Ordinal)
+            .ToArray();
+
+    private static ContainerImageEvidence NormalizeContainerImage(ContainerImageEvidence image)
+    {
+        if (image is null ||
+            image.Source is null ||
+            !IsSafeRelativePath(image.Source.Path) ||
+            image.Source.Line < 1 ||
+            !ContainerImageReferenceKind.IsDefined(image.ReferenceKind) ||
+            !ContainerImageResolutionStatus.IsDefined(image.ResolutionStatus) ||
+            !IsSafeOptionalContainerIdentifier(image.StageAlias) ||
+            !IsValidContainerImageShape(image))
+        {
+            throw new JsonException("A container image contains invalid or unsafe evidence.");
+        }
+
+        return image with
+        {
+            Source = image.Source with
+            {
+                Path = NormalizePath(image.Source.Path)
+            }
+        };
+    }
+
+    private static bool IsValidContainerImageShape(ContainerImageEvidence image)
+    {
+        if (image.ResolutionStatus == ContainerImageResolutionStatus.Unresolved)
+        {
+            return image.ImageReference is null &&
+                   image.Registry is null &&
+                   image.Repository is null &&
+                   image.Tag is null &&
+                   image.Digest is null &&
+                   image.DotNetFamily is null &&
+                   !image.IsOfficialDotNetImage;
+        }
+
+        if (!IsSafeContainerReference(image.ImageReference) ||
+            !IsSafeOptionalContainerIdentifier(image.Registry) ||
+            !IsSafeOptionalContainerRepository(image.Repository) ||
+            !IsSafeOptionalContainerIdentifier(image.Tag) ||
+            !IsValidOptionalDigest(image.Digest) ||
+            (image.DotNetFamily is not null &&
+             !ContainerDotNetImageFamily.IsDefined(image.DotNetFamily)) ||
+            image.IsOfficialDotNetImage != (image.DotNetFamily is not null))
+        {
+            return false;
+        }
+
+        if (image.ReferenceKind == ContainerImageReferenceKind.Stage)
+        {
+            return image.Registry is null &&
+                   image.Repository is null &&
+                   image.Tag is null &&
+                   image.Digest is null &&
+                   image.DotNetFamily is null &&
+                   !image.IsOfficialDotNetImage;
+        }
+
+        if (image.ReferenceKind == ContainerImageReferenceKind.Scratch)
+        {
+            return image.ImageReference == "scratch" &&
+                   image.Registry is null &&
+                   image.Repository is null &&
+                   image.Tag is null &&
+                   image.Digest is null &&
+                   image.DotNetFamily is null &&
+                   !image.IsOfficialDotNetImage;
+        }
+
+        if (image.Repository is null)
+        {
+            return false;
+        }
+
+        return !image.IsOfficialDotNetImage ||
+               (string.Equals(image.Registry, "mcr.microsoft.com", StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(
+                    image.Repository,
+                    $"dotnet/{image.DotNetFamily}",
+                    StringComparison.Ordinal));
     }
 
     private static IntegrationDiscoveryMetadata NormalizeIntegrationDiscovery(
@@ -187,6 +303,8 @@ public static class InspectionJsonSerializer
             RuntimeIdentifiers = project.RuntimeIdentifiers
                 .OrderBy(identifier => identifier, StringComparer.Ordinal)
                 .ToArray(),
+            Publication = NormalizePublication(
+                project.Publication ?? ProjectPublicationMetadata.Unspecified),
             Classification = normalizedClassification,
             References = project.References
                 .Select(reference => reference with { Path = NormalizePath(reference.Path) })
@@ -195,6 +313,42 @@ public static class InspectionJsonSerializer
             Diagnostics = NormalizeDiagnostics(project.Diagnostics)
         };
     }
+
+    private static ProjectPublicationMetadata NormalizePublication(
+        ProjectPublicationMetadata publication)
+    {
+        if (publication.SelfContained is null ||
+            publication.PublishSelfContained is null ||
+            publication.PublishAot is null ||
+            publication.PublishTrimmed is null ||
+            publication.RuntimeFrameworkVersion is null ||
+            !IsValidPublicationBoolean(publication.SelfContained) ||
+            !IsValidPublicationBoolean(publication.PublishSelfContained) ||
+            !IsValidPublicationBoolean(publication.PublishAot) ||
+            !IsValidPublicationBoolean(publication.PublishTrimmed) ||
+            !IsValidPublicationString(publication.RuntimeFrameworkVersion))
+        {
+            throw new JsonException("Project publication metadata contains an invalid value state.");
+        }
+
+        return publication;
+    }
+
+    private static bool IsValidPublicationBoolean(PublicationBooleanPropertyValue property) =>
+        PublicationPropertyValueState.IsDefined(property.State) &&
+        (property.State == PublicationPropertyValueState.Evaluated
+            ? property.Value.HasValue
+            : property.Value is null);
+
+    private static bool IsValidPublicationString(PublicationStringPropertyValue property) =>
+        PublicationPropertyValueState.IsDefined(property.State) &&
+        (property.State == PublicationPropertyValueState.Evaluated
+            ? IsSafeRestrictedEvidence(
+                property.Value,
+                static character =>
+                    char.IsAsciiLetterOrDigit(character) ||
+                    character is '.' or '-' or '+' or '_')
+            : property.Value is null);
 
     private static InspectionDiagnostic[] NormalizeDiagnostics(
         IReadOnlyList<InspectionDiagnostic> diagnostics) =>
@@ -356,7 +510,9 @@ public static class InspectionJsonSerializer
             report.Diagnostics is null ||
             report.PolicyFindings is null ||
             report.Integrations is null ||
-            report.IntegrationDiscovery is null)
+            report.IntegrationDiscovery is null ||
+            report.ContainerImages is null ||
+            report.ContainerDiscovery is null)
         {
             throw new JsonException(
                 "The inspection payload is missing one or more required top-level properties.");
@@ -418,6 +574,42 @@ public static class InspectionJsonSerializer
             value,
             static character =>
                 char.IsLetterOrDigit(character) || character is ':' or '.' or '_' or '-' or '[' or ']');
+
+    private static bool IsSafeContainerReference(string? value) =>
+        value is not null &&
+        IsSafeEvidence(value, 512) &&
+        value.All(static character =>
+            char.IsAsciiLetterOrDigit(character) ||
+            character is '.' or '_' or '-' or '/' or ':' or '@');
+
+    private static bool IsSafeOptionalContainerIdentifier(string? value) =>
+        value is null ||
+        IsSafeRestrictedEvidence(
+            value,
+            static character =>
+                char.IsAsciiLetterOrDigit(character) ||
+                character is '.' or '_' or '-' or ':');
+
+    private static bool IsSafeOptionalContainerRepository(string? value) =>
+        value is null ||
+        (IsSafeEvidence(value, 512) &&
+         value.All(static character =>
+             char.IsAsciiLetterOrDigit(character) ||
+             character is '.' or '_' or '-' or '/'));
+
+    private static bool IsValidOptionalDigest(string? value)
+    {
+        if (value is null)
+        {
+            return true;
+        }
+
+        const string prefix = "sha256:";
+        return value.Length == prefix.Length + 64 &&
+               value.StartsWith(prefix, StringComparison.Ordinal) &&
+               value[prefix.Length..].All(static character =>
+                   character is (>= '0' and <= '9') or (>= 'a' and <= 'f') or (>= 'A' and <= 'F'));
+    }
 
     private static bool IsSafeRestrictedEvidence(
         string? value,

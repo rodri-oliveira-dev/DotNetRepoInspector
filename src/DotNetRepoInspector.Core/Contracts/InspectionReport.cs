@@ -27,6 +27,18 @@ public sealed record InspectionReport(
         init;
     } = IntegrationDiscoveryMetadata.NotExecuted;
 
+    public IReadOnlyList<ContainerImageEvidence> ContainerImages
+    {
+        get;
+        init;
+    } = Array.Empty<ContainerImageEvidence>();
+
+    public ContainerDiscoveryMetadata ContainerDiscovery
+    {
+        get;
+        init;
+    } = ContainerDiscoveryMetadata.NotExecuted;
+
     public static InspectionReport Create(
         RepositoryMetadata repository,
         DotNetSdkMetadata dotNetSdk,

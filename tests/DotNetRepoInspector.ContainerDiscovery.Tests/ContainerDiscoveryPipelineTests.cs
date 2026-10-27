@@ -182,6 +182,24 @@ public sealed class ContainerDiscoveryPipelineTests
     }
 
     [Fact]
+    public async Task DiscoverAsync_DoesNotExpandSecretShapedArgumentDefaults()
+    {
+        var pipeline = new ContainerDiscoveryPipeline();
+
+        ContainerDiscoveryResult result = await pipeline.DiscoverAsync(
+            Request(exclusions: ExcludeAllExcept("SensitiveArguments")),
+            TestContext.Current.CancellationToken);
+
+        DockerImageEvidence image = Assert.Single(result.Images);
+        Assert.Equal(DockerImageResolutionStatus.Unresolved, image.ResolutionStatus);
+        Assert.Null(image.ImageReference);
+        Assert.DoesNotContain(
+            "fixture-secret",
+            string.Join('|', result.Images.Select(static item => item.ImageReference)),
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task DiscoverAsync_EnforcesFileBytePathDepthAndResultLimits()
     {
         var pipeline = new ContainerDiscoveryPipeline();

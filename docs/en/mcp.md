@@ -163,7 +163,7 @@ Abridged response shape (the complete report follows the [inspection schema](sch
   "ok": true,
   "data": {
     "report": {
-      "schemaVersion": "1.6",
+      "schemaVersion": "1.7",
       "repository": {},
       "dotNetSdk": {},
       "projects": [],
@@ -196,7 +196,7 @@ Response data:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.6",
+  "inspectionSchemaVersion": "1.7",
   "projects": [
     {
       "path": "src/App/App.csproj",
@@ -235,7 +235,7 @@ Abridged response data (the complete `ProjectInspection` follows the [inspection
 
 ```json
 {
-  "inspectionSchemaVersion": "1.6",
+  "inspectionSchemaVersion": "1.7",
   "project": {
     "path": "src/App/App.csproj",
     "name": "App",
@@ -260,7 +260,7 @@ Response data:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.6",
+  "inspectionSchemaVersion": "1.7",
   "projects": [
     {
       "path": "src/App/App.csproj",
@@ -287,7 +287,7 @@ Abridged response data (diagnostic records also carry nullable `source`, `detail
 
 ```json
 {
-  "inspectionSchemaVersion": "1.6",
+  "inspectionSchemaVersion": "1.7",
   "diagnostics": [
     {
       "projectPath": "src/App/App.csproj",
@@ -315,7 +315,7 @@ Response data:
 
 ```json
 {
-  "inspectionSchemaVersion": "1.6",
+  "inspectionSchemaVersion": "1.7",
   "dotNetSdk": {
     "globalJsonPath": "global.json",
     "configured": {

@@ -19,6 +19,7 @@ public sealed class CliOptionsParserTests
         Assert.Empty(result.Options.ExcludedPaths);
         Assert.Empty(result.Options.ClassificationOverrides);
         Assert.Null(result.Options.DiscoverIntegrations);
+        Assert.Null(result.Options.DiscoverContainers);
     }
 
     [Fact]
@@ -35,6 +36,25 @@ public sealed class CliOptionsParserTests
     {
         CliParseResult result = CliOptionsParser.Parse(
             ["--discover-integrations", "--discover-integrations"]);
+
+        Assert.False(result.Succeeded);
+        Assert.Contains("only be specified once", result.Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Parse_EnablesContainerDiscoveryExplicitly()
+    {
+        CliParseResult result = CliOptionsParser.Parse(["--discover-containers"]);
+
+        Assert.True(result.Succeeded);
+        Assert.True(result.Options?.DiscoverContainers);
+    }
+
+    [Fact]
+    public void Parse_RejectsDuplicateContainerDiscoveryOption()
+    {
+        CliParseResult result = CliOptionsParser.Parse(
+            ["--discover-containers", "--discover-containers"]);
 
         Assert.False(result.Succeeded);
         Assert.Contains("only be specified once", result.Error, StringComparison.Ordinal);

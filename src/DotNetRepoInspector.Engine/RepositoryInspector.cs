@@ -1,5 +1,6 @@
 using System.Globalization;
 
+using DotNetRepoInspector.ContainerDiscovery;
 using DotNetRepoInspector.Core.Contracts;
 using DotNetRepoInspector.Core.Policies;
 using DotNetRepoInspector.Git;
@@ -24,6 +25,7 @@ public sealed class RepositoryInspector : IRepositoryInspector
     private readonly IDotNetSdkInspector _sdkInspector;
     private readonly IGitRepositoryMetadataProvider _gitMetadataProvider;
     private readonly IIntegrationDiscoveryPipeline _integrationDiscoveryPipeline;
+    private readonly IContainerDiscoveryPipeline _containerDiscoveryPipeline;
     private readonly MsBuildProjectClassificationAdapter _classificationAdapter;
 
     public RepositoryInspector()
@@ -32,7 +34,8 @@ public sealed class RepositoryInspector : IRepositoryInspector
             new MsBuildProjectFactsEvaluator(),
             new DotNetSdkInspector(),
             new GitRepositoryMetadataProvider(),
-            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()))
+            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()),
+            new ContainerDiscoveryPipeline())
     {
     }
 
@@ -46,7 +49,8 @@ public sealed class RepositoryInspector : IRepositoryInspector
             projectFactsEvaluator,
             sdkInspector,
             gitMetadataProvider,
-            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()))
+            new IntegrationDiscoveryPipeline(IntegrationDetectorCatalog.CreateDefault()),
+            new ContainerDiscoveryPipeline())
     {
     }
 
@@ -56,18 +60,37 @@ public sealed class RepositoryInspector : IRepositoryInspector
         IDotNetSdkInspector sdkInspector,
         IGitRepositoryMetadataProvider gitMetadataProvider,
         IIntegrationDiscoveryPipeline integrationDiscoveryPipeline)
+        : this(
+            projectDiscoverer,
+            projectFactsEvaluator,
+            sdkInspector,
+            gitMetadataProvider,
+            integrationDiscoveryPipeline,
+            new ContainerDiscoveryPipeline())
+    {
+    }
+
+    public RepositoryInspector(
+        IProjectDiscoverer projectDiscoverer,
+        IMsBuildProjectFactsEvaluator projectFactsEvaluator,
+        IDotNetSdkInspector sdkInspector,
+        IGitRepositoryMetadataProvider gitMetadataProvider,
+        IIntegrationDiscoveryPipeline integrationDiscoveryPipeline,
+        IContainerDiscoveryPipeline containerDiscoveryPipeline)
     {
         ArgumentNullException.ThrowIfNull(projectDiscoverer);
         ArgumentNullException.ThrowIfNull(projectFactsEvaluator);
         ArgumentNullException.ThrowIfNull(sdkInspector);
         ArgumentNullException.ThrowIfNull(gitMetadataProvider);
         ArgumentNullException.ThrowIfNull(integrationDiscoveryPipeline);
+        ArgumentNullException.ThrowIfNull(containerDiscoveryPipeline);
 
         _projectDiscoverer = projectDiscoverer;
         _projectFactsEvaluator = projectFactsEvaluator;
         _sdkInspector = sdkInspector;
         _gitMetadataProvider = gitMetadataProvider;
         _integrationDiscoveryPipeline = integrationDiscoveryPipeline;
+        _containerDiscoveryPipeline = containerDiscoveryPipeline;
         _classificationAdapter = new MsBuildProjectClassificationAdapter();
     }
 
@@ -172,6 +195,18 @@ public sealed class RepositoryInspector : IRepositoryInspector
             diagnostics.AddRange(integrationResult.Diagnostics);
         }
 
+        var containerResult = ContainerDiscoveryResult.Empty;
+        if (configuration.DiscoverContainers)
+        {
+            containerResult = await _containerDiscoveryPipeline.DiscoverAsync(
+                new ContainerDiscoveryRequest(
+                    repositoryRoot,
+                    configuration.ExcludedPaths,
+                    request.ContainerDiscoveryOptions),
+                cancellationToken);
+            diagnostics.AddRange(containerResult.Diagnostics.Select(MapContainerDiagnostic));
+        }
+
         var report = InspectionReport.Create(
             gitResult.Metadata,
             ToSdkMetadata(repositoryRoot, sdkResult),
@@ -181,7 +216,11 @@ public sealed class RepositoryInspector : IRepositoryInspector
             Integrations = integrationResult.Findings,
             IntegrationDiscovery = configuration.DiscoverIntegrations
                 ? IntegrationDiscoveryMetadata.Complete(integrationResult.Truncated)
-                : IntegrationDiscoveryMetadata.NotExecuted
+                : IntegrationDiscoveryMetadata.NotExecuted,
+            ContainerImages = containerResult.Images.Select(ToContainerImageEvidence).ToArray(),
+            ContainerDiscovery = configuration.DiscoverContainers
+                ? ContainerDiscoveryMetadata.Complete(containerResult.Truncated)
+                : ContainerDiscoveryMetadata.NotExecuted
         };
 
         if (configuration.PolicyRules.Count == 0)
@@ -269,7 +308,83 @@ public sealed class RepositoryInspector : IRepositoryInspector
             NormalizeValues(facts.RuntimeIdentifiers),
             classification,
             references,
-            projectDiagnostics);
+            projectDiagnostics)
+        {
+            Publication = ToPublicationMetadata(facts.Publication)
+        };
+    }
+
+    private static ProjectPublicationMetadata ToPublicationMetadata(
+        MsBuildPublicationFacts publication) =>
+        new(
+            ToPublicationBoolean(publication.SelfContained),
+            ToPublicationBoolean(publication.PublishSelfContained),
+            ToPublicationBoolean(publication.PublishAot),
+            ToPublicationBoolean(publication.PublishTrimmed),
+            ToPublicationString(publication.RuntimeFrameworkVersion));
+
+    private static PublicationBooleanPropertyValue ToPublicationBoolean(
+        MsBuildBooleanPropertyValue property) =>
+        new(ToPublicationState(property.State), property.Value);
+
+    private static PublicationStringPropertyValue ToPublicationString(
+        MsBuildStringPropertyValue property) =>
+        new(ToPublicationState(property.State), NormalizeOptionalValue(property.Value));
+
+    private static string ToPublicationState(MsBuildPropertyValueState state) =>
+        state switch
+        {
+            MsBuildPropertyValueState.Evaluated => PublicationPropertyValueState.Evaluated,
+            MsBuildPropertyValueState.Unspecified => PublicationPropertyValueState.Unspecified,
+            MsBuildPropertyValueState.Unknown => PublicationPropertyValueState.Unknown,
+            MsBuildPropertyValueState.ContextDependent => PublicationPropertyValueState.ContextDependent,
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, "Unsupported MSBuild property state.")
+        };
+
+    private static ContainerImageEvidence ToContainerImageEvidence(
+        DockerImageEvidence image) =>
+        new(
+            image.ImageReference,
+            image.Registry,
+            image.Repository,
+            image.Tag,
+            image.Digest,
+            image.StageAlias,
+            image.ReferenceKind,
+            image.ResolutionStatus,
+            image.DotNetFamily,
+            image.IsOfficialDotNetImage,
+            new ContainerSourceLocation(image.SourcePath, image.Line));
+
+    private static InspectionDiagnostic MapContainerDiagnostic(
+        ContainerDiscoveryDiagnostic diagnostic)
+    {
+        var context = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["component"] = "container-discovery",
+            ["reason"] = diagnostic.Reason
+        };
+        if (diagnostic.Line.HasValue)
+        {
+            context["line"] = diagnostic.Line.Value.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return diagnostic.Code switch
+        {
+            ContainerDiscoveryDiagnosticCodes.FileSkipped =>
+                InspectionDiagnostics.ContainerDiscoveryFileSkipped(diagnostic.SourcePath, context),
+            ContainerDiscoveryDiagnosticCodes.DockerfileParseFailed =>
+                InspectionDiagnostics.ContainerDiscoveryParseFailed(diagnostic.SourcePath, context),
+            ContainerDiscoveryDiagnosticCodes.LimitReached =>
+                InspectionDiagnostics.ContainerDiscoveryLimitReached(diagnostic.SourcePath, context),
+            _ => InspectionDiagnostics.ContainerDiscoveryParseFailed(
+                diagnostic.SourcePath,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["component"] = "container-discovery",
+                    ["reason"] = "unknown-diagnostic"
+                })
+        };
     }
 
     private static ProjectClassification ApplyClassificationOverride(

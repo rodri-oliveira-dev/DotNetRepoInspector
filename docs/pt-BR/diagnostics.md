@@ -28,6 +28,9 @@ Os diagnósticos de inspeção fazem parte do resultado normalizado e são desti
 | `DRI1016` | `warning` | Um arquivo de source não pôde ser parseado para integration discovery. |
 | `DRI1017` | `warning` | Integration discovery atingiu um limite configurado e retornou resultados parciais. |
 | `DRI1018` | `warning` | Um detector de integração falhou e o discovery restante continuou. |
+| `DRI1019` | `warning` | Um Dockerfile foi ignorado durante container discovery. |
+| `DRI1020` | `warning` | Uma instrução de Dockerfile não pôde ser interpretada durante container discovery. |
+| `DRI1021` | `warning` | Container discovery atingiu um limite configurado e retornou resultados parciais. |
 
 Os códigos são identificadores estáveis. Códigos existentes não devem ser reutilizados com outro significado. A automação deve utilizar `code` e `severity`, e não o texto de `message`.
 
@@ -36,6 +39,8 @@ Para `DRI1013`, `context.reason` fornece um motivo estável e não sensível, co
 Para `DRI1014`, `source` identifica o caminho do projeto configurado, relativo ao repositório, e `context.overrideSource` informa se o override obsoleto veio de `configuration` ou da camada direta `request`.
 
 Para `DRI1015` a `DRI1018`, `source` é limitado a um caminho relativo ao repositório. `context.reason`, `context.component` e o `context.detector` opcional contêm somente identificadores estáveis. Diagnostics do parser, mensagens de exceptions, snippets de source e valores de configuração nunca são copiados para esses diagnostics.
+
+Para `DRI1019` a `DRI1021`, `source` é um caminho de Dockerfile relativo ao repositório. O contexto contém somente identificadores estáveis de reason/component e um número de linha opcional; conteúdo do Dockerfile, valores de argumentos, valores de ambiente e mensagens de exceptions não são copiados para diagnostics.
 
 ## Campos de diagnóstico
 

@@ -65,6 +65,33 @@ public sealed class RepositoryInspectorTests
     }
 
     [Fact]
+    public async Task InspectAsync_MapsEvaluatedPublicationFactsToPublicContract()
+    {
+        var inspector = new RepositoryInspector();
+
+        InspectionReport report = await inspector.InspectAsync(
+            FixturePath("PublicationSettings/Defined"),
+            TestContext.Current.CancellationToken);
+
+        ProjectPublicationMetadata publication = Assert.Single(report.Projects).Publication;
+        Assert.Equal(
+            new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, false),
+            publication.SelfContained);
+        Assert.Equal(
+            new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, true),
+            publication.PublishSelfContained);
+        Assert.Equal(
+            new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, false),
+            publication.PublishAot);
+        Assert.Equal(
+            new PublicationBooleanPropertyValue(PublicationPropertyValueState.Evaluated, false),
+            publication.PublishTrimmed);
+        Assert.Equal(
+            new PublicationStringPropertyValue(PublicationPropertyValueState.Evaluated, "10.0.1"),
+            publication.RuntimeFrameworkVersion);
+    }
+
+    [Fact]
     public async Task InspectAsync_PreservesSuccessfulProjectsWhenAnotherProjectFails()
     {
         var repositoryRoot = Directory.CreateTempSubdirectory("DotNetRepoInspector-Engine-").FullName;

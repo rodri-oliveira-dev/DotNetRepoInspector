@@ -28,6 +28,9 @@ Inspection diagnostics are part of the normalized result and are intended for bo
 | `DRI1016` | `warning` | A source file could not be parsed for integration discovery. |
 | `DRI1017` | `warning` | Integration discovery reached a configured limit and returned partial results. |
 | `DRI1018` | `warning` | An integration detector failed and the remaining discovery continued. |
+| `DRI1019` | `warning` | A Dockerfile was skipped during container discovery. |
+| `DRI1020` | `warning` | A Dockerfile instruction could not be parsed for container discovery. |
+| `DRI1021` | `warning` | Container discovery reached a configured limit and returned partial results. |
 
 Codes are stable identifiers. Existing codes must not be repurposed for a different meaning. Automation should use `code` and `severity`, not message text.
 
@@ -36,6 +39,8 @@ For `DRI1013`, `context.reason` provides a stable non-sensitive reason such as `
 For `DRI1014`, `source` identifies the configured repository-relative project path and `context.overrideSource` identifies whether the stale override came from `configuration` or the direct `request` layer.
 
 For `DRI1015` through `DRI1018`, `source` is limited to a repository-relative path. `context.reason`, `context.component`, and optional `context.detector` contain stable identifiers only. Parser diagnostics, exception messages, source snippets, and configuration values are never copied into these diagnostics.
+
+For `DRI1019` through `DRI1021`, `source` is a repository-relative Dockerfile path. Context contains only stable reason/component identifiers and an optional line number; Dockerfile content, argument values, environment values, and exception messages are not copied into diagnostics.
 
 ## Diagnostic fields
 
