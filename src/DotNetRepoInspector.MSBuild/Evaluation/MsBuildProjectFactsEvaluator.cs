@@ -12,8 +12,13 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         "IsTestProject",
         "IsTestingPlatformApplication",
         "OutputType",
+        "PublishAot",
+        "PublishSelfContained",
+        "PublishTrimmed",
         "RuntimeIdentifier",
         "RuntimeIdentifiers",
+        "RuntimeFrameworkVersion",
+        "SelfContained",
         "TargetFramework",
         "TargetFrameworks",
         "UsingMicrosoftNETSdkWorker"
@@ -122,9 +127,19 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             {
                 AzureFunctionsVersion = NormalizeScalar(
                     innerProperties,
-                    "AzureFunctionsVersion")
+                    "AzureFunctionsVersion"),
+                RuntimeIdentifiers = NormalizeList(
+                    innerProperties,
+                    "RuntimeIdentifiers",
+                    "RuntimeIdentifier"),
+                Publication = NormalizePublication(innerProperties)
             });
         }
+
+        var runtimeIdentifiers = NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier")
+            .Concat(targetFrameworkFacts.SelectMany(facts => facts.RuntimeIdentifiers))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
 
         var packageReferences = NormalizePackageReferences(evaluation.Items)
             .Concat(targetFrameworkFacts.SelectMany(facts => facts.PackageReferences))
@@ -139,7 +154,7 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
             NormalizeScalar(properties, "OutputType"),
             NormalizeBoolean(properties, "IsTestProject"),
             NormalizeBoolean(properties, "IsPackable"),
-            NormalizeList(properties, "RuntimeIdentifiers", "RuntimeIdentifier"),
+            runtimeIdentifiers,
             properties)
         {
             IsTestingPlatformApplication = NormalizeBoolean(
@@ -153,7 +168,10 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
                 "AzureFunctionsVersion"),
             PackageReferences = packageReferences,
             ProjectReferences = NormalizeProjectReferences(projectPath, evaluation.Items),
-            TargetFrameworkFacts = targetFrameworkFacts
+            TargetFrameworkFacts = targetFrameworkFacts,
+            Publication = targetFrameworkFacts.Count == 0
+                ? NormalizePublication(properties)
+                : AggregatePublication(targetFrameworkFacts)
         };
 
         return MsBuildProjectFactsResult.Success(projectPath, facts);
@@ -311,6 +329,67 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         return bool.TryParse(value, out var parsed)
             ? parsed
             : null;
+    }
+
+    private static MsBuildPublicationFacts NormalizePublication(
+        IReadOnlyDictionary<string, string> properties) =>
+        new(
+            NormalizeBooleanProperty(properties, "SelfContained"),
+            NormalizeBooleanProperty(properties, "PublishSelfContained"),
+            NormalizeBooleanProperty(properties, "PublishAot"),
+            NormalizeBooleanProperty(properties, "PublishTrimmed"),
+            NormalizeStringProperty(properties, "RuntimeFrameworkVersion"));
+
+    private static MsBuildPublicationFacts AggregatePublication(
+        IReadOnlyList<MsBuildTargetFrameworkFacts> targetFrameworkFacts) =>
+        new(
+            AggregateBoolean(targetFrameworkFacts.Select(facts => facts.Publication.SelfContained)),
+            AggregateBoolean(targetFrameworkFacts.Select(facts => facts.Publication.PublishSelfContained)),
+            AggregateBoolean(targetFrameworkFacts.Select(facts => facts.Publication.PublishAot)),
+            AggregateBoolean(targetFrameworkFacts.Select(facts => facts.Publication.PublishTrimmed)),
+            AggregateString(targetFrameworkFacts.Select(facts => facts.Publication.RuntimeFrameworkVersion)));
+
+    private static MsBuildBooleanPropertyValue NormalizeBooleanProperty(
+        IReadOnlyDictionary<string, string> properties,
+        string propertyName)
+    {
+        var value = NormalizeScalar(properties, propertyName);
+        if (value is null)
+        {
+            return MsBuildBooleanPropertyValue.Unspecified;
+        }
+
+        return bool.TryParse(value, out var parsed)
+            ? MsBuildBooleanPropertyValue.Evaluated(parsed)
+            : MsBuildBooleanPropertyValue.Unknown;
+    }
+
+    private static MsBuildStringPropertyValue NormalizeStringProperty(
+        IReadOnlyDictionary<string, string> properties,
+        string propertyName)
+    {
+        var value = NormalizeScalar(properties, propertyName);
+        return value is null
+            ? MsBuildStringPropertyValue.Unspecified
+            : MsBuildStringPropertyValue.Evaluated(value);
+    }
+
+    private static MsBuildBooleanPropertyValue AggregateBoolean(
+        IEnumerable<MsBuildBooleanPropertyValue> values)
+    {
+        var distinctValues = values.Distinct().Take(2).ToArray();
+        return distinctValues.Length == 1
+            ? distinctValues[0]
+            : MsBuildBooleanPropertyValue.ContextDependent;
+    }
+
+    private static MsBuildStringPropertyValue AggregateString(
+        IEnumerable<MsBuildStringPropertyValue> values)
+    {
+        var distinctValues = values.Distinct().Take(2).ToArray();
+        return distinctValues.Length == 1
+            ? distinctValues[0]
+            : MsBuildStringPropertyValue.ContextDependent;
     }
 
     private static string? GetPropertyValue(

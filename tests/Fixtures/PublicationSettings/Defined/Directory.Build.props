@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <PublishTrimmed>false</PublishTrimmed>
+    <RuntimeFrameworkVersion>10.0.1</RuntimeFrameworkVersion>
+  </PropertyGroup>
+</Project>

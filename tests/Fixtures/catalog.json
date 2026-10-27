@@ -157,6 +157,17 @@
       ]
     },
     {
+      "id": "publication-settings",
+      "path": "PublicationSettings",
+      "proves": [
+        "publication-properties",
+        "publication-properties-absent",
+        "publication-properties-inherited",
+        "publication-properties-multi-target-conditional",
+        "runtime-identifiers-deduplicated"
+      ]
+    },
+    {
       "id": "project-reference-simple",
       "path": "ProjectReferences/Simple",
       "proves": [

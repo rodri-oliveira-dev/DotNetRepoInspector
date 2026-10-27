@@ -75,6 +75,144 @@ public sealed class MsBuildProjectFactsEvaluatorTests
     }
 
     [Fact]
+    public async Task EvaluateAsync_CapturesDefinedAndInheritedPublicationFacts()
+    {
+        var facts = await EvaluateSuccessfulFactsAsync(
+            "PublicationSettings",
+            "Defined",
+            "Defined.csproj");
+
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(false),
+            facts.Publication.SelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(true),
+            facts.Publication.PublishSelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(false),
+            facts.Publication.PublishAot);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(false),
+            facts.Publication.PublishTrimmed);
+        Assert.Equal(
+            MsBuildStringPropertyValue.Evaluated("10.0.1"),
+            facts.Publication.RuntimeFrameworkVersion);
+        Assert.Equal(new[] { "linux-x64", "win-x64" }, facts.RuntimeIdentifiers);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_DistinguishesEvaluatedFalseFromUnspecifiedPublicationValues()
+    {
+        var facts = await EvaluateSuccessfulFactsAsync(
+            "PublicationSettings",
+            "Absent",
+            "Absent.csproj");
+
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(false),
+            facts.Publication.SelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Unspecified,
+            facts.Publication.PublishSelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Unspecified,
+            facts.Publication.PublishAot);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Unspecified,
+            facts.Publication.PublishTrimmed);
+        Assert.Equal(
+            MsBuildStringPropertyValue.Unspecified,
+            facts.Publication.RuntimeFrameworkVersion);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_PreservesTargetFrameworkPublicationContexts()
+    {
+        var facts = await EvaluateSuccessfulFactsAsync(
+            "PublicationSettings",
+            "Conditional",
+            "Conditional.csproj");
+
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.ContextDependent,
+            facts.Publication.SelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.ContextDependent,
+            facts.Publication.PublishSelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.ContextDependent,
+            facts.Publication.PublishAot);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.ContextDependent,
+            facts.Publication.PublishTrimmed);
+        Assert.Equal(
+            MsBuildStringPropertyValue.ContextDependent,
+            facts.Publication.RuntimeFrameworkVersion);
+        Assert.Equal(new[] { "linux-x64", "win-x64" }, facts.RuntimeIdentifiers);
+
+        var net8 = Assert.Single(
+            facts.TargetFrameworkFacts,
+            target => target.TargetFramework == "net8.0");
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(false),
+            net8.Publication.SelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Unspecified,
+            net8.Publication.PublishSelfContained);
+        Assert.Equal(new[] { "linux-x64" }, net8.RuntimeIdentifiers);
+
+        var net10 = Assert.Single(
+            facts.TargetFrameworkFacts,
+            target => target.TargetFramework == "net10.0");
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(true),
+            net10.Publication.SelfContained);
+        Assert.Equal(
+            MsBuildBooleanPropertyValue.Evaluated(true),
+            net10.Publication.PublishSelfContained);
+        Assert.Equal(new[] { "linux-x64", "win-x64" }, net10.RuntimeIdentifiers);
+    }
+
+    [Fact]
+    public async Task EvaluateAsync_RepresentsInvalidBooleanAsUnknown()
+    {
+        var temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dotnet-repo-inspector-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(temporaryDirectory);
+
+        try
+        {
+            var projectPath = Path.Combine(temporaryDirectory, "Unknown.csproj");
+            await File.WriteAllTextAsync(
+                projectPath,
+                "<Project Sdk=\"Microsoft.NET.Sdk\" />",
+                TestContext.Current.CancellationToken);
+            var properties = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["PublishAot"] = "not-a-boolean",
+                ["TargetFramework"] = "net10.0"
+            };
+            var evaluator = new MsBuildProjectFactsEvaluator(
+                new StubProjectEvaluator(MsBuildEvaluationResult.Success("10.0.100", properties)));
+
+            var result = await evaluator.EvaluateAsync(
+                projectPath,
+                TestContext.Current.CancellationToken);
+
+            Assert.True(result.Succeeded, result.Error?.Message);
+            Assert.NotNull(result.Facts);
+            Assert.Equal(
+                MsBuildBooleanPropertyValue.Unknown,
+                result.Facts.Publication.PublishAot);
+        }
+        finally
+        {
+            Directory.Delete(temporaryDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task EvaluateAsync_DistinguishesMissingBooleanAndNormalizesSingularValues()
     {
         var temporaryDirectory = Path.Combine(
@@ -140,6 +278,18 @@ public sealed class MsBuildProjectFactsEvaluatorTests
         segments.Aggregate(
             Path.Combine(AppContext.BaseDirectory, "Fixtures"),
             Path.Combine);
+
+    private static async Task<MsBuildProjectFacts> EvaluateSuccessfulFactsAsync(
+        params string[] fixturePathSegments)
+    {
+        var evaluator = new MsBuildProjectFactsEvaluator();
+        var result = await evaluator.EvaluateAsync(
+            FixturePath(fixturePathSegments),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Succeeded, result.Error?.Message ?? "Project facts evaluation failed.");
+        return Assert.IsType<MsBuildProjectFacts>(result.Facts);
+    }
 
     private sealed class StubProjectEvaluator(MsBuildEvaluationResult result) : IMsBuildProjectEvaluator
     {
