@@ -1,17 +1,17 @@
 # syntax=docker/dockerfile:1
 
-# Microsoft publishes both required SDK families on Ubuntu 24.04 Noble for
-# linux/amd64 and linux/arm64. Keep human-readable version tags and pin each
-# multi-platform manifest by immutable digest.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.426-noble@sha256:ada801965b46b26af97d6d366300ec06ca793c581259664c226253d9da55d254 AS dotnet8
+# Use the patched .NET 8 SDK from Debian 12 and the patched .NET 10 SDK
+# from Ubuntu 24.04 Noble for linux/amd64 and linux/arm64. Both supply
+# compatible .NET installation trees; pin multi-platform manifests by digest.
+FROM mcr.microsoft.com/dotnet/sdk:8.0.427-bookworm-slim@sha256:ff39a765f04619c8d146796fc09b38499ae5984f4a2a4c3a0a57d0022855daee AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.402-noble@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2 AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.402-noble@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS build
 
 ARG PRODUCT_VERSION=0.0.0
 ARG REPOSITORY_COMMIT=local
@@ -32,7 +32,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.13-noble@sha256:1c20bc9ebda297198be069d82b6c5d1716faeeec8b8dca53ef963f9c92d3e2e3 AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.14-noble@sha256:62028293921f5bd6db3d9f9119cd29cd926dfd3c2336da23b09f425e40c3c832 AS final
 
 COPY --from=dotnet10 /usr/share/dotnet/ /usr/share/dotnet/
 
