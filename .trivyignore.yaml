@@ -1,11 +1,11 @@
 vulnerabilities:
   - id: CVE-2025-26646
     paths:
-      - "usr/share/dotnet/sdk/8.0.426/FSharp/fsc.deps.json"
-      - "usr/share/dotnet/sdk/8.0.426/FSharp/fsi.deps.json"
-      - "usr/share/dotnet/sdk/8.0.426/MSBuild.deps.json"
-      - "usr/share/dotnet/sdk/8.0.426/NuGet.CommandLine.XPlat.deps.json"
-      - "usr/share/dotnet/sdk/8.0.426/dotnet.deps.json"
+      - "usr/share/dotnet/sdk/8.0.427/FSharp/fsc.deps.json"
+      - "usr/share/dotnet/sdk/8.0.427/FSharp/fsi.deps.json"
+      - "usr/share/dotnet/sdk/8.0.427/MSBuild.deps.json"
+      - "usr/share/dotnet/sdk/8.0.427/NuGet.CommandLine.XPlat.deps.json"
+      - "usr/share/dotnet/sdk/8.0.427/dotnet.deps.json"
     statement: >-
       Scanner false positive for Microsoft.Build.Tasks.Core 17.11.69. Aqua Trivy
       discussion #10234 documents the same branch-matching finding, while the
