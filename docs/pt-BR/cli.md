@@ -145,6 +145,8 @@ Valores diretos de `--exclude` são aditivos às exclusões do arquivo. Uma entr
 
 `--discover-containers` habilita análise limitada de Dockerfiles. Permanece desabilitado por padrão e nunca invoca Docker ou shell, executa scripts do repositório, expande variáveis de ambiente nem consulta registries. A mesma capability pode ser habilitada por `containerDiscovery.enabled`; a flag direta tem precedência. Os resultados são emitidos em `containerImages`, com o estado de execução em `containerDiscovery`.
 
+Consulte [Evidências de deployment](deployment-evidence.md) para os estados das propriedades de publicação, a sintaxe de Dockerfile suportada, limites de recursos, fronteiras de segurança e um exemplo de entrada para auditoria de runtimes.
+
 Exemplos:
 
 ```bash

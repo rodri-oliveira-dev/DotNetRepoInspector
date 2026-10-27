@@ -212,6 +212,48 @@ public sealed class MsBuildProjectFactsEvaluatorTests
         }
     }
 
+    [Theory]
+    [InlineData("$(RUNTIME_VERSION)")]
+    [InlineData("fixture-secret")]
+    [InlineData("10")]
+    public async Task EvaluateAsync_RepresentsUnsafeRuntimeFrameworkVersionAsUnknown(string value)
+    {
+        string temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"dotnet-repo-inspector-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(temporaryDirectory);
+
+        try
+        {
+            string projectPath = Path.Combine(temporaryDirectory, "Unknown.csproj");
+            await File.WriteAllTextAsync(
+                projectPath,
+                "<Project Sdk=\"Microsoft.NET.Sdk\" />",
+                TestContext.Current.CancellationToken);
+            var properties = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["RuntimeFrameworkVersion"] = value,
+                ["TargetFramework"] = "net10.0"
+            };
+            var evaluator = new MsBuildProjectFactsEvaluator(
+                new StubProjectEvaluator(MsBuildEvaluationResult.Success("10.0.100", properties)));
+
+            MsBuildProjectFactsResult result = await evaluator.EvaluateAsync(
+                projectPath,
+                TestContext.Current.CancellationToken);
+
+            Assert.True(result.Succeeded, result.Error?.Message);
+            Assert.NotNull(result.Facts);
+            Assert.Equal(
+                MsBuildStringPropertyValue.Unknown,
+                result.Facts.Publication.RuntimeFrameworkVersion);
+        }
+        finally
+        {
+            Directory.Delete(temporaryDirectory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task EvaluateAsync_DistinguishesMissingBooleanAndNormalizesSingularValues()
     {

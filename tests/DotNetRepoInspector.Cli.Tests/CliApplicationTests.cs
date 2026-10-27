@@ -113,6 +113,19 @@ public sealed class CliApplicationTests
         Assert.Contains(
             report.ContainerImages,
             static image => image.ResolutionStatus == ContainerImageResolutionStatus.Unresolved);
+        Assert.Contains(
+            report.ContainerImages,
+            static image =>
+                image.Source.Path == "MultiStage/Dockerfile" &&
+                image.ReferenceKind == ContainerImageReferenceKind.Stage &&
+                image.ImageReference == "build" &&
+                image.StageAlias == "publish");
+        Assert.Contains(
+            report.ContainerImages,
+            static image =>
+                image.Source.Path == "MultiStage/Dockerfile" &&
+                image.ReferenceKind == ContainerImageReferenceKind.Scratch &&
+                image.StageAlias == "final");
         Assert.DoesNotContain("fixture-secret", output.ToString(), StringComparison.Ordinal);
     }
 

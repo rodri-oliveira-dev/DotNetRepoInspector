@@ -480,7 +480,7 @@ public sealed class InspectionContractTests
     }
 
     [Fact]
-    public void CoreContract_DoesNotReferenceMicrosoftBuildAssemblies()
+    public void CoreContract_DoesNotReferenceInfrastructureAssemblies()
     {
         var references = typeof(InspectionReport)
             .Assembly
@@ -491,7 +491,10 @@ public sealed class InspectionContractTests
 
         Assert.DoesNotContain(
             references,
-            name => name!.StartsWith("Microsoft.Build", StringComparison.Ordinal));
+            name =>
+                name!.StartsWith("Microsoft.Build", StringComparison.Ordinal) ||
+                name.StartsWith("Docker.", StringComparison.Ordinal) ||
+                name.StartsWith("Octokit", StringComparison.Ordinal));
     }
 
     private static PolicyFinding CreatePolicyFinding(string ruleCode, string projectPath) =>

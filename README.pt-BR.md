@@ -51,7 +51,7 @@ A detecção concreta de subtypes permanece orientada por evidência e conservad
 
 Integration Discovery é desabilitado por padrão. Habilite com `--discover-integrations`, configuração do repositório, input da GitHub Action ou opt-in MCP. Ele não faz lookup por rede e nunca serializa snippets de source, queries, payloads, connection strings ou credenciais. Consulte o [catálogo v1.6 reconhecido e suas limitações](docs/pt-BR/integration-discovery.md).
 
-Container Discovery também é desabilitado por padrão. Habilite com `--discover-containers` ou configuração do repositório. Ele lê sintaxe limitada de Dockerfiles sem invocar Docker, executar scripts do repositório, expandir variáveis de ambiente ou consultar registries.
+Container Discovery também é desabilitado por padrão. Habilite com `--discover-containers` ou configuração do repositório. Ele lê sintaxe limitada de Dockerfiles sem invocar Docker, executar scripts do repositório, expandir variáveis de ambiente ou consultar registries. Consulte [evidências de deployment e limitações](docs/pt-BR/deployment-evidence.md).
 
 ## Contrato JSON
 

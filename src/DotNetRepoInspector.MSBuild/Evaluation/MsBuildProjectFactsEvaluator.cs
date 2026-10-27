@@ -369,9 +369,36 @@ public sealed class MsBuildProjectFactsEvaluator : IMsBuildProjectFactsEvaluator
         string propertyName)
     {
         var value = NormalizeScalar(properties, propertyName);
-        return value is null
-            ? MsBuildStringPropertyValue.Unspecified
-            : MsBuildStringPropertyValue.Evaluated(value);
+        if (value is null)
+        {
+            return MsBuildStringPropertyValue.Unspecified;
+        }
+
+        return IsSafeRuntimeFrameworkVersion(value)
+            ? MsBuildStringPropertyValue.Evaluated(value)
+            : MsBuildStringPropertyValue.Unknown;
+    }
+
+    private static bool IsSafeRuntimeFrameworkVersion(string value)
+    {
+        const int maximumLength = 128;
+        if (value.Length is 0 or > maximumLength ||
+            !char.IsAsciiDigit(value[0]))
+        {
+            return false;
+        }
+
+        int firstSeparator = value.IndexOf('.');
+        if (firstSeparator <= 0 ||
+            firstSeparator == value.Length - 1 ||
+            !char.IsAsciiDigit(value[firstSeparator + 1]))
+        {
+            return false;
+        }
+
+        return value.All(static character =>
+            char.IsAsciiLetterOrDigit(character) ||
+            character is '.' or '-' or '+' or '_');
     }
 
     private static MsBuildBooleanPropertyValue AggregateBoolean(

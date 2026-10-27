@@ -145,6 +145,8 @@ Direct `--exclude` values are additive to file exclusions. A direct `--classify`
 
 `--discover-containers` enables bounded Dockerfile analysis. It is off by default and never invokes Docker or a shell, executes repository scripts, expands environment variables, or queries registries. The same capability can be enabled by `containerDiscovery.enabled`; the direct flag wins. Results are emitted as `containerImages` with `containerDiscovery` execution state.
 
+See [Deployment evidence](deployment-evidence.md) for publication-property states, supported Dockerfile syntax, resource limits, security boundaries, and a runtime-audit input example.
+
 Examples:
 
 ```bash

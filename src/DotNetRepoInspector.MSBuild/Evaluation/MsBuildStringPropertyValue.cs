@@ -13,6 +13,12 @@ public sealed record MsBuildStringPropertyValue(
     } =
         new(MsBuildPropertyValueState.Unspecified, null);
 
+    public static MsBuildStringPropertyValue Unknown
+    {
+        get;
+    } =
+        new(MsBuildPropertyValueState.Unknown, null);
+
     public static MsBuildStringPropertyValue ContextDependent
     {
         get;

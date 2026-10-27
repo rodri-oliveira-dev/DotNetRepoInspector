@@ -115,7 +115,11 @@
     "docs/en/mcp-1.2.0-release-notes.md",
     "docs/pt-BR/mcp-1.2.0-release-notes.md",
     "docs/en/container.md",
-    "docs/pt-BR/container.md"
+    "docs/pt-BR/container.md",
+    "docs/en/deployment-evidence.md",
+    "docs/pt-BR/deployment-evidence.md",
+    "docs/en/decisions/0019-deployment-evidence-boundary.md",
+    "docs/pt-BR/decisions/0019-deployment-evidence-boundary.md"
   ],
   "currentSchemaVersion": "1.7"
 }

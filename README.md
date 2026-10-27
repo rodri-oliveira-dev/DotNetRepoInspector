@@ -51,7 +51,7 @@ Concrete subtype detection remains evidence-driven and conservative. The current
 
 Integration Discovery is disabled by default. Enable it with `--discover-integrations`, repository configuration, the GitHub Action input, or the MCP opt-in. It performs no network lookup and never serializes source snippets, queries, payloads, connection strings, or credentials. See the [recognized v1.6 catalog and limitations](docs/en/integration-discovery.md).
 
-Container Discovery is also disabled by default. Enable it with `--discover-containers` or repository configuration. It reads bounded Dockerfile syntax without invoking Docker, running repository scripts, expanding environment variables, or querying registries.
+Container Discovery is also disabled by default. Enable it with `--discover-containers` or repository configuration. It reads bounded Dockerfile syntax without invoking Docker, running repository scripts, expanding environment variables, or querying registries. See [deployment evidence and limitations](docs/en/deployment-evidence.md).
 
 ## JSON contract
 
