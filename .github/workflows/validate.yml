@@ -305,9 +305,9 @@ jobs:
               -File
           )
 
-          if ($reports.Count -ne 9) {
+          if ($reports.Count -ne 10) {
             $found = if ($reports.Count -eq 0) { "<none>" } else { $reports.FullName -join ", " }
-            throw "Expected nine normalized OpenCover reports, found $($reports.Count): $found"
+            throw "Expected ten normalized OpenCover reports, found $($reports.Count): $found"
           }
 
           Write-Host "Found $($reports.Count) normalized OpenCover reports."
