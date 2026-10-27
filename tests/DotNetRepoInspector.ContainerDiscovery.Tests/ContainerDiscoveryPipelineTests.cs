@@ -248,6 +248,83 @@ public sealed class ContainerDiscoveryPipelineTests
     }
 
     [Fact]
+    public async Task DiscoverAsync_MarksExactResultLimitAsTruncatedWhenCandidatesRemain()
+    {
+        using var repository = new TemporaryRepository();
+        await repository.WriteTextAsync("Dockerfile.a", "FROM alpine:3.20\n");
+        await repository.WriteTextAsync("Dockerfile.b", "FROM ubuntu:24.04\n");
+        var pipeline = new ContainerDiscoveryPipeline();
+
+        ContainerDiscoveryResult result = await pipeline.DiscoverAsync(
+            new ContainerDiscoveryRequest(
+                repository.Path,
+                Options: new ContainerDiscoveryOptions { MaxResults = 1 }),
+            TestContext.Current.CancellationToken);
+
+        Assert.Single(result.Images);
+        Assert.True(result.Truncated);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Reason == "results");
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_DoesNotMarkExactResultLimitAsTruncatedWhenScanIsComplete()
+    {
+        using var repository = new TemporaryRepository();
+        await repository.WriteTextAsync("Dockerfile", "FROM alpine:3.20\n");
+        var pipeline = new ContainerDiscoveryPipeline();
+
+        ContainerDiscoveryResult result = await pipeline.DiscoverAsync(
+            new ContainerDiscoveryRequest(
+                repository.Path,
+                Options: new ContainerDiscoveryOptions { MaxResults = 1 }),
+            TestContext.Current.CancellationToken);
+
+        Assert.Single(result.Images);
+        Assert.False(result.Truncated);
+        Assert.DoesNotContain(result.Diagnostics, static diagnostic => diagnostic.Reason == "results");
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_AppliesVisitedPathBudgetWhileCollectingDirectoryEntries()
+    {
+        using var repository = new TemporaryRepository();
+        for (int index = 0; index < 20; index++)
+        {
+            await repository.WriteTextAsync($"entry-{index:D2}.txt", string.Empty);
+        }
+
+        var pipeline = new ContainerDiscoveryPipeline();
+        ContainerDiscoveryResult result = await pipeline.DiscoverAsync(
+            new ContainerDiscoveryRequest(
+                repository.Path,
+                Options: new ContainerDiscoveryOptions { MaxVisitedPaths = 2 }),
+            TestContext.Current.CancellationToken);
+
+        Assert.Empty(result.Images);
+        Assert.True(result.Truncated);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Reason == "visited-paths");
+    }
+
+    [Fact]
+    public async Task DiscoverAsync_ChargesInvalidUtf8FilesAgainstTotalByteBudget()
+    {
+        using var repository = new TemporaryRepository();
+        await repository.WriteBytesAsync("Dockerfile.a", [0xff, 0xff]);
+        await repository.WriteBytesAsync("Dockerfile.b", [0xff, 0xff]);
+        var pipeline = new ContainerDiscoveryPipeline();
+
+        ContainerDiscoveryResult result = await pipeline.DiscoverAsync(
+            new ContainerDiscoveryRequest(
+                repository.Path,
+                Options: new ContainerDiscoveryOptions { MaxTotalBytes = 3 }),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(result.Truncated);
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Reason == "invalid-utf8");
+        Assert.Contains(result.Diagnostics, static diagnostic => diagnostic.Reason == "total-bytes");
+    }
+
+    [Fact]
     public async Task DiscoverAsync_RejectsEscapingExclusionsAndPropagatesCallerCancellation()
     {
         var pipeline = new ContainerDiscoveryPipeline();
@@ -295,4 +372,35 @@ public sealed class ContainerDiscoveryPipelineTests
 
     private static string FixtureRoot =>
         Path.Combine(AppContext.BaseDirectory, "Fixtures", "ContainerDiscovery");
+
+    private sealed class TemporaryRepository : IDisposable
+    {
+        public TemporaryRepository()
+        {
+            Path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                $"dotnet-repo-inspector-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Path);
+        }
+
+        public string Path
+        {
+            get;
+        }
+
+        public Task WriteTextAsync(string relativePath, string content) =>
+            File.WriteAllTextAsync(
+                System.IO.Path.Combine(Path, relativePath),
+                content,
+                TestContext.Current.CancellationToken);
+
+        public Task WriteBytesAsync(string relativePath, byte[] content) =>
+            File.WriteAllBytesAsync(
+                System.IO.Path.Combine(Path, relativePath),
+                content,
+                TestContext.Current.CancellationToken);
+
+        public void Dispose() =>
+            Directory.Delete(Path, recursive: true);
+    }
 }

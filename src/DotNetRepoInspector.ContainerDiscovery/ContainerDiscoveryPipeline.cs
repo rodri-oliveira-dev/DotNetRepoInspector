@@ -68,8 +68,9 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
             long totalBytes = 0;
             int processedFiles = 0;
 
-            foreach (DockerfileCandidate candidate in candidates.Files)
+            for (int candidateIndex = 0; candidateIndex < candidates.Files.Count; candidateIndex++)
             {
+                DockerfileCandidate candidate = candidates.Files[candidateIndex];
                 discoveryToken.ThrowIfCancellationRequested();
 
                 if (processedFiles >= options.MaxDockerfiles)
@@ -135,18 +136,19 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
                     continue;
                 }
 
-                if (bytes.Length > options.MaxBytesPerFile)
-                {
-                    truncated = true;
-                    diagnostics.Add(FileSkippedDiagnostic(candidate.SourcePath, "file-size-limit"));
-                    continue;
-                }
-
                 if (totalBytes + bytes.LongLength > options.MaxTotalBytes)
                 {
                     truncated = true;
                     diagnostics.Add(LimitDiagnostic(candidate.SourcePath, "total-bytes"));
                     break;
+                }
+
+                totalBytes += bytes.LongLength;
+                if (bytes.Length > options.MaxBytesPerFile)
+                {
+                    truncated = true;
+                    diagnostics.Add(FileSkippedDiagnostic(candidate.SourcePath, "file-size-limit"));
+                    continue;
                 }
 
                 string content;
@@ -160,7 +162,6 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
                     continue;
                 }
 
-                totalBytes += bytes.LongLength;
                 DockerfileParser.ParseResult parsed = DockerfileParser.Parse(
                     candidate.SourcePath,
                     content,
@@ -170,19 +171,23 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
                     diagnostics.Add(diagnostic);
                 }
 
-                foreach (DockerImageEvidence image in parsed.Images)
+                bool resultLimitReached = false;
+                for (int imageIndex = 0; imageIndex < parsed.Images.Count; imageIndex++)
                 {
-                    if (images.Count >= options.MaxResults)
+                    DockerImageEvidence image = parsed.Images[imageIndex];
+                    images.Add(image);
+                    if (images.Count >= options.MaxResults &&
+                        (imageIndex + 1 < parsed.Images.Count ||
+                         candidateIndex + 1 < candidates.Files.Count))
                     {
                         truncated = true;
                         diagnostics.Add(LimitDiagnostic(candidate.SourcePath, "results"));
+                        resultLimitReached = true;
                         break;
                     }
-
-                    images.Add(image);
                 }
 
-                if (images.Count >= options.MaxResults)
+                if (resultLimitReached)
                 {
                     break;
                 }
@@ -223,15 +228,26 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
             cancellationToken.ThrowIfCancellationRequested();
             DirectoryCandidate current = directories.Pop();
 
-            string[] entries;
+            var entries = new List<string>();
             try
             {
-                entries = Directory.EnumerateFileSystemEntries(
-                        current.FullPath,
-                        "*",
-                        EnumerationOptions)
-                    .OrderBy(static path => Path.GetFileName(path), StringComparer.Ordinal)
-                    .ToArray();
+                foreach (string entry in Directory.EnumerateFileSystemEntries(
+                             current.FullPath,
+                             "*",
+                             EnumerationOptions))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (++visitedPaths > options.MaxVisitedPaths)
+                    {
+                        truncated = true;
+                        diagnostics.Add(LimitDiagnostic(
+                            ToRelativePath(repositoryRoot, entry),
+                            "visited-paths"));
+                        return new DiscoveryCandidates(files, truncated);
+                    }
+
+                    entries.Add(entry);
+                }
             }
             catch (Exception exception) when (IsFileAccessException(exception))
             {
@@ -241,19 +257,13 @@ public sealed class ContainerDiscoveryPipeline : IContainerDiscoveryPipeline
                 continue;
             }
 
+            entries.Sort(static (left, right) => StringComparer.Ordinal.Compare(
+                Path.GetFileName(left),
+                Path.GetFileName(right)));
             var childDirectories = new List<DirectoryCandidate>();
             foreach (string entry in entries)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (++visitedPaths > options.MaxVisitedPaths)
-                {
-                    truncated = true;
-                    diagnostics.Add(LimitDiagnostic(
-                        ToRelativePath(repositoryRoot, entry),
-                        "visited-paths"));
-                    return new DiscoveryCandidates(files, truncated);
-                }
-
                 string relativePath = ToRelativePath(repositoryRoot, entry);
                 if (IsExcluded(relativePath, exclusions))
                 {
