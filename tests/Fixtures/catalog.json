@@ -168,6 +168,19 @@
       ]
     },
     {
+      "id": "container-discovery",
+      "path": "ContainerDiscovery",
+      "proves": [
+        "container-dockerfile-discovery",
+        "container-image-arguments",
+        "container-image-digests",
+        "container-image-families",
+        "container-image-limits",
+        "container-image-multi-stage",
+        "container-image-unresolved"
+      ]
+    },
+    {
       "id": "project-reference-simple",
       "path": "ProjectReferences/Simple",
       "proves": [
