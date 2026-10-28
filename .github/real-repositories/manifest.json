@@ -118,7 +118,7 @@
           "minimumProjectCount": 1,
           "expectedSdk": {
             "configuredVersion": "10.0.400",
-            "resolvedVersion": "10.0.400"
+            "resolvedVersionPrefix": "10.0.4"
           },
           "requiredProjects": [
             {
