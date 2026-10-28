@@ -24,8 +24,10 @@ public sealed class McpStdioIntegrationTests
         var tools = await client.ListToolsAsync(
             cancellationToken: TestContext.Current.CancellationToken);
 
-        Assert.Equal(McpProductInfo.ServerName, client.ServerInfo.Name);
-        Assert.Equal(McpProductInfo.Version, client.ServerInfo.Version);
+        var serverInfo = client.ServerInfo ??
+            throw new InvalidOperationException("MCP handshake did not provide server identity.");
+        Assert.Equal(McpProductInfo.ServerName, serverInfo.Name);
+        Assert.Equal(McpProductInfo.Version, serverInfo.Version);
         Assert.NotNull(client.ServerCapabilities.Tools);
         Assert.Equal(
             [
