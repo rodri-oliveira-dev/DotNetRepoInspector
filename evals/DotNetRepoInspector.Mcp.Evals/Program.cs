@@ -150,6 +150,9 @@ internal static class Program
             await using var client = await McpClient.CreateAsync(
                 transport,
                 cancellationToken: caseTimeout.Token);
+            // MCP SDK 2.3 allows the peer's server information to be absent.
+            // Preserve that distinction rather than assuming it is populated.
+            var serverInfo = client.ServerInfo;
             var tools = await client.ListToolsAsync(cancellationToken: caseTimeout.Token);
             var discoveredTools = tools.Select(static tool => tool.Name)
                 .Order(StringComparer.Ordinal)
@@ -164,8 +167,8 @@ internal static class Program
                     discoveredTools,
                     calledTools,
                     assertionResults,
-                    client.ServerInfo.Name,
-                    client.ServerInfo.Version);
+                    serverInfo?.Name,
+                    serverInfo?.Version);
             }
 
             calledTools.Add(evalCase.ExpectedTool);
@@ -183,8 +186,8 @@ internal static class Program
                     discoveredTools,
                     calledTools,
                     assertionResults,
-                    client.ServerInfo.Name,
-                    client.ServerInfo.Version);
+                    serverInfo?.Name,
+                    serverInfo?.Version);
             }
 
             var envelope = result.StructuredContent.Value;
@@ -199,8 +202,8 @@ internal static class Program
                 discoveredTools,
                 calledTools,
                 assertionResults,
-                client.ServerInfo.Name,
-                client.ServerInfo.Version);
+                serverInfo?.Name,
+                serverInfo?.Version);
         }
         catch (OperationCanceledException) when (caseTimeout.IsCancellationRequested)
         {
