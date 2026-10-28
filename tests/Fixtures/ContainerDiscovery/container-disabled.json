@@ -1,0 +1,6 @@
+{
+  "schemaVersion": "2",
+  "containerDiscovery": {
+    "enabled": false
+  }
+}

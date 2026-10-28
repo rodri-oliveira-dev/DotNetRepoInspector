@@ -12,4 +12,11 @@ public sealed record ProjectInspection(
     IReadOnlyList<string> RuntimeIdentifiers,
     ProjectClassification? Classification,
     IReadOnlyList<ProjectReferenceMetadata> References,
-    IReadOnlyList<InspectionDiagnostic> Diagnostics);
+    IReadOnlyList<InspectionDiagnostic> Diagnostics)
+{
+    public ProjectPublicationMetadata Publication
+    {
+        get;
+        init;
+    } = ProjectPublicationMetadata.Unspecified;
+}

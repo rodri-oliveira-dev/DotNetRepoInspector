@@ -37,4 +37,10 @@ public sealed record MsBuildProjectFacts(
     public IReadOnlyList<MsBuildProjectReference> ProjectReferences { get; init; } = [];
 
     public IReadOnlyList<MsBuildTargetFrameworkFacts> TargetFrameworkFacts { get; init; } = [];
+
+    public MsBuildPublicationFacts Publication
+    {
+        get; init;
+    } =
+        MsBuildPublicationFacts.Unspecified;
 }

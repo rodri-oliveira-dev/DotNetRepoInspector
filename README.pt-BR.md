@@ -24,14 +24,15 @@ O DotNetRepoInspector produz uma visão determinística e legível por máquina 
 A superfície da v1 inclui:
 
 - descoberta de projetos .NET SDK-style;
-- fatos MSBuild avaliados como SDKs, target frameworks, output type, metadados de teste, packability, runtime identifiers e arestas de `ProjectReference`;
+- fatos MSBuild avaliados como SDKs, target frameworks, output type, metadados de teste, packability, runtime identifiers, configurações de publicação e arestas de `ProjectReference`;
 - metadados de `global.json` e SDK resolvido;
 - metadados Git de repositório, commit, branch, remote e dirty state quando disponíveis;
 - classificação base determinística: Web, Worker, Console, Library, Test e Unknown;
 - campo opcional de contrato `classification.subtype` reservado para evidência explícita de subtipo;
-- JSON de inspeção versionado (`schemaVersion 1.6`);
+- JSON de inspeção versionado (`schemaVersion 1.7`);
 - configuração opcional do repositório para exclusões, overrides explícitos de classificação e policies opt-in;
 - Integration Discovery opt-in para dependências normalizadas de HTTP, mensageria, database, cache e cloud storage;
+- Container Discovery limitada e opt-in para evidências de imagens e estágios em Dockerfiles;
 - CLI/.NET Tool e Composite GitHub Action reutilizável;
 - persistência HTTP/webhook opcional de snapshots com proveniência e idempotência;
 - diagnósticos estruturados, cancelamento, compatibilidade cross-platform, hardening de segurança, guardrails de performance e validação contra repositórios públicos fixados.
@@ -50,13 +51,15 @@ A detecção concreta de subtypes permanece orientada por evidência e conservad
 
 Integration Discovery é desabilitado por padrão. Habilite com `--discover-integrations`, configuração do repositório, input da GitHub Action ou opt-in MCP. Ele não faz lookup por rede e nunca serializa snippets de source, queries, payloads, connection strings ou credenciais. Consulte o [catálogo v1.6 reconhecido e suas limitações](docs/pt-BR/integration-discovery.md).
 
+Container Discovery também é desabilitado por padrão. Habilite com `--discover-containers` ou configuração do repositório. Ele lê sintaxe limitada de Dockerfiles sem invocar Docker, executar scripts do repositório, expandir variáveis de ambiente ou consultar registries. Consulte [evidências de deployment e limitações](docs/pt-BR/deployment-evidence.md).
+
 ## Contrato JSON
 
-O contrato v1 usa atualmente o schema de inspeção **1.6**. Um payload representativo é:
+O contrato v1 usa atualmente o schema de inspeção **1.7**. Um payload representativo é:
 
 ```json
 {
-  "schemaVersion": "1.6",
+  "schemaVersion": "1.7",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -92,11 +95,30 @@ O contrato v1 usa atualmente o schema de inspeção **1.6**. Um payload represen
         "signals": ["sdk:Microsoft.NET.Sdk.Web"]
       },
       "references": [],
-      "diagnostics": []
+      "diagnostics": [],
+      "publication": {
+        "selfContained": { "state": "evaluated", "value": false },
+        "publishSelfContained": { "state": "unspecified" },
+        "publishAot": { "state": "unspecified" },
+        "publishTrimmed": { "state": "unspecified" },
+        "runtimeFrameworkVersion": { "state": "unspecified" }
+      }
     }
   ],
   "diagnostics": [],
-  "policyFindings": []
+  "policyFindings": [],
+  "integrations": [],
+  "integrationDiscovery": {
+    "enabled": false,
+    "completed": false,
+    "truncated": false
+  },
+  "containerImages": [],
+  "containerDiscovery": {
+    "enabled": false,
+    "completed": false,
+    "truncated": false
+  }
 }
 ```
 

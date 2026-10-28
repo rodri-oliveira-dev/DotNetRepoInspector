@@ -10,7 +10,8 @@ The normalized `InspectionReport` can contain only the public contract documente
 
 - repository identity: repository name, `HEAD` commit SHA, symbolic branch, sanitized `origin` URL, and dirty/clean state when available;
 - .NET SDK metadata: applicable `global.json` path, configured SDK version/roll-forward/prerelease settings, and resolved SDK version;
-- project metadata: repository-relative project path and name, resolved/declared SDKs, target frameworks, output type, test/packable flags, runtime identifiers, classification, and normalized `ProjectReference` paths;
+- project metadata: repository-relative project path and name, resolved/declared SDKs, target frameworks, output type, test/packable flags, runtime identifiers, evaluated publication-property states, classification, and normalized `ProjectReference` paths;
+- opt-in container evidence: normalized Dockerfile image/stage references and repository-relative source locations;
 - stable diagnostics: `DRIxxxx` code, severity, stable message, normalized source, and controlled context.
 
 Paths in the report are normalized and repository-relative where the contract defines them as such. Machine-specific absolute workspace paths are not intentionally exposed.
@@ -42,6 +43,12 @@ Integration Discovery is disabled by default. When enabled, it parses a bounded 
 The feature enforces independent limits for paths, source files, total bytes, findings, diagnostics, and elapsed time. It rejects invalid UTF-8, excludes generated/build output, rejects links and paths that escape the repository, observes cancellation, isolates detector failures, and produces deterministic ordering. Tests cover oversized and pathological syntax, malicious secret-shaped strings, traversal/link handling, exhausted budgets, and stable redaction.
 
 These controls reduce the parser-facing attack surface; they are not an operating-system sandbox. The separate MSBuild evaluation trust boundary and the guidance for untrusted repositories below still apply.
+
+## Opt-in Container Discovery
+
+Container Discovery is disabled by default and is isolated from Core behind the Engine boundary. When enabled, it reads only bounded eligible Dockerfile text. It never invokes Docker or a shell, executes Dockerfile instructions or repository scripts, expands process environment variables, contacts a registry, pulls/builds images, or resolves a remote digest.
+
+The scanner rejects filesystem links and paths outside the repository, observes cancellation, and enforces path, file, byte, depth, result, diagnostic, and duration ceilings. Unsupported dynamic references become `unresolved`; unresolved expressions and secret-shaped `ARG` defaults are not serialized. These controls do not prove what image was built or deployed, and the Inspector does not query CVEs or determine vulnerability status. See [Deployment evidence](deployment-evidence.md) for the supported grammar, limits, and audit example.
 
 ## No automatic upload
 

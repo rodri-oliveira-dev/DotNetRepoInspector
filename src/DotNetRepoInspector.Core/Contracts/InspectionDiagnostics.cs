@@ -182,6 +182,36 @@ public static class InspectionDiagnostics
             source,
             context);
 
+    public static InspectionDiagnostic ContainerDiscoveryFileSkipped(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.ContainerDiscoveryFileSkipped,
+            InspectionDiagnosticSeverity.Warning,
+            "A Dockerfile was skipped during container discovery.",
+            source,
+            context);
+
+    public static InspectionDiagnostic ContainerDiscoveryParseFailed(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.ContainerDiscoveryParseFailed,
+            InspectionDiagnosticSeverity.Warning,
+            "A Dockerfile instruction could not be parsed for container discovery.",
+            source,
+            context);
+
+    public static InspectionDiagnostic ContainerDiscoveryLimitReached(
+        string? source = null,
+        IReadOnlyDictionary<string, string>? context = null) =>
+        Create(
+            InspectionDiagnosticCodes.ContainerDiscoveryLimitReached,
+            InspectionDiagnosticSeverity.Warning,
+            "Container discovery reached a configured limit and returned partial results.",
+            source,
+            context);
+
     private static InspectionDiagnostic Create(
         string code,
         string severity,

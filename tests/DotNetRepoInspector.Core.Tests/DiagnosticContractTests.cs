@@ -23,6 +23,9 @@ public sealed class DiagnosticContractTests
         var discoveryParseFailed = InspectionDiagnostics.IntegrationDiscoveryParseFailed();
         var discoveryLimitReached = InspectionDiagnostics.IntegrationDiscoveryLimitReached();
         var detectorFailed = InspectionDiagnostics.IntegrationDetectorFailed();
+        var containerFileSkipped = InspectionDiagnostics.ContainerDiscoveryFileSkipped();
+        var containerParseFailed = InspectionDiagnostics.ContainerDiscoveryParseFailed();
+        var containerLimitReached = InspectionDiagnostics.ContainerDiscoveryLimitReached();
 
         Assert.Equal(InspectionDiagnosticCodes.InvalidProject, invalidProject.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Error, invalidProject.Severity);
@@ -46,6 +49,12 @@ public sealed class DiagnosticContractTests
         Assert.Equal(InspectionDiagnosticSeverity.Warning, discoveryLimitReached.Severity);
         Assert.Equal(InspectionDiagnosticCodes.IntegrationDetectorFailed, detectorFailed.Code);
         Assert.Equal(InspectionDiagnosticSeverity.Warning, detectorFailed.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.ContainerDiscoveryFileSkipped, containerFileSkipped.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, containerFileSkipped.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.ContainerDiscoveryParseFailed, containerParseFailed.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, containerParseFailed.Severity);
+        Assert.Equal(InspectionDiagnosticCodes.ContainerDiscoveryLimitReached, containerLimitReached.Code);
+        Assert.Equal(InspectionDiagnosticSeverity.Warning, containerLimitReached.Severity);
     }
 
     [Fact]
@@ -114,7 +123,7 @@ public sealed class DiagnosticContractTests
     [Fact]
     public void SchemaVersion_RemainsCompatibleWithEarlierAdditiveChanges()
     {
-        Assert.Equal("1.6", InspectionSchema.CurrentVersion);
+        Assert.Equal("1.7", InspectionSchema.CurrentVersion);
         Assert.True(InspectionSchema.IsCompatibleVersion("1.0"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.1"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.2"));
@@ -122,6 +131,7 @@ public sealed class DiagnosticContractTests
         Assert.True(InspectionSchema.IsCompatibleVersion("1.4"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.5"));
         Assert.True(InspectionSchema.IsCompatibleVersion("1.6"));
+        Assert.True(InspectionSchema.IsCompatibleVersion("1.7"));
     }
 
     private static InspectionReport CreateReport(InspectionDiagnostic diagnostic) =>

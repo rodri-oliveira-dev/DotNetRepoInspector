@@ -13,4 +13,12 @@ public sealed record MsBuildTargetFrameworkFacts(
         get;
         init;
     }
+
+    public IReadOnlyList<string> RuntimeIdentifiers { get; init; } = [];
+
+    public MsBuildPublicationFacts Publication
+    {
+        get; init;
+    } =
+        MsBuildPublicationFacts.Unspecified;
 }

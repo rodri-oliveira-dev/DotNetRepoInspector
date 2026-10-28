@@ -111,6 +111,7 @@ The first positional argument is the repository path. When omitted, the current 
     --exclude <path>         Exclude a repository-relative directory or project. Repeatable.
     --classify <path>=<kind> Override one project classification. Repeatable.
     --discover-integrations  Analyze source syntax for external integrations (opt-in, bounded).
+    --discover-containers    Analyze Dockerfiles for container image evidence (opt-in, bounded).
     --sink http              Persist a snapshot through the built-in HTTP/webhook sink.
     --sink-url <url>         HTTP/HTTPS endpoint used by the selected sink.
     --sink-timeout-seconds   Overall persistence timeout in seconds. Default: 15.
@@ -134,13 +135,17 @@ Automation and fleet-inventory consumers should treat the Inspector report's `pr
 
 ## Repository configuration
 
-When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions, explicit classification overrides, Integration Discovery, and opt-in policies. It is completely optional; when absent, the existing zero-configuration behavior is preserved.
+When `.dotnetrepoinspector.json` exists at the inspected repository root, it is loaded automatically. The file can define repository-relative exclusions, explicit classification overrides, Integration Discovery, Container Discovery, and opt-in policies. It is completely optional; when absent, the existing zero-configuration behavior is preserved.
 
 Use `--config` to select another repository-relative file, or `--no-config` to skip automatic loading of the default file. `--config` and `--no-config` are mutually exclusive.
 
 Direct `--exclude` values are additive to file exclusions. A direct `--classify` entry has precedence over a file classification override for the same project. See [`configuration.md`](configuration.md) for the versioned file format, path rules, override provenance, diagnostics, and full precedence policy.
 
 `--discover-integrations` enables bounded source-syntax analysis. It is off by default, does not execute repository code or use the network, and keeps machine-readable JSON on stdout/file while operational logs remain on stderr. The same capability can be enabled by `integrationDiscovery.enabled` in configuration; the direct flag wins.
+
+`--discover-containers` enables bounded Dockerfile analysis. It is off by default and never invokes Docker or a shell, executes repository scripts, expands environment variables, or queries registries. The same capability can be enabled by `containerDiscovery.enabled`; the direct flag wins. Results are emitted as `containerImages` with `containerDiscovery` execution state.
+
+See [Deployment evidence](deployment-evidence.md) for publication-property states, supported Dockerfile syntax, resource limits, security boundaries, and a runtime-audit input example.
 
 Examples:
 
@@ -152,6 +157,7 @@ dotnet repo-inspect . \
 
 dotnet repo-inspect . --config config/inspector.json
 dotnet repo-inspect . --no-config --classify src/App/App.csproj=web
+dotnet repo-inspect . --discover-containers
 ```
 
 Policies use the same configuration file; there is no separate CLI policy parser. For example:

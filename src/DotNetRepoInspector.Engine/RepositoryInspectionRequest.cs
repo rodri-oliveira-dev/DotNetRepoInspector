@@ -1,3 +1,4 @@
+using DotNetRepoInspector.ContainerDiscovery;
 using DotNetRepoInspector.IntegrationDiscovery;
 
 namespace DotNetRepoInspector.Engine;
@@ -10,4 +11,6 @@ public sealed record RepositoryInspectionRequest(
     IReadOnlyCollection<string>? ExcludedPaths = null,
     IReadOnlyDictionary<string, string>? ClassificationOverrides = null,
     bool? DiscoverIntegrations = null,
-    IntegrationDiscoveryOptions? IntegrationDiscoveryOptions = null);
+    IntegrationDiscoveryOptions? IntegrationDiscoveryOptions = null,
+    bool? DiscoverContainers = null,
+    ContainerDiscoveryOptions? ContainerDiscoveryOptions = null);

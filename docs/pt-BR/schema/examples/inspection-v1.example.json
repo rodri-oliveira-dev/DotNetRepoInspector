@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "1.6",
+  "schemaVersion": "1.7",
   "repository": {
     "name": "sample-service",
     "commitSha": "0123456789abcdef0123456789abcdef01234567",
@@ -45,7 +45,27 @@
           "path": "src/Core/Core.csproj"
         }
       ],
-      "diagnostics": []
+      "diagnostics": [],
+      "publication": {
+        "selfContained": {
+          "state": "evaluated",
+          "value": false
+        },
+        "publishSelfContained": {
+          "state": "evaluated",
+          "value": true
+        },
+        "publishAot": {
+          "state": "evaluated",
+          "value": false
+        },
+        "publishTrimmed": {
+          "state": "unspecified"
+        },
+        "runtimeFrameworkVersion": {
+          "state": "context-dependent"
+        }
+      }
     }
   ],
   "diagnostics": [
@@ -82,6 +102,50 @@
     }
   ],
   "integrationDiscovery": {
+    "enabled": true,
+    "completed": true,
+    "truncated": false
+  },
+  "containerImages": [
+    {
+      "imageReference": "mcr.microsoft.com/dotnet/sdk:10.0@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "registry": "mcr.microsoft.com",
+      "repository": "dotnet/sdk",
+      "tag": "10.0",
+      "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "stageAlias": "build",
+      "referenceKind": "external",
+      "resolutionStatus": "resolved",
+      "dotNetFamily": "sdk",
+      "isOfficialDotNetImage": true,
+      "source": {
+        "path": "Dockerfile",
+        "line": 1
+      }
+    },
+    {
+      "imageReference": "build",
+      "stageAlias": "publish",
+      "referenceKind": "stage",
+      "resolutionStatus": "resolved",
+      "isOfficialDotNetImage": false,
+      "source": {
+        "path": "Dockerfile",
+        "line": 5
+      }
+    },
+    {
+      "stageAlias": "dynamic",
+      "referenceKind": "external",
+      "resolutionStatus": "unresolved",
+      "isOfficialDotNetImage": false,
+      "source": {
+        "path": "Dockerfile",
+        "line": 9
+      }
+    }
+  ],
+  "containerDiscovery": {
     "enabled": true,
     "completed": true,
     "truncated": false

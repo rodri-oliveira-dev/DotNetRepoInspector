@@ -10,7 +10,8 @@ O `InspectionReport` normalizado pode conter apenas o contrato público document
 
 - identidade do repositório: nome, SHA do commit de `HEAD`, branch simbólica, URL sanitizada de `origin` e estado dirty/clean quando disponível;
 - metadados do SDK .NET: caminho do `global.json` aplicável, versão configurada, roll-forward, prerelease e versão resolvida;
-- metadados dos projetos: caminho relativo e nome do projeto, SDK resolvido/declarado, target frameworks, output type, flags de teste/packable, runtime identifiers, classificação e caminhos normalizados de `ProjectReference`;
+- metadados dos projetos: caminho relativo e nome do projeto, SDK resolvido/declarado, target frameworks, output type, flags de teste/packable, runtime identifiers, estados avaliados das propriedades de publicação, classificação e caminhos normalizados de `ProjectReference`;
+- evidência opt-in de contêiner: referências normalizadas de imagens/stages em Dockerfiles e locais de origem relativos ao repositório;
 - diagnósticos estáveis: código `DRIxxxx`, severidade, mensagem estável, source normalizado e contexto controlado.
 
 Os caminhos no relatório são normalizados e relativos à raiz do repositório quando o contrato assim define. Caminhos absolutos do workspace específicos da máquina não são expostos intencionalmente.
@@ -42,6 +43,12 @@ Integration Discovery fica desabilitado por padrão. Quando habilitado, analisa 
 O recurso impõe limites independentes para caminhos, arquivos-fonte, total de bytes, findings, diagnósticos e tempo decorrido. Ele rejeita UTF-8 inválido, exclui outputs gerados/de build, rejeita links e caminhos que escapem do repositório, observa cancelamento, isola falhas de detectores e produz ordenação determinística. Os testes cobrem sintaxe muito grande e patológica, strings maliciosas com formato de segredo, traversal/links, budgets esgotados e redaction estável.
 
 Esses controles reduzem a superfície de ataque exposta ao parser; eles não são um sandbox de sistema operacional. A fronteira de confiança separada da avaliação MSBuild e as orientações abaixo para repositórios não confiáveis continuam aplicáveis.
+
+## Container Discovery opcional
+
+Container Discovery fica desabilitada por padrão e é isolada do Core pela fronteira da Engine. Quando habilitada, ela lê somente texto limitado de Dockerfiles elegíveis. Ela nunca invoca Docker ou shell, executa instruções do Dockerfile ou scripts do repositório, expande variáveis de ambiente do processo, consulta um registry, faz pull/build de imagens nem resolve um digest remoto.
+
+O scanner rejeita links de filesystem e paths fora do repositório, observa cancelamento e aplica limites de paths, arquivos, bytes, profundidade, resultados, diagnósticos e duração. Referências dinâmicas não suportadas se tornam `unresolved`; expressões não resolvidas e defaults de `ARG` com aparência de segredo não são serializados. Esses controles não provam qual imagem foi construída ou implantada, e o Inspector não consulta CVEs nem determina status de vulnerabilidade. Consulte [Evidências de deployment](deployment-evidence.md) para a gramática suportada, limites e exemplo de auditoria.
 
 ## Sem upload automático
 

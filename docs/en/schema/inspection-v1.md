@@ -4,7 +4,7 @@
 
 `DotNetRepoInspector.Core.Contracts` defines the stable inspection result independently of MSBuild internals, GitHub Actions, persistence, or any specific delivery mechanism.
 
-The current schema version is `1.6`.
+The current schema version is `1.7`.
 
 ## Top-level contract
 
@@ -16,7 +16,9 @@ Every payload contains these properties:
 - `projects`: normalized projects, always emitted as an array.
 - `diagnostics`: repository-level diagnostics, always emitted as an array.
 - `policyFindings`: optional policy evaluation results, structurally separate from inspection diagnostics. The canonical serializer always emits it as an array; older compatible `1.x` payloads may omit it.
-- `integrations`: optional, normalized integration findings. The canonical `1.6` serializer always emits it as an array; older compatible `1.x` payloads may omit it.
+- `integrations`: optional, normalized integration findings. The canonical serializer always emits it as an array; older compatible `1.x` payloads may omit it.
+- `containerImages`: normalized Dockerfile `FROM` evidence. The canonical `1.7` serializer always emits it as an array.
+- `containerDiscovery`: execution state for bounded Dockerfile discovery.
 
 The machine-readable schema is [`inspection-v1.schema.json`](inspection-v1.schema.json). A canonical payload is available at [`examples/inspection-v1.example.json`](examples/inspection-v1.example.json).
 
@@ -58,6 +60,10 @@ The contract deliberately distinguishes absence from an explicit value:
 
 This distinction is particularly important for MSBuild facts such as `isTestProject` and `isPackable`, for `repository.isDirty`, for `classification.subtype` when no subtype evidence exists, and for classification provenance fields that only exist when an override is active.
 
+## Publication metadata
+
+Schema `1.7` adds `projects[].publication`, populated from evaluated MSBuild state. It contains `selfContained`, `publishSelfContained`, `publishAot`, `publishTrimmed`, and `runtimeFrameworkVersion`. Each property has an explicit `state`: `evaluated`, `unspecified`, `unknown`, or `context-dependent`. `value` is present only for `evaluated`, so explicit `false` remains distinguishable from an absent or unresolved setting. These facts do not claim how an application was actually deployed.
+
 ## Diagnostics
 
 Diagnostics are stable inspection facts, not operational log lines. A diagnostic contains a stable `DRIxxxx` code, one of the severities `info`, `warning`, or `error`, a human-readable stable message, and optional `source`, `details`, and `context` fields.
@@ -90,6 +96,12 @@ Every newly serialized report also includes `integrationDiscovery`: `enabled=fal
 
 The contract never contains source bodies, payloads, request or message bodies, queries, connection strings, credentials, authentication headers, configuration values, or arbitrary evaluated properties. `configurationKey` identifies a key only; it never contains the corresponding value. Detectors must omit evidence that cannot be represented safely and use conservative confidence rather than inventing a remote endpoint or runtime topology.
 
+## Container image evidence
+
+Schema `1.7` adds top-level `containerImages` and `containerDiscovery`. Discovery is opt-in; the default inspection path does not read Dockerfiles. Each image records repository-relative `source.path`, one-based `source.line`, `referenceKind`, `resolutionStatus`, the current `stageAlias`, and resolved `imageReference`, `registry`, `repository`, `tag`, or SHA-256 `digest` when available. `referenceKind` distinguishes external images, earlier stages, and `scratch`.
+
+Official .NET `dotNetFamily` values (`sdk`, `aspnet`, `runtime`, and `runtime-deps`) are emitted only for exact `mcr.microsoft.com/dotnet/...` repositories. Similar paths in other registries are not treated as official. Unsupported variables and expressions produce `resolutionStatus=unresolved` without guessing or expanding environment values. `containerDiscovery.truncated=true` means a file, path, byte, duration, depth, diagnostic, or result budget produced partial output.
+
 ## Paths
 
 Paths in the normalized contract use `/` separators and must not contain machine-specific absolute workspace paths.
@@ -113,6 +125,7 @@ The Git work-tree root discovered by the Git adapter is an internal operational 
 - policy finding context keys are ordered ordinally;
 - integration findings are ordered by project path, source path and line, kind, direction, technology, target, and id;
 - integration signals are deduplicated and ordered ordinally;
+- container images are ordered by source path, source line, image reference, and stage alias;
 - path separators are normalized to `/`;
 - property names use `camelCase`;
 - optional `null` properties are omitted.
@@ -130,6 +143,7 @@ Schema versions follow a major/minor policy.
 - Schema `1.4` adds optional `classification.subtype` as a refinement of the base classification kind without adding concrete subtype detection rules.
 - Schema `1.5` adds top-level `policyFindings` so policy violations remain structurally separate from inspection diagnostics.
 - Schema `1.6` adds optional top-level `integrations` for opt-in, source-derived integration evidence.
+- Schema `1.7` adds evaluated project publication metadata plus opt-in `containerImages` and `containerDiscovery` execution state.
 - Consumers of schema `1.x` should ignore unknown fields and preserve the documented semantics of existing fields.
 - Removing or renaming a field, changing its type, making an optional field required, or changing its meaning is a breaking change and requires a new major schema version such as `2.0`.
 - `InspectionSchema.IsCompatibleVersion` accepts versions with the current major version and rejects a different major version.
@@ -157,11 +171,13 @@ The stable contract intentionally does not expose infrastructure-specific result
 | Project `IsTestProject` | `projects[].isTestProject` |
 | Project `IsPackable` | `projects[].isPackable` |
 | Project `RuntimeIdentifiers` | `projects[].runtimeIdentifiers` |
+| Evaluated publish properties | `projects[].publication` with explicit value state |
 | Automatic classifier result | `projects[].classification.kind` when no override is active; otherwise `projects[].classification.automaticKind` |
 | Approved subtype evidence | optional `projects[].classification.subtype` when supported evidence exists |
 | Explicit classification override | effective `projects[].classification.kind` plus `projects[].classification.source` |
 | Policy rule evaluation | top-level `policyFindings[]`, separate from inspection diagnostics |
 | Opt-in source analysis | top-level `integrations[]`, containing only bounded, normalized evidence |
+| Opt-in Dockerfile analysis | top-level `containerImages[]` and `containerDiscovery` state |
 
 The raw MSBuild `Properties` dictionary from the evaluation layer is intentionally excluded. It is an internal evidence source, not part of the stable public contract.
 

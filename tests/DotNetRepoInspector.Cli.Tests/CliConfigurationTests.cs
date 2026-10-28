@@ -33,7 +33,8 @@ public sealed class CliConfigurationTests
                 "generated",
                 "--classify",
                 "src/App/App.csproj=web",
-                "--discover-integrations"
+                "--discover-integrations",
+                "--discover-containers"
             ],
             output,
             error,
@@ -47,6 +48,7 @@ public sealed class CliConfigurationTests
         Assert.Equal(["generated"], observedRequest.ExcludedPaths);
         Assert.Equal("web", observedRequest.ClassificationOverrides?["src/App/App.csproj"]);
         Assert.True(observedRequest.DiscoverIntegrations);
+        Assert.True(observedRequest.DiscoverContainers);
     }
 
     private sealed class RecordingInspector(

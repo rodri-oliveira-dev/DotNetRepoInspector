@@ -9,6 +9,7 @@ public sealed record CliOptions(
     IReadOnlyList<string> ExcludedPaths,
     IReadOnlyDictionary<string, string> ClassificationOverrides,
     bool? DiscoverIntegrations,
+    bool? DiscoverContainers,
     CliPersistenceOptions Persistence,
     bool ShowHelp,
     bool ShowVersion);

@@ -202,10 +202,12 @@ internal static class Program
         if (!options.DiscoverIntegrations)
         {
             if (report.IntegrationDiscovery != IntegrationDiscoveryMetadata.NotExecuted ||
-                report.Integrations.Count != 0)
+                report.Integrations.Count != 0 ||
+                report.ContainerDiscovery != ContainerDiscoveryMetadata.NotExecuted ||
+                report.ContainerImages.Count != 0)
             {
                 throw new InvalidOperationException(
-                    "The default performance scenario unexpectedly executed Integration Discovery.");
+                    "The default performance scenario unexpectedly executed an opt-in discovery pipeline.");
             }
 
             return;

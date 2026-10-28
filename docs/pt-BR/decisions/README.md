@@ -32,5 +32,6 @@ Um ADR deve registrar:
 - [ADR 0016: Detectar Azure Functions por SDK oficial e sinais do modelo de runtime](0016-azure-functions-subtype-detection.md) — Aceito.
 - [ADR 0017: Definir a fronteira de extensibilidade da policy engine](0017-policy-engine-extensibility-boundary.md) — Aceito.
 - [ADR 0018: Manter Integration Discovery opt-in e isolado](0018-integration-discovery-boundary.md) — Aceito.
+- [ADR 0019: Manter evidências de deployment factuais, opt-in e independentes de adapters](0019-deployment-evidence-boundary.md) — Aceito.
 
 Uma provável próxima decisão é o transporte MCP remoto caso ele se torne um cenário suportado.
