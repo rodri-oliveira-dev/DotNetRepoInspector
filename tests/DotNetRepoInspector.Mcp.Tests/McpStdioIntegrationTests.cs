@@ -179,10 +179,21 @@ public sealed class McpStdioIntegrationTests
     public async Task GetProjectDetails_ReturnsPredictableErrorsForMissingAndOutsideProjects()
     {
         var standardError = new ConcurrentQueue<string>();
+        var errorLogsReceived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var observedErrorLogs = 0;
         await using var client = await CreateClientAsync(
             FixturePath("ProjectKinds"),
             standardError,
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken,
+            onStandardErrorLine: line =>
+            {
+                if (line.Contains("\"Tool\":\"get_project_details\"", StringComparison.Ordinal) &&
+                    line.Contains("\"Status\":\"error\"", StringComparison.Ordinal) &&
+                    Interlocked.Increment(ref observedErrorLogs) == 2)
+                {
+                    errorLogsReceived.TrySetResult();
+                }
+            });
 
         var missing = await client.CallToolAsync(
             "get_project_details",
@@ -195,6 +206,11 @@ public sealed class McpStdioIntegrationTests
             new Dictionary<string, object?> { ["projectPath"] = "../Outside.csproj" },
             cancellationToken: TestContext.Current.CancellationToken);
         AssertToolError(outside, "path_outside_repository_root");
+        // MCP responses and stderr delivery are asynchronous; observe both log events
+        // before asserting the exact count without weakening their content checks.
+        await errorLogsReceived.Task.WaitAsync(
+            TimeSpan.FromSeconds(10),
+            TestContext.Current.CancellationToken);
         var errorLogs = standardError.Where(static line =>
             line.Contains("\"Tool\":\"get_project_details\"", StringComparison.Ordinal) &&
             line.Contains("\"Status\":\"error\"", StringComparison.Ordinal)).ToArray();
@@ -487,7 +503,8 @@ public sealed class McpStdioIntegrationTests
         string repositoryRoot,
         ConcurrentQueue<string> standardError,
         CancellationToken cancellationToken,
-        IDictionary<string, string?>? environmentVariables = null)
+        IDictionary<string, string?>? environmentVariables = null,
+        Action<string>? onStandardErrorLine = null)
     {
         var transport = new StdioClientTransport(new StdioClientTransportOptions
         {
@@ -496,7 +513,11 @@ public sealed class McpStdioIntegrationTests
             Arguments = ["--root", repositoryRoot],
             WorkingDirectory = repositoryRoot,
             ShutdownTimeout = TimeSpan.FromSeconds(10),
-            StandardErrorLines = standardError.Enqueue,
+            StandardErrorLines = line =>
+            {
+                standardError.Enqueue(line);
+                onStandardErrorLine?.Invoke(line);
+            },
             EnvironmentVariables = environmentVariables
         });
 
