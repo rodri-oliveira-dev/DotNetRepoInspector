@@ -3,7 +3,7 @@
 # Use the patched .NET 8 SDK from Debian 12 and the patched .NET 10 SDK
 # from Ubuntu 24.04 Noble for linux/amd64 and linux/arm64. Both supply
 # compatible .NET installation trees; pin multi-platform manifests by digest.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.427-bookworm-slim@sha256:ff39a765f04619c8d146796fc09b38499ae5984f4a2a4c3a0a57d0022855daee AS dotnet8
+FROM mcr.microsoft.com/dotnet/sdk:9.0.320-bookworm-slim@sha256:7e3a4bd66701a451823db2028154ae16ff191bc452596ba618ef4d0c58f9cd01 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
