@@ -1,48 +1,36 @@
+# One weekly version-update PR across NuGet, Docker, and GitHub Actions.
+# Security updates remain managed separately by Dependabot.
 version: 2
-updates:
-  - package-ecosystem: "nuget"
-    directory: "/"
+
+multi-ecosystem-groups:
+  weekly-dependencies:
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
       timezone: "America/Sao_Paulo"
-    open-pull-requests-limit: 10
-    groups:
-      nuget-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
+    open-pull-requests-limit: 1
 
-  # Keep the pinned container bases fresh while the official image stabilizes.
-  # The container gate decides whether an updated tag/digest is safe to merge.
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    patterns:
+      - "*"
+    multi-ecosystem-group: "weekly-dependencies"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    patterns:
+      - "*"
+    multi-ecosystem-group: "weekly-dependencies"
+
   - package-ecosystem: "docker"
     directory: "/"
-    schedule:
-      interval: "daily"
-      time: "08:00"
-      timezone: "America/Sao_Paulo"
-    open-pull-requests-limit: 3
-    # Major SDK image upgrades change the supported SDK matrix; review manually.
+    patterns:
+      - "*"
+    multi-ecosystem-group: "weekly-dependencies"
+    # Major SDK image changes require a manual compatibility review.
     ignore:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "10:00"
-      timezone: "America/Sao_Paulo"
-    open-pull-requests-limit: 5
-    groups:
-      actions-minor-patch:
-        patterns:
-          - "*"
-        update-types:
-          - "minor"
-          - "patch"
