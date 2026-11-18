@@ -3,15 +3,16 @@
 # Use the patched .NET 8 SDK from Debian 12 and the patched .NET 10 SDK
 # from Ubuntu 24.04 Noble for linux/amd64 and linux/arm64. Both supply
 # compatible .NET installation trees; pin multi-platform manifests by digest.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.427-bookworm-slim@sha256:341aa6e8bbaceb1194732328ca27c15bfa9c531687db83a66af3c0c1833f5534 AS dotnet8
+# The .NET 10 SDK digest below is the 10.0.404 (10.0.15 runtime) Noble image.
+FROM mcr.microsoft.com/dotnet/sdk:8.0.428-bookworm-slim@sha256:1b955f179b02df4f0eb5fadedaa898cbe44d620a64aab52eec72c8e91d1355b5 AS dotnet8
 
 # This stage follows TARGETPLATFORM and provides the architecture-correct .NET 10
 # muxer/runtime/SDK files copied into the final multi-architecture image.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e AS dotnet10
+FROM mcr.microsoft.com/dotnet/sdk:10.0-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS dotnet10
 
 # The application itself is framework-dependent/architecture-neutral, so compile
 # on BUILDPLATFORM to avoid emulating the SDK during the publish stage.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.403-noble@sha256:212fe4cb74627d5adf9817a4088906ae3edff1bd853bb27565d4b46731efe61e AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 
 ARG PRODUCT_VERSION=0.0.0
 ARG REPOSITORY_COMMIT=local
@@ -32,7 +33,7 @@ RUN dotnet restore ./src/DotNetRepoInspector.Cli/DotNetRepoInspector.Cli.csproj 
 # then copy only the .NET installation required for SDK selection and MSBuild
 # inspection. Noble avoids the Azure Linux package findings seen in the previous
 # composition while preserving Microsoft's supported container baseline.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.14-noble@sha256:f87d6824cd56fa4ad117d06461e4eb0058f46a159872dbcc4a836a72efdd1bec AS final
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.15-noble@sha256:9cab4d7d886226d47b5489ef9abf0544e2f109fde11a8acc190217610af26c00 AS final
 
 # Refresh the patched Ubuntu apt package to address CVE-2026-109518.
 # Keep the package version pinned to make the security remediation auditable.
